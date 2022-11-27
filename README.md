@@ -10,7 +10,10 @@ Otherwise, you will need the following:
 - rustup (v1.25.1)
 - cargo (v1.64.0)
 - rustfmt (v1.5.1-stable)
-- your code editor of choice
+- Your code editor of choice
+  - If you use VScode, we suggest you to install these extensions so that you can use our launch configurations (when you open the directory, you will get an automatic prompt to install them in one click):
+    - `rust-lang.rust-analyzer`
+    - `vadimcn.vscode-lldb`
 
 ## Connect to the VPN
 1. Ping `advancedprogramming.disi.unitn.it`. This should fail since you'll need to connect to University of Trento's VPN to access `advancedprogramming.disi.unitn.it`
