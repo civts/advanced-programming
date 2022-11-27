@@ -15,3 +15,7 @@ Cargo.lock
 
 .idea
 *.iml
+
+#Nix
+.direnv/
+.env

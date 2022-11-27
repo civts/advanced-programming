@@ -2,6 +2,16 @@
 
 # Setup
 
+## Dependencies
+
+If you use [nix](https://nixos.org), a flake is here for you. Activate the environment with `direnv allow` and you will get the right versions of everything and a VScode already configured with all the extensions.
+
+Otherwise, you will need the following:
+- rustup (v1.25.1)
+- cargo (v1.64.0)
+- rustfmt (v1.5.1-stable)
+- your code editor of choice
+
 ## Connect to the VPN
 1. Ping `advancedprogramming.disi.unitn.it`. This should fail since you'll need to connect to University of Trento's VPN to access `advancedprogramming.disi.unitn.it`
 
