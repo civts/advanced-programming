@@ -1,0 +1,3 @@
+[registries.kellnr]
+index = "git://advancedprogramming.disi.unitn.it/index"
+#The token is provided through environment variables, see README
