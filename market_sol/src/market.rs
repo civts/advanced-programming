@@ -75,17 +75,16 @@ impl Market for SOLMarket {
     }
 
     fn get_budget(&self) -> f32 {
-        // self.goods.iter().fold(0f32, |acc, good| {
-        //     let value = good.get_qty()
-        //         * self
-        //             .meta
-        //             .goods_meta
-        //             .get(&good.get_kind())
-        //             .unwrap()
-        //             .sell_price; //TODO: Check
-        //     acc + value
-        // })
-        todo!();
+        self.goods.iter().fold(0f32, |acc, good| {
+            let value = good.get_qty()
+                * self
+                    .meta
+                    .goods_meta
+                    .get(&good.get_kind())
+                    .unwrap()
+                    .sell_price;
+            acc + value
+        })
     }
 
     fn get_buy_price(
