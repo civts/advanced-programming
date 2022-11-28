@@ -1,8 +1,12 @@
+use crate::good_meta::GoodMeta;
 use crate::market_metadata::MarketMetadata;
 
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 use std::cell::RefCell;
 use std::rc::Rc;
 use unitn_market_2022::event::notifiable::Notifiable;
+use unitn_market_2022::good::consts::STARTING_CAPITAL;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::Market;
@@ -11,18 +15,52 @@ const MARKET_NAME: &str = "SOL";
 
 pub struct SOLMarket {
     name: String,
-    budget: Good,
     goods: Vec<Good>,
     meta: MarketMetadata,
 }
 
 impl Market for SOLMarket {
     fn new_random() -> Rc<RefCell<dyn Market>> {
-        todo!()
+        //https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs
+        let mut rng = ChaCha20Rng::from_entropy();
+        //Generate the market cap of each good, randomly
+        let mut remaining_market_cap = STARTING_CAPITAL;
+        let eur_quantity = rng.gen_range(1.0..remaining_market_cap);
+        remaining_market_cap -= eur_quantity;
+        let yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        remaining_market_cap -= yen_mkt_cap;
+        let yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        remaining_market_cap -= yuan_mkt_cap;
+        let usd_mkt_cap = remaining_market_cap;
+        //Calculate the quantity of each good
+        let yen_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YEN) * yen_mkt_cap;
+        let yuan_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YUAN) * yuan_mkt_cap;
+        let usd_quantity = GoodKind::get_default_exchange_rate(&GoodKind::USD) * usd_mkt_cap;
+        //Get the market
+        return SOLMarket::new_with_quantities(
+            eur_quantity,
+            yen_quantity,
+            yuan_quantity,
+            usd_quantity,
+        );
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
-        todo!()
+        //Initialize the market
+        let goods = vec![
+            Good::new(GoodKind::EUR, eur),
+            Good::new(GoodKind::YEN, usd),
+            Good::new(GoodKind::YUAN, yuan),
+            Good::new(GoodKind::USD, yen),
+        ];
+        let goods_metadata = goods.iter().map(GoodMeta::fromGood).collect();
+        Rc::new(RefCell::new(SOLMarket {
+            name: String::from(MARKET_NAME),
+            goods,
+            meta: MarketMetadata {
+                goods_meta: goods_metadata,
+            },
+        }))
     }
 
     fn new_file(path: &str) -> Rc<RefCell<dyn Market>>
