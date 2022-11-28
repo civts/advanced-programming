@@ -10,7 +10,7 @@ pub(crate) struct GoodMeta {
 }
 
 impl GoodMeta {
-    fn new(price: f32, quantity: f32) -> Self {
+    pub fn new(price: f32, quantity: f32) -> Self {
         Self {
             sell_price: price,
             buy_price: price * 0.99, // TODO: Come with a better option
@@ -23,11 +23,5 @@ impl GoodMeta {
 
     fn is_locked(&self) -> bool {
         self.quantity_locked > 0f32
-    }
-
-    pub fn fromGood(g: &Good) -> (GoodKind, GoodMeta) {
-        let kind = g.get_kind();
-        let meta = GoodMeta::new(1.01, g.get_qty());
-        (kind, meta)
     }
 }

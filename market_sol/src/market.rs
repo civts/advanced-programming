@@ -53,7 +53,12 @@ impl Market for SOLMarket {
             Good::new(GoodKind::YUAN, yuan),
             Good::new(GoodKind::USD, yen),
         ];
-        let goods_metadata = goods.iter().map(GoodMeta::fromGood).collect();
+        fn to_map_item(good: &Good) -> (GoodKind, GoodMeta) {
+            let kind = good.get_kind();
+            let meta = GoodMeta::new(1.01, good.get_qty());
+            (kind, meta)
+        }
+        let goods_metadata = goods.iter().map(to_map_item).collect();
         Rc::new(RefCell::new(SOLMarket {
             name: String::from(MARKET_NAME),
             goods,
