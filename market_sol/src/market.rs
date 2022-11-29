@@ -4,19 +4,48 @@ use crate::market_metadata::MarketMetadata;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use std::cell::RefCell;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
+use unitn_market_2022::event::event::{Event, EventKind};
 use unitn_market_2022::event::notifiable::Notifiable;
-use unitn_market_2022::good::consts::STARTING_CAPITAL;
+use unitn_market_2022::good::consts::{DEFAULT_GOOD_KIND, STARTING_CAPITAL};
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
-use unitn_market_2022::market::Market;
+use unitn_market_2022::market::{BuyError, LockBuyError, LockSellError, Market, MarketGetterError, SellError};
+use unitn_market_2022::market::good_label::GoodLabel;
+use crate::good_lock_meta::GoodLockMeta;
+use crate::market_meta::MarketMeta;
 
 const MARKET_NAME: &str = "SOL";
+const TOKEN_DURATION: u32 = 5;
 
 pub struct SOLMarket {
     name: String,
-    goods: Vec<Good>,
-    meta: MarketMetadata,
+    goods: Vec<Good>, // Deprecated
+    good_labels: Vec<GoodLabel>,
+    subscribers: Vec<Box<dyn Notifiable>>,
+    old_meta: MarketMetadata, // Deprecated
+    meta: MarketMeta,
+}
+
+impl SOLMarket {
+    /// Notify every market including ours of an event
+    fn notify_everyone(&self, e: Event) {
+        todo!()
+    }
+}
+
+
+impl Notifiable for SOLMarket {
+    fn add_subscriber(&mut self, subscriber: Box<dyn Notifiable>) {
+        todo!()
+    }
+
+    fn on_event(&mut self, event: Event) {
+        todo!()
+    }
 }
 
 impl Market for SOLMarket {
@@ -55,25 +84,36 @@ impl Market for SOLMarket {
         ];
         fn to_map_item(good: &Good) -> (GoodKind, GoodMeta) {
             let kind = good.get_kind();
-            let meta = GoodMeta::new(1.01, good.get_qty());
+            let meta = GoodMeta::new(kind.get_default_exchange_rate(), good.get_qty());
             (kind, meta)
         }
-        let goods_metadata = goods.iter().map(to_map_item).collect();
+        let goods_metadata: HashMap<GoodKind, GoodMeta> = goods.iter().map(to_map_item).collect();
+        let good_labels: Vec<GoodLabel> = goods_metadata.iter().map(|(k, g)|
+            {
+                GoodLabel {
+                    good_kind: k.clone(),
+                    quantity: g.quantity_available,
+                    exchange_rate_buy: g.buy_price,
+                    exchange_rate_sell: g.sell_price,
+                }
+            }).collect();
+
         Rc::new(RefCell::new(SOLMarket {
             name: String::from(MARKET_NAME),
             goods,
-            meta: MarketMetadata {
+            good_labels,
+            subscribers: vec![],
+            old_meta: MarketMetadata {
                 goods_meta: goods_metadata,
             },
+            meta: MarketMeta::new(),
         }))
     }
 
     fn new_file(path: &str) -> Rc<RefCell<dyn Market>>
-    where
-        Self: Sized,
-    {
-        todo!()
-    }
+        where
+            Self: Sized,
+    { todo!() }
 
     fn get_name(&self) -> &'static str {
         return MARKET_NAME;
@@ -81,147 +121,132 @@ impl Market for SOLMarket {
 
     fn get_budget(&self) -> f32 {
         self.goods.iter().fold(0f32, |acc, good| {
-            let value = good.get_qty()
-                * self
-                    .meta
-                    .goods_meta
-                    .get(&good.get_kind())
-                    .unwrap()
-                    .sell_price;
+            let value = good.get_qty() * self.old_meta.goods_meta.get(&good.get_kind()).unwrap().sell_price;
             acc + value
         })
     }
 
-    fn get_buy_price(
-        &self,
-        kind: GoodKind,
-        quantity: f32,
-    ) -> Result<f32, unitn_market_2022::market::MarketGetterError> {
+    fn get_buy_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
+        if quantity.is_sign_negative() { return Err(MarketGetterError::NonPositiveQuantityAsked); }
+
+        let good_label = self.good_labels.iter().find(|g| g.good_kind.eq(&kind)).unwrap();
+
+        let qty_available = good_label.quantity;
+        if qty_available < quantity {
+            return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
+                requested_good_kind: kind,
+                requested_good_quantity: quantity,
+                available_good_quantity: qty_available,
+            });
+        }
+
+        Ok(quantity / good_label.exchange_rate_buy)
+    }
+
+    fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
         todo!()
     }
 
-    fn get_sell_price(
-        &self,
-        kind: GoodKind,
-        quantity: f32,
-    ) -> Result<f32, unitn_market_2022::market::MarketGetterError> {
+    fn get_goods(&self) -> Vec<GoodLabel> {
+        self.good_labels.clone()
+    }
+
+    fn lock_buy(&mut self, kind_to_buy: GoodKind, quantity_to_buy: f32, bid: f32, trader_name: String) -> Result<String, LockBuyError> {
+        // Check positive quantity
+        if quantity_to_buy.is_sign_negative() { return Err(LockBuyError::NonPositiveQuantityToBuy { negative_quantity_to_buy: quantity_to_buy }); }
+
+        // Check positive bid
+        if bid.is_sign_negative() { return Err(LockBuyError::NonPositiveBid { negative_bid: bid }); }
+
+        // Check quantity available
+        let good_label = self.good_labels.iter_mut().find(|g| g.good_kind.eq(&kind_to_buy)).unwrap();
+        let quantity_available = good_label.quantity;
+        if quantity_available < quantity_to_buy {
+            return Err(LockBuyError::InsufficientGoodQuantityAvailable {
+                requested_good_kind: kind_to_buy,
+                requested_good_quantity: quantity_to_buy,
+                available_good_quantity: quantity_available,
+            });
+        }
+
+        // todo: Maximum locks reached (see Market Deadlock section)
+
+        // Check bid
+        let min_bid = good_label.exchange_rate_sell;
+        if bid < min_bid {
+            return Err(LockBuyError::BidTooLow {
+                requested_good_kind: kind_to_buy,
+                requested_good_quantity: quantity_to_buy,
+                low_bid: bid,
+                lowest_acceptable_bid: min_bid,
+            });
+        }
+
+        // Create token
+        let mut hasher = DefaultHasher::new();
+        let now = chrono::Local::now();
+        (kind_to_buy.clone(), quantity_to_buy.to_string(), bid.to_string(), now, trader_name).hash(&mut hasher);
+        let token = hasher.finish().to_string();
+
+        // Update good quantity available, todo: Update good buy and sell price
+        good_label.quantity -= quantity_to_buy;
+
+        // Update meta
+        let good_meta = GoodLockMeta::new(kind_to_buy.clone(), bid, quantity_to_buy, self.meta.current_day);
+        self.meta.locked_buys.insert(token.clone(), good_meta);
+
+        // Create and spread event
+        let e = Event {
+            kind: EventKind::LockedBuy,
+            good_kind: kind_to_buy,
+            quantity: quantity_to_buy,
+            price: bid,
+        };
+
+        // self.notify_everyone(e);
+
+        Ok(token)
+    }
+
+
+    fn buy(&mut self, token: String, cash: &mut Good) -> Result<Good, BuyError> {
+        // Check token existence
+        let good_meta = match self.meta.locked_buys.get(&*token) {
+            None => { return Err(BuyError::UnrecognizedToken { unrecognized_token: token }); }
+            Some(g) => { g }
+        };
+
+        // Check token validity
+        let days_since = self.meta.current_day - good_meta.created_on;
+        if days_since > TOKEN_DURATION { return Err(BuyError::ExpiredToken { expired_token: token }); }
+
+        // Check cash is default
+        let kind = cash.get_kind();
+        if kind.ne(&DEFAULT_GOOD_KIND) { return Err(BuyError::GoodKindNotDefault { non_default_good_kind: kind }); }
+
+        // Check cash qty
+        let contained_quantity = cash.get_qty();
+        let pre_agreed_quantity = good_meta.quantity / good_meta.price;
+        if contained_quantity < pre_agreed_quantity { return Err(BuyError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
+
+        // Cash in, todo: Update good buy and sell price
+        let eur = cash.split(pre_agreed_quantity).unwrap();
+        let default = self.good_labels.iter_mut().find(|g| g.good_kind.eq(&eur.get_kind())).unwrap();
+        default.quantity += eur.get_qty();
+
+        let release_good = Good::new(good_meta.kind.clone(), good_meta.quantity);
+
+        // Reset lock
+        self.meta.locked_buys.remove(&*token);
+
+        Ok(release_good)
+    }
+
+    fn lock_sell(&mut self, kind_to_sell: GoodKind, quantity_to_sell: f32, offer: f32, trader_name: String) -> Result<String, LockSellError> {
         todo!()
     }
 
-    fn get_goods(&self) -> Vec<unitn_market_2022::market::good_label::GoodLabel> {
-        todo!()
-    }
-
-    fn lock_buy(
-        &mut self,
-        kind_to_buy: GoodKind,
-        quantity_to_buy: f32,
-        bid: f32,
-        trader_name: String,
-    ) -> Result<String, unitn_market_2022::market::LockBuyError> {
-        // let mut good_meta = self.meta.get_mut_good_meta(&g)?;
-        // // Check good is locked
-        // if good_meta.is_locked() {
-        //     good_meta
-        //     return Err(LockBuyError::GoodAlreadyLocked{token : });
-        // }
-
-        // // Check quantity
-        // let quantity_available = good_meta.quantity_available;
-        // if quantity_available < q {
-        //     return Err(MarketError::NotEnoughQuantity());
-        // }
-
-        // // Check price
-        // let market_price = good_meta.sell_price;
-        // if p < market_price {
-        //     return Err(MarketError::OfferTooLow());
-        // }
-
-        // // Create token TODO: Maybe find a better way
-        // let mut hasher = DefaultHasher::new();
-        // (g.to_string(), p.to_string(), q.to_string(), d).hash(&mut hasher);
-        // let token = hasher.finish().to_string();
-
-        // // Update quantity locked and available
-        // good_meta.quantity_locked = q;
-        // good_meta.quantity_available -= q;
-        // good_meta.token = token.clone();
-        // good_meta.price_locked = p;
-
-        // Ok(token)
-        todo!();
-    }
-
-    fn buy(
-        &mut self,
-        token: String,
-        cash: &mut Good,
-    ) -> Result<Good, unitn_market_2022::market::BuyError> {
-        // Get GoodMeta from token
-        //         let (good_kind, mut good_meta) = self.meta.get_mut_good_meta_from_token(token)?;
-
-        //         // Check if locked
-        //         if !good_meta.is_locked() {
-        //             return Err(MarketError::GoodNotLocked());
-        //         }
-
-        //         // Check cash
-        //         if cash.get_kind() != GoodKind::DEFAULT_GOOD_KIND {
-        //             return Err(MarketError::CashNotDefaultGood());
-        //         }
-        //         if cash.get_q() < good_meta.quantity_locked / good_meta.price_locked {
-        //             return Err(MarketError::TooFewQuantityGiven());
-        //         } // Meaning we accept more cash if given TODO: check
-
-        //         // Take the cash
-        //         let eur = self
-        //             .goods
-        //             .iter_mut()
-        //             .find(|g| g.get_kind() == GoodKind::DEFAULT_GOOD_KIND)
-        //             .unwrap();
-        //         eur.merge(cash).unwrap();
-
-        //         let mut good = self
-        //             .goods
-        //             .iter_mut()
-        //             .find(|g| g.get_kind() == *good_kind)
-        //             .unwrap(); // TODO: deal with error or write proper method
-        //         let good_to_give = good.split(good_meta.quantity_locked).unwrap(); // TODO: deal with error
-        //                                                                            // Update good and meta
-        //         good_meta.quantity_locked = 0f32;
-        //         good_meta.token = "".to_string();
-        //         // TODO: Change prices in good_meta..
-
-        //         Ok(good_to_give)
-        todo!()
-    }
-
-    fn lock_sell(
-        &mut self,
-        kind_to_sell: GoodKind,
-        quantity_to_sell: f32,
-        offer: f32,
-        trader_name: String,
-    ) -> Result<String, unitn_market_2022::market::LockSellError> {
-        todo!()
-    }
-
-    fn sell(
-        &mut self,
-        token: String,
-        good: &mut Good,
-    ) -> Result<Good, unitn_market_2022::market::SellError> {
-        todo!()
-    }
-}
-
-impl Notifiable for SOLMarket {
-    fn add_subscriber(&mut self, subscriber: Box<dyn Notifiable>) {
-        todo!()
-    }
-
-    fn on_event(&mut self, event: unitn_market_2022::event::event::Event) {
+    fn sell(&mut self, token: String, good: &mut Good) -> Result<Good, SellError> {
         todo!()
     }
 }

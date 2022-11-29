@@ -19,3 +19,6 @@ Cargo.lock
 #Nix
 .direnv/
 .env
+
+.vscode
+.DS_Store

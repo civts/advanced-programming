@@ -17,97 +17,114 @@ fn should_return_markets_name() {
     assert_eq!("SOL", name)
 }
 
-#[test]
-fn fail_lock_buy_on_locked() {
-    let q = 20.0;
-    let trader_name = String::from(TRADER_NAME);
-    let binding = SOLMarket::new_with_quantities(q, q, q, q);
-    let mut market = binding.borrow_mut();
-    let token_result = market.lock_buy(GoodKind::USD, 1.01, 1f32, trader_name);
-    assert!(token_result.is_ok());
-    let token = token_result.unwrap();
-    let trader_name = String::from(TRADER_NAME);
-    let result = market
-        .lock_buy(GoodKind::USD, 1.01, 100f32, trader_name)
-        .expect_err("DID NOT FAIL");
-    let expected = LockBuyError::GoodAlreadyLocked { token: token };
-}
+#[cfg(test)]
+mod test_buy {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
+    use unitn_market_2022::good::good::Good;
+    use unitn_market_2022::good::good_kind::GoodKind;
+    use unitn_market_2022::market::{LockBuyError, Market};
+    use crate::market::SOLMarket;
 
-#[test]
-fn fail_lock_buy_quantity() {
-    let trader_name = String::from(TRADER_NAME);
+    // Setup a struct with default test value
+    struct Setup {
+        market: Rc<RefCell<dyn Market>>,
+        buy_kind: GoodKind,
+        qty: f32,
+        bid: f32,
+        trader: String,
+    }
 
-    let q = 20.0;
-    let binding = SOLMarket::new_with_quantities(q, q, q, q);
-    let mut market = binding.borrow_mut();
-    let requested_quantity = q + 0.1;
-    let bid = f32::MAX;
-    let result = market
-        .lock_buy(GoodKind::USD, requested_quantity, bid, trader_name)
-        .expect_err("DID NOT FAIL");
-    let expected = LockBuyError::InsufficientGoodQuantityAvailable {
-        requested_good_kind: GoodKind::USD,
-        requested_good_quantity: requested_quantity,
-        available_good_quantity: q,
-    };
-}
+    impl Setup {
+        fn new() -> Self {
+            let qty = 100f32;
+            let market = SOLMarket::new_with_quantities(qty, qty, qty, qty);
+            let buy_kind = GoodKind::USD;
+            let bid = market.borrow().get_goods().iter().find_map(
+                |gl| { if gl.good_kind.eq(&buy_kind) { Some(gl.exchange_rate_sell) } else { None } }).unwrap();
+            let trader = "foobar".to_string();
+            Self {
+                market,
+                buy_kind,
+                qty,
+                bid,
+                trader,
+            }
+        }
+    }
 
-#[test]
-fn fail_lock_buy_price() {
-    let binding = SOLMarket::new_with_quantities(0.0, 0.0, 0.0, 0.0);
-    let mut market = binding.borrow_mut();
-    let trader_name = String::from(TRADER_NAME);
-    let quantity_to_buy = 1.00;
-    let bid = 99.9;
-    let result = market
-        .lock_buy(GoodKind::USD, quantity_to_buy, bid, trader_name)
-        .expect_err("DID NOT FAIL");
-    let expected = LockBuyError::BidTooLow {
-        requested_good_kind: GoodKind::USD,
-        requested_good_quantity: quantity_to_buy,
-        low_bid: bid,
-        lowest_acceptable_bid: 999.0, //TODO
-    };
 
-    // Can't assert_eq because: `MarketError` cannot be formatted using `{:?}` because it doesn't implement `Debug`
-    // assert_eq!(result, expected)
-}
+    #[test]
+    fn fail_lock_neg_qty() {
+        let s = Setup::new();
+        let mut market = s.market.borrow_mut();
+        let neg_qty = -s.qty;
+        let result = market.lock_buy(GoodKind::USD, neg_qty, s.bid, s.trader).unwrap_err();
+        let expected = LockBuyError::NonPositiveQuantityToBuy { negative_quantity_to_buy: neg_qty };
+        assert_eq!(result, expected);
+    }
 
-#[test]
-fn success_lock_buy() {
-    let binding = SOLMarket::new_with_quantities(0.0, 0.0, 0.0, 0.0);
-    let mut market = binding.borrow_mut();
-    let trader_name = String::from(TRADER_NAME);
+    #[test]
+    fn fail_lock_neg_bid() {
+        let s = Setup::new();
+        let mut market = s.market.borrow_mut();
+        let neg_bid = -s.bid;
+        let result = market.lock_buy(s.buy_kind, s.qty, neg_bid, s.trader).unwrap_err();
+        let expected = LockBuyError::NonPositiveBid { negative_bid: neg_bid };
 
-    let g = GoodKind::USD;
-    let p = 1.01;
-    let q = 100f32;
-    let d = trader_name;
+        assert_eq!(result, expected)
+    }
 
-    let result = market.lock_buy(g.clone(), p, q, d.clone()).ok().unwrap();
-    let mut hasher = DefaultHasher::new();
-    (g.to_string(), p.to_string(), q.to_string(), d).hash(&mut hasher);
-    let expected = hasher.finish().to_string();
+    #[test]
+    fn fail_lock_insufficient_qty() {
+        let s = Setup::new();
+        let mut market = s.market.borrow_mut();
+        let extra_qty = s.qty + 1f32;
+        let result = market.lock_buy(s.buy_kind.clone(), extra_qty, s.bid, s.trader).unwrap_err();
+        let expected = LockBuyError::InsufficientGoodQuantityAvailable {
+            requested_good_kind: s.buy_kind,
+            requested_good_quantity: extra_qty,
+            available_good_quantity: s.qty,
+        };
 
-    // Can't assert_eq because: `MarketError` cannot be formatted using `{:?}` because it doesn't implement `Debug`
-    // assert_eq!(result, expected)
-}
+        assert_eq!(result, expected)
+    }
 
-#[test]
-fn success_buy() {
-    let binding = SOLMarket::new_with_quantities(0.0, 0.0, 0.0, 0.0);
-    let mut market = binding.borrow_mut();
-    let trader_name = String::from(TRADER_NAME);
+    #[test]
+    fn fail_lock_bid_low() {
+        let s = Setup::new();
+        let mut market = s.market.borrow_mut();
+        let low_bid = s.bid - 1f32;
+        let result = market.lock_buy(s.buy_kind.clone(), s.qty, low_bid, s.trader).unwrap_err();
+        let expected = LockBuyError::BidTooLow {
+            requested_good_kind: s.buy_kind,
+            requested_good_quantity: s.qty,
+            low_bid,
+            lowest_acceptable_bid: s.bid
+        };
 
-    let g = GoodKind::USD;
-    let p = 1.01;
-    let q = 100f32;
-    let d = trader_name;
+        assert_eq!(result, expected)
+    }
 
-    let token = market.lock_buy(g.clone(), p, q, d.clone()).ok().unwrap();
-    let result = market.buy(token, &mut Good::new(GoodKind::EUR, q / p));
-    let expected = Good::new(g, q);
+    #[test]
+    fn success_lock_buy() {
+        let s = Setup::new();
+        let mut market = s.market.borrow_mut();
+        market.lock_buy(s.buy_kind, s.qty, s.bid, s.trader).unwrap();
+    }
 
-    // Can't assert_eq because: `MarketError` cannot be formatted using `{:?}` because it doesn't implement `Debug`
-    // assert_eq!(result, expected)
+    // TODO: Implement tests for buy method
+
+    #[test]
+    fn success_buy() {
+        let s = Setup::new();
+        let mut market = s.market.borrow_mut();
+        let token = market.lock_buy(s.buy_kind.clone(), s.qty, s.bid, s.trader).unwrap();
+        let mut cash = Good::new(DEFAULT_GOOD_KIND, s.qty / s.bid);
+        let result = market.buy(token, &mut cash).unwrap();
+        let expected = Good::new(s.buy_kind, s.qty);
+        assert_eq!(result, expected)
+    }
 }

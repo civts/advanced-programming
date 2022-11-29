@@ -2,11 +2,11 @@ use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
 
 pub(crate) struct GoodMeta {
     pub sell_price: f32,
-    buy_price: f32,
-    quantity_locked: f32,
-    price_locked: f32,
-    quantity_available: f32,
-    token: String,
+    pub buy_price: f32,
+    pub quantity_locked: f32,
+    pub price_locked: f32,
+    pub quantity_available: f32,
+    pub token: String,
 }
 
 impl GoodMeta {
