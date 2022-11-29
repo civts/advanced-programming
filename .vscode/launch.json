@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug",
+      "program": "${workspaceFolder}/tmp/program",
+      "args": [],
+      "preLaunchTask": "Build and run current crate",
+      "postDebugTask": "Remove tmp",
+      "terminal": "integrated",
+    }
+  ]
+}
