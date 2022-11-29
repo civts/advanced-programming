@@ -1,6 +1,6 @@
 use unitn_market_2022::good::good_kind::GoodKind;
 
-#[derive(Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct GoodLockMeta {
     pub kind: GoodKind,
     pub price: f32,

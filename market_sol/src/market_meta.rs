@@ -18,7 +18,7 @@ impl MarketMeta {
             locked_buys: Default::default(),
             locked_sells: Default::default(),
             min_bid: Default::default(), // todo: come up with min bid for each goods
-            current_day: 0
+            current_day: 0u32
         }
     }
 }

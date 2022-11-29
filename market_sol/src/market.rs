@@ -23,10 +23,12 @@ const TOKEN_DURATION: u32 = 5;
 
 pub struct SOLMarket {
     name: String,
-    goods: Vec<Good>, // Deprecated
+    goods: Vec<Good>,
+    // Deprecated
     good_labels: Vec<GoodLabel>,
     subscribers: Vec<Box<dyn Notifiable>>,
-    old_meta: MarketMetadata, // Deprecated
+    // Deprecated
+    old_meta: MarketMetadata,
     meta: MarketMeta,
 }
 
@@ -95,7 +97,7 @@ impl Market for SOLMarket {
             usd_quantity,
         );
     }
-  
+
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
         if eur < 0.0 {
             panic!("Tried to initialize the market with a negative quantity of eur");
@@ -163,7 +165,7 @@ impl Market for SOLMarket {
     fn get_buy_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
         if quantity.is_sign_negative() { return Err(MarketGetterError::NonPositiveQuantityAsked); }
 
-        let good_label = self.good_labels.iter().find(|g| g.good_kind.eq(&kind)).unwrap();
+        let good_label = self.good_labels.iter().find(|l| l.good_kind.eq(&kind)).unwrap();
 
         let qty_available = good_label.quantity;
         if qty_available < quantity {
@@ -174,7 +176,7 @@ impl Market for SOLMarket {
             });
         }
 
-        Ok(quantity / good_label.exchange_rate_buy)
+        Ok(quantity / good_label.exchange_rate_sell)
     }
 
     fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
@@ -193,7 +195,7 @@ impl Market for SOLMarket {
         if bid.is_sign_negative() { return Err(LockBuyError::NonPositiveBid { negative_bid: bid }); }
 
         // Check quantity available
-        let good_label = self.good_labels.iter_mut().find(|g| g.good_kind.eq(&kind_to_buy)).unwrap();
+        let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_buy)).unwrap();
         let quantity_available = good_label.quantity;
         if quantity_available < quantity_to_buy {
             return Err(LockBuyError::InsufficientGoodQuantityAvailable {
@@ -206,7 +208,7 @@ impl Market for SOLMarket {
         // todo: Maximum locks reached (see Market Deadlock section)
 
         // Check bid
-        let min_bid = good_label.exchange_rate_sell;
+        let min_bid = quantity_to_buy / good_label.exchange_rate_sell;
         if bid < min_bid {
             return Err(LockBuyError::BidTooLow {
                 requested_good_kind: kind_to_buy,
@@ -222,11 +224,11 @@ impl Market for SOLMarket {
         (kind_to_buy.clone(), quantity_to_buy.to_string(), bid.to_string(), now, trader_name).hash(&mut hasher);
         let token = hasher.finish().to_string();
 
-        // Update good quantity available, todo: Update good buy and sell price
+        // Update good quantity available, todo: Update good buy and sell price (in on_event method)
         good_label.quantity -= quantity_to_buy;
 
         // Update meta
-        let good_meta = GoodLockMeta::new(kind_to_buy.clone(), bid, quantity_to_buy, self.meta.current_day);
+        let good_meta = GoodLockMeta::new(kind_to_buy.clone(), quantity_to_buy / bid, quantity_to_buy, self.meta.current_day);
         self.meta.locked_buys.insert(token.clone(), good_meta);
 
         // Create and spread event
@@ -263,10 +265,19 @@ impl Market for SOLMarket {
         let pre_agreed_quantity = good_meta.quantity / good_meta.price;
         if contained_quantity < pre_agreed_quantity { return Err(BuyError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
 
-        // Cash in, todo: Update good buy and sell price
+        // Cash in, todo: Update good buy and sell price (in on_event method)
         let eur = cash.split(pre_agreed_quantity).unwrap();
-        let default = self.good_labels.iter_mut().find(|g| g.good_kind.eq(&eur.get_kind())).unwrap();
+        let default = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&eur.get_kind())).unwrap();
         default.quantity += eur.get_qty();
+
+        // Create and spread event
+        let e = Event {
+            kind: EventKind::Bought,
+            good_kind: good_meta.kind.clone(),
+            quantity: good_meta.quantity,
+            price: good_meta.price,
+        };
+        // self.notify_everyone(e);
 
         let release_good = Good::new(good_meta.kind.clone(), good_meta.quantity);
 
