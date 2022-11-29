@@ -32,23 +32,45 @@ pub struct SOLMarket {
 
 impl SOLMarket {
     /// Notify every market including ours of an event
-    fn notify_everyone(&self, e: Event) {
-        todo!()
+    fn notify_everyone(&mut self, e: Event) {
+        for subscriber in &mut self.subscribers {
+            subscriber.on_event(e.clone())
+        }
     }
 }
 
 
 impl Notifiable for SOLMarket {
     fn add_subscriber(&mut self, subscriber: Box<dyn Notifiable>) {
-        todo!()
+        self.subscribers.push(subscriber);
     }
 
     fn on_event(&mut self, event: Event) {
-        todo!()
+        match event.kind { 
+            EventKind::Bought => {
+            },
+            EventKind::Sold => {
+            },
+            EventKind::LockedBuy => {
+            },
+            EventKind::LockedSell => {},
+            EventKind::Wait => { 
+                // change some exchange rate -> buy_prices - as for now it's enough to decrease the price a bit
+                // as time goes on with goods left unsold you tend to decrease the price
+                self.good_labels.iter_mut().for_each(|gl| {
+                        if gl.good_kind.ne(&GoodKind::EUR){
+                            gl.exchange_rate_buy *= 1.05;
+                        }
+                    });
+            },
+        }
+        //progress one day in any case
+        self.meta.current_day += 1;
     }
 }
 
 impl Market for SOLMarket {
+
     fn new_random() -> Rc<RefCell<dyn Market>> {
         //https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs
         let mut rng = ChaCha20Rng::from_entropy();
@@ -203,7 +225,7 @@ impl Market for SOLMarket {
             price: bid,
         };
 
-        // self.notify_everyone(e);
+        self.notify_everyone(e);
 
         Ok(token)
     }
@@ -236,8 +258,24 @@ impl Market for SOLMarket {
 
         let release_good = Good::new(good_meta.kind.clone(), good_meta.quantity);
 
+        // Create and spread event
+        let e = Event {
+            kind: EventKind::Bought,
+            good_kind: release_good.get_kind(),
+            quantity: release_good.get_qty(),
+            price: good_meta.price,
+        };
+
         // Reset lock
         self.meta.locked_buys.remove(&*token);
+
+        self.notify_everyone(e);
+
+        //Update price after successful buy, slightly decrease the price as qnty increases
+        self.good_labels.iter_mut().for_each(|gl| {
+            if gl.good_kind.eq(&release_good.get_kind()) {
+                gl.exchange_rate_buy *= 1.05;
+            } });
 
         Ok(release_good)
     }
