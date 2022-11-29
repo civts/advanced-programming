@@ -95,14 +95,26 @@ impl Market for SOLMarket {
             usd_quantity,
         );
     }
-
+  
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
+        if eur < 0.0 {
+            panic!("Tried to initialize the market with a negative quantity of eur");
+        }
+        if usd < 0.0 {
+            panic!("Tried to initialize the market with a negative quantity of usd");
+        }
+        if yen < 0.0 {
+            panic!("Tried to initialize the market with a negative quantity of yen");
+        }
+        if yuan < 0.0 {
+            panic!("Tried to initialize the market with a negative quantity of yuan");
+        }
         //Initialize the market
         let goods = vec![
             Good::new(GoodKind::EUR, eur),
-            Good::new(GoodKind::YEN, usd),
+            Good::new(GoodKind::YEN, yen),
             Good::new(GoodKind::YUAN, yuan),
-            Good::new(GoodKind::USD, yen),
+            Good::new(GoodKind::USD, usd),
         ];
         fn to_map_item(good: &Good) -> (GoodKind, GoodMeta) {
             let kind = good.get_kind();
@@ -110,15 +122,15 @@ impl Market for SOLMarket {
             (kind, meta)
         }
         let goods_metadata: HashMap<GoodKind, GoodMeta> = goods.iter().map(to_map_item).collect();
-        let good_labels: Vec<GoodLabel> = goods_metadata.iter().map(|(k, g)|
-            {
-                GoodLabel {
-                    good_kind: k.clone(),
-                    quantity: g.quantity_available,
-                    exchange_rate_buy: g.buy_price,
-                    exchange_rate_sell: g.sell_price,
-                }
-            }).collect();
+        let good_labels: Vec<GoodLabel> = goods_metadata
+            .iter()
+            .map(|(k, g)| GoodLabel {
+                good_kind: k.clone(),
+                quantity: g.quantity_available,
+                exchange_rate_buy: g.buy_price,
+                exchange_rate_sell: g.sell_price,
+            })
+            .collect();
 
         Rc::new(RefCell::new(SOLMarket {
             name: String::from(MARKET_NAME),

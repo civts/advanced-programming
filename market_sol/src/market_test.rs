@@ -4,6 +4,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
+use unitn_market_2022::market::good_label::GoodLabel;
 use unitn_market_2022::market::{LockBuyError, Market};
 use unitn_market_2022::{subscribe_each_other, wait_one_day};
 use unitn_market_2022::event::event::Event;
@@ -18,6 +19,92 @@ fn should_return_markets_name() {
     let name = market.borrow().get_name();
     // then
     assert_eq!("SOL", name)
+}
+
+#[test]
+/// When a market gets created using the `new_with_quantities` constructor,
+/// the quantities of each good in the market should correspond to the ones
+/// passed as parameters.
+fn should_initialize_with_right_quantity() {
+    //Create market with predefined quantities
+    let eur_qty = 12.0;
+    let usd_qty = 42.0;
+    let yen_qty = 137.0;
+    let yuan_qty = 1984.0;
+    let market = SOLMarket::new_with_quantities(eur_qty, yen_qty, usd_qty, yuan_qty);
+    let goods = market.borrow().get_goods();
+    {
+        //Check USD quantity
+        let usd_vec: Vec<&GoodLabel> = goods
+            .iter()
+            .filter(|g| g.good_kind == GoodKind::USD)
+            .collect();
+        assert_eq!(
+            usd_vec.len(),
+            1,
+            "There should be only one GoodLabel for usd"
+        );
+        let usd_good_label = usd_vec.get(0).unwrap();
+        assert_eq!(
+            usd_good_label.quantity,
+            usd_qty,
+            "The usd quantity in the market should be equal to the one supplied in the constructor"
+        );
+    }
+    {
+        //Check EUR quantity
+        let eur_vec: Vec<&GoodLabel> = goods
+            .iter()
+            .filter(|g| g.good_kind == GoodKind::EUR)
+            .collect();
+        assert_eq!(
+            eur_vec.len(),
+            1,
+            "There should be only one GoodLabel for eur"
+        );
+        let eur_good_label = eur_vec.get(0).unwrap();
+        assert_eq!(
+            eur_good_label.quantity,
+            eur_qty,
+            "The eur quantity in the market should be equal to the one supplied in the constructor"
+        );
+    }
+    {
+        //Check YEN quantity
+        let yen_vec: Vec<&GoodLabel> = goods
+            .iter()
+            .filter(|g| g.good_kind == GoodKind::YEN)
+            .collect();
+        assert_eq!(
+            yen_vec.len(),
+            1,
+            "There should be only one GoodLabel for yen"
+        );
+        let yen_good_label = yen_vec.get(0).unwrap();
+        assert_eq!(
+            yen_good_label.quantity,
+            yen_qty,
+            "The yen quantity in the market should be equal to the one supplied in the constructor"
+        );
+    }
+    {
+        //Check YUAN quantity
+        let yuan_vec: Vec<&GoodLabel> = goods
+            .iter()
+            .filter(|g| g.good_kind == GoodKind::YUAN)
+            .collect();
+        assert_eq!(
+            yuan_vec.len(),
+            1,
+            "There should be only one GoodLabel for yuan"
+        );
+        let yuan_good_label = yuan_vec.get(0).unwrap();
+        assert_eq!(
+            yuan_good_label.quantity, 
+            yuan_qty,
+            "The yuan quantity in the market should be equal to the one supplied in the constructor"
+        );
+    }
 }
 
 #[cfg(test)]
