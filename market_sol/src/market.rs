@@ -66,6 +66,7 @@ impl Notifiable for SOLMarket {
                 self.good_labels.iter_mut().for_each(|gl| {
                     if gl.good_kind.eq(&event.good_kind) {
                         gl.exchange_rate_buy *= 0.95;
+                        // println!("ciaoo {}", gl.exchange_rate_buy);
                     } });
             },
 
@@ -328,32 +329,27 @@ impl Market for SOLMarket {
         // Check positive bid
         if offer.is_sign_negative() { return Err(LockSellError::NonPositiveOffer { negative_offer: offer }); }
 
-        // Check quantity available
-        let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_sell)).unwrap();
-        let quantity_available = good_label.quantity;
-        if quantity_available < quantity_to_sell {
+        // Check money available
+        let money_available = self.good_labels.iter_mut().find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND)).unwrap().quantity;
+        if money_available < offer {
             return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
-                available_good_quantity: quantity_available,
+                available_good_quantity: money_available,
             });
         }
 
+        let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_sell)).unwrap();
         // todo: Maximum locks reached (see Market Deadlock section)
 
-        // Check bid
-
-        //
-        //SHOULDN'T BE MIN-BID HERE!!!
-            // THIS IS JUST A PLACEHOLDER!
-        // 
-        let min_bid = quantity_to_sell / good_label.exchange_rate_buy;
-        if offer > min_bid {
+        // Check offer not too high
+        let max_offer = quantity_to_sell / good_label.exchange_rate_buy;
+        if offer > max_offer {
             return Err(LockSellError::OfferTooHigh {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
                 high_offer: offer,
-                highest_acceptable_offer: min_bid,
+                highest_acceptable_offer: max_offer,
             });
         }
 
@@ -365,13 +361,11 @@ impl Market for SOLMarket {
         // Update good quantity available, todo: Update good buy and sell price (in on_event method)
         // also: updates should be done only after a successful buy/sell, not locks
 
-
-        // ALSO THIS IS A PLACEHOLDER
         good_label.quantity += quantity_to_sell;
 
         // Update meta
         let good_meta = GoodLockMeta::new(kind_to_sell.clone(), offer, quantity_to_sell, self.meta.current_day);
-        self.meta.locked_buys.insert(token.clone(), good_meta);
+        self.meta.locked_sells.insert(token.clone(), good_meta);
 
         // Create and spread event
         let e = Event {
@@ -432,6 +426,5 @@ impl Market for SOLMarket {
         self.notify_everyone(e);
 
         Ok(give_money)
-
     }
 }
