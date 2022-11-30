@@ -460,8 +460,8 @@ fn test_price_change_after_sell(){
         let starting_price = market.borrow().get_sell_price(kind.clone(), 1.0).ok().unwrap();
 
         //sell the good
-        let bid = market.borrow().get_sell_price(kind.clone(), preset_quantity).ok().unwrap();
-        let token = market.borrow_mut().lock_sell(kind.clone(),preset_quantity, bid, String::from("test")).unwrap();
+        let offer = market.borrow().get_sell_price(kind.clone(), preset_quantity).ok().unwrap();
+        let token = market.borrow_mut().lock_sell(kind.clone(),preset_quantity, offer, String::from("test")).unwrap();
         let mut good_to_sell = Good::new(kind.clone(), preset_quantity);
         market.borrow_mut().sell(token, &mut good_to_sell);
 

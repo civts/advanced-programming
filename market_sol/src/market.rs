@@ -55,13 +55,20 @@ impl Notifiable for SOLMarket {
             EventKind::Bought => {
                     //Update price after successful buy, slightly decrease the price as qnty increases
                     self.good_labels.iter_mut().for_each(|gl| {
-                    if gl.good_kind.eq(&event.good_kind) {
-                        gl.exchange_rate_sell *= 1.05;
-                    } });
+                        if gl.good_kind.eq(&event.good_kind) {
+                            gl.exchange_rate_sell *= 1.05;
+                        } });
             },
 
             EventKind::Sold => {
+                //Update price after successful sell, slightly increase the price as qnty increases
+                // i'm just chaniging the price :/
+                self.good_labels.iter_mut().for_each(|gl| {
+                    if gl.good_kind.eq(&event.good_kind) {
+                        gl.exchange_rate_buy *= 0.95;
+                    } });
             },
+
             EventKind::LockedBuy => {
             },
             EventKind::LockedSell => {},
@@ -360,7 +367,7 @@ impl Market for SOLMarket {
 
 
         // ALSO THIS IS A PLACEHOLDER
-        good_label.quantity -= quantity_to_sell;
+        good_label.quantity += quantity_to_sell;
 
         // Update meta
         let good_meta = GoodLockMeta::new(kind_to_sell.clone(), offer, quantity_to_sell, self.meta.current_day);
@@ -381,8 +388,50 @@ impl Market for SOLMarket {
     }
 
     fn sell(&mut self, token: String, good: &mut Good) -> Result<Good, SellError> {
-        todo!()
+        //if buy returns a good, then sell returns EUR!
 
-        //sell returns a ->
+        // Check token existence
+        let good_meta = match self.meta.locked_sells.get(&*token) {
+            None => { return Err(SellError::UnrecognizedToken { unrecognized_token: token }); }
+            Some(g) => { g }
+        };
+
+        // Check token validity
+        let days_since = self.meta.current_day - good_meta.created_on;
+        if days_since > TOKEN_DURATION { return Err(SellError::ExpiredToken { expired_token: token }); }
+
+        // Check good is not default
+        let kind = good.get_kind();
+        if kind.eq(&DEFAULT_GOOD_KIND) { return Err(SellError::WrongGoodKind { wrong_good_kind: kind.clone(), pre_agreed_kind: good_meta.kind.clone() }); }
+
+        // Check cash qty
+        let contained_quantity = good.get_qty();
+        let pre_agreed_quantity = good_meta.quantity;
+        if contained_quantity < pre_agreed_quantity { return Err(SellError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
+
+
+        // Get your good now
+        let selling_good = good.split(pre_agreed_quantity).unwrap();
+        let my_good = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&selling_good.get_kind())).unwrap();
+        my_good.quantity += selling_good.get_qty();
+
+
+        let give_money = Good::new(DEFAULT_GOOD_KIND, good_meta.price);
+
+        // Create and spread event
+        let e = Event {
+            kind: EventKind::Sold,
+            good_kind: good_meta.kind.clone(),
+            quantity: good_meta.quantity,
+            price: good_meta.price,
+        };
+
+        // Reset lock
+        self.meta.locked_buys.remove(&*token);
+
+        self.notify_everyone(e);
+
+        Ok(give_money)
+
     }
 }
