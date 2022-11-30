@@ -310,6 +310,46 @@ mod test_buy {
 }
 
 
+#[cfg(test)]
+mod test_sell{
+    use unitn_market_2022::{market::{MarketGetterError, Market}, good::good_kind::GoodKind};
+
+    use crate::market::SOLMarket;
+
+    #[test]
+    fn test_get_sell_price() { // identical to test_get_buy_price but with some changes
+        let market_start_quantity = 1000.0;
+        let preset_quantity = 15.0;
+        
+        let mrkt_bind = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
+        let market = mrkt_bind.borrow();
+
+        // Fail on negative quantity
+        let neg_qty = -1f32;
+        let result = market.get_buy_price(GoodKind::USD, neg_qty).unwrap_err();
+        let expected = MarketGetterError::NonPositiveQuantityAsked;
+        assert_eq!(result, expected);
+
+        // Fail on insufficient Quantity
+        let extra_qty = market_start_quantity + 1f32;
+        let result = market.get_buy_price(GoodKind::USD, extra_qty).unwrap_err();
+        let expected = MarketGetterError::InsufficientGoodQuantityAvailable {
+            requested_good_kind: GoodKind::USD,
+            requested_good_quantity: extra_qty,
+            available_good_quantity: market_start_quantity,
+        };
+        assert_eq!(result, expected);
+
+        // Success with total amount
+        let kinds = vec![GoodKind::USD,GoodKind::YEN,GoodKind::YUAN];
+        for kind in kinds{
+
+            let result = market.get_buy_price(kind.clone(), market_start_quantity).unwrap();
+            let expected = market_start_quantity / kind.get_default_exchange_rate(); // market sell price = default exchange rate when init
+            assert_eq!(result, expected);
+        }
+    }
+}
 #[test]
 fn price_unsold_decrease_over_time(){
 

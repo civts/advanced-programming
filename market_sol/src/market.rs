@@ -181,7 +181,20 @@ impl Market for SOLMarket {
     }
 
     fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
-        todo!()
+        if quantity.is_sign_negative() { return Err(MarketGetterError::NonPositiveQuantityAsked); }
+
+        let good_label = self.good_labels.iter().find(|l| l.good_kind.eq(&kind)).unwrap();
+
+        let qty_available = good_label.quantity;
+        if qty_available < quantity {
+            return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
+                requested_good_kind: kind,
+                requested_good_quantity: quantity,
+                available_good_quantity: qty_available,
+            });
+        }
+
+        Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk 
     }
 
     fn get_goods(&self) -> Vec<GoodLabel> {
