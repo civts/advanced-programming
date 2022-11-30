@@ -84,18 +84,19 @@ impl Market for SOLMarket {
         remaining_market_cap -= yen_mkt_cap;
         let yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
         remaining_market_cap -= yuan_mkt_cap;
-        let usd_mkt_cap = remaining_market_cap;
+        let mut usd_mkt_cap = remaining_market_cap;
+
+        //Fix floating point operation errors
+        let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
+        let exceeding_capital = real_market_cap - STARTING_CAPITAL;
+        usd_mkt_cap -= exceeding_capital;
+
         //Calculate the quantity of each good
         let yen_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YEN) * yen_mkt_cap;
         let yuan_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YUAN) * yuan_mkt_cap;
         let usd_quantity = GoodKind::get_default_exchange_rate(&GoodKind::USD) * usd_mkt_cap;
         //Get the market
-        return SOLMarket::new_with_quantities(
-            eur_quantity,
-            yen_quantity,
-            yuan_quantity,
-            usd_quantity,
-        );
+        return Self::new_with_quantities(eur_quantity, yen_quantity, usd_quantity, yuan_quantity);
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
