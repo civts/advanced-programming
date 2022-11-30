@@ -311,171 +311,6 @@ fn price_changes_waiting(){
 }
 
 
-// #[test]
-// fn price_change_after_buy(){
-//     let market_start_quantity = 1000.0;
-//     let mrkt_bind = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
-//     let trade_qty = 10.0;
-
-
-//     let mut USD: f32; let mut YUAN: f32; let mut YEN:f32;
-//     {  
-//         let market = mrkt_bind.borrow();
-//         USD = market.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-//         YUAN = market.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-//         YEN = market.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();        
-//     }
-//     let usd_bid = mrkt_bind.borrow().get_goods().iter().find_map(
-//         |gl| { if gl.good_kind.eq(&GoodKind::USD) { Some(trade_qty/ gl.exchange_rate_sell) } else { None } }).unwrap();
-//     let yen_bid = mrkt_bind.borrow().get_goods().iter().find_map(
-//         |gl| { if gl.good_kind.eq(&GoodKind::YEN) { Some(trade_qty / gl.exchange_rate_sell) } else { None } }).unwrap();
-//     let yuan_bid = mrkt_bind.borrow().get_goods().iter().find_map(
-//         |gl| { if gl.good_kind.eq(&GoodKind::YUAN) { Some(trade_qty / gl.exchange_rate_sell) } else { None } }).unwrap();
-    
-
-//     // buy USD, assess price change
-//     {
-//         let mut market = mrkt_bind.borrow_mut();
-//         let token = market.lock_buy(GoodKind::USD, 10.0, usd_bid, TRADER_NAME.to_string()).unwrap();
-//         let mut cash = Good::new(DEFAULT_GOOD_KIND, 10.0 / usd_bid);
-//         market.buy(token, &mut cash).unwrap();
-
-//         assert!(market.get_buy_price(GoodKind::USD, 1.0).ok().unwrap() < USD);
-//         // assert!(market.get_buy_price(GoodKind::USD, 1.0).ok().unwrap() != USD);
-//     }
-//     // buy YUAN, assess price change
-//     {
-//         let mut market = mrkt_bind.borrow_mut();
-//         let token = market.lock_buy(GoodKind::YUAN, 10.0, yuan_bid, TRADER_NAME.to_string()).unwrap();
-//         let mut cash = Good::new(DEFAULT_GOOD_KIND, 10.0 / yuan_bid);
-//         market.buy(token, &mut cash).unwrap();
-
-//         assert!(market.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap() < YUAN);
-//     }
-//     // buy YEN, assess price change
-//     {
-//         let mut market = mrkt_bind.borrow_mut();
-//         let token = market.lock_buy(GoodKind::YEN, 10.0, yen_bid, TRADER_NAME.to_string()).unwrap();
-//         let mut cash = Good::new(DEFAULT_GOOD_KIND, 10.0 / yen_bid);
-//         market.buy(token, &mut cash).unwrap();
-
-//         assert!(market.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN);
-//     }
-
-//     //do it again
-//     {
-//         let mut market = mrkt_bind.borrow_mut();
-//         let token = market.lock_buy(GoodKind::YEN, 10.0, yen_bid, TRADER_NAME.to_string()).unwrap();
-//         let mut cash = Good::new(DEFAULT_GOOD_KIND, 10.0 / yen_bid);
-//         market.buy(token, &mut cash).unwrap();
-
-//         assert!(market.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN);
-//     }
-//     {
-//         let mut market = mrkt_bind.borrow_mut();
-//         let token = market.lock_buy(GoodKind::YEN, 10.0, yen_bid, TRADER_NAME.to_string()).unwrap();
-//         let mut cash = Good::new(DEFAULT_GOOD_KIND, 10.0 / yen_bid);
-//         market.buy(token, &mut cash).unwrap();
-
-//         assert!(market.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN);
-//     }
-
-// }
-
-#[test]
-fn price_change_over_time(){
-    let market_start_quantity = 1000.0;
-    let a = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
-    let b = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
-    subscribe_each_other!(a, b);
-
-    let mut USD_a: f32; let mut YUAN_a: f32; let mut YEN_a:f32;
-    let mut USD_b: f32; let mut YUAN_b: f32; let mut YEN_b:f32;
-    {  
-        let market_a = a.borrow();
-        USD_a = market_a.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-        YUAN_a = market_a.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-        YEN_a = market_a.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();
-        let market_b = b.borrow();
-        USD_b = market_b.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-        YUAN_b = market_b.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-        YEN_b = market_b.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();
-    }
-
-    wait_one_day!(a, b);
-    {
-        let market_a = a.borrow();
-        assert!(market_a.get_buy_price(GoodKind::USD, 1.0).ok().unwrap() < USD_a);
-        assert!(market_a.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap() < YUAN_a);
-        assert!(market_a.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN_a);
-        USD_a = market_a.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-        YUAN_a = market_a.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-        YEN_a = market_a.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();
-    }
-    {
-        let market_b = b.borrow();
-        assert!(market_b.get_buy_price(GoodKind::USD, 1.0).ok().unwrap() < USD_b);
-        assert!(market_b.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap() < YUAN_b);
-        assert!(market_b.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN_b);
-        USD_b = market_b.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-        YUAN_b = market_b.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-        YEN_b = market_b.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();
-    }
-
-    
-    // // market_a buys USD, price of USD should decrease
-    // {   
-    //     let preset_quantity = 15.0;
-    //     let market_start_quantity = 1000.0;
-    //     let kinds = vec![GoodKind::USD,GoodKind::YEN,GoodKind::YUAN];
-    //     for kind in kinds{
-            
-    //         let starting_price = market.borrow().get_buy_price(kind.clone(), 1.0).ok().unwrap();
-
-    //         let bid = market.borrow().get_buy_price(kind.clone(), preset_quantity).ok().unwrap();
-    //         let token = market.borrow_mut().lock_buy(kind.clone(),preset_quantity, bid, String::from("test")).unwrap();
-    //         let mut cash = Good::new(DEFAULT_GOOD_KIND, bid);
-    //         market.borrow_mut().buy(token, &mut cash);
-
-    //         let price_after_trade = market.borrow().get_buy_price(kind.clone(), 1.0).ok().unwrap();
-
-    //         assert_ne!(starting_price, price_after_trade);
-    //     }
-    // }
-
-    wait_one_day!(a, b);
-    {
-        let market_a = a.borrow();
-        assert!(market_a.get_buy_price(GoodKind::USD, 1.0).ok().unwrap() < USD_a);
-        assert!(market_a.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap() < YUAN_a);
-        assert!(market_a.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN_a);
-        USD_a = market_a.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-        YUAN_a = market_a.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-        YEN_a = market_a.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();
-    }
-    {
-        let market_b = b.borrow();
-        assert!(market_b.get_buy_price(GoodKind::USD, 1.0).ok().unwrap() < USD_b);
-        assert!(market_b.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap() < YUAN_b);
-        assert!(market_b.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN_b);
-        USD_b = market_b.get_buy_price(GoodKind::USD, 1.0).ok().unwrap();
-        YUAN_b = market_b.get_buy_price(GoodKind::YUAN, 1.0).ok().unwrap();
-        YEN_b = market_b.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap();
-    }
-
-    // market_b buys YEN, price of YEN should decrease
-    {   
-        let yen_bid = b.borrow().get_goods().iter().find_map(
-            |gl| { if gl.good_kind.eq(&GoodKind::YEN) { Some(gl.exchange_rate_sell) } else { None } }).unwrap();
-        let mut market = b.borrow_mut();
-        let token = market.lock_buy(GoodKind::YEN, 10.0, yen_bid, TRADER_NAME.to_string()).unwrap();
-        let mut cash = Good::new(DEFAULT_GOOD_KIND, 10.0 / yen_bid);
-        market.buy(token, &mut cash).unwrap();
-
-        assert!(market.get_buy_price(GoodKind::YEN, 1.0).ok().unwrap() < YEN_b);
-    }
-}
-
 #[test]
 fn test_price_change_after_buy(){
     // use crate::good::good_kind::{*};
@@ -519,24 +354,35 @@ fn test_price_change_after_buy(){
     }
 }
 
+// test if the selling price of a good changes after selling that good
+// SOL group
+#[test]
+fn test_price_change_after_sell(){
+    // use crate::good::good_kind::{*};
+    // use crate::good::{good::Good, consts::DEFAULT_GOOD_KIND};
 
-fn price_changes_waiting_aa(){
+    let preset_quantity = 15.0;
     let market_start_quantity = 1000.0;
-    let mrkt_bind = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
 
-    let kinds = vec![GoodKind::USD,GoodKind::YEN,GoodKind::YUAN,GoodKind::EUR];
+    //execute the test for each goodkind
+    //EUR has been excluded
+    let kinds = vec![GoodKind::USD,GoodKind::YEN,GoodKind::YUAN];
     for kind in kinds{
+
+        //init again for each good trade
+        let mut market = SOLMarket::new_with_quantities(market_start_quantity,market_start_quantity,market_start_quantity, market_start_quantity);
         
-        let starting_price = mrkt_bind.borrow().get_buy_price(kind.clone(), 1.0).ok().unwrap();
+        let starting_price = market.borrow().get_sell_price(kind.clone(), 1.0).ok().unwrap();
 
-        wait_one_day!(mrkt_bind);
+        //sell the good
+        let bid = market.borrow().get_sell_price(kind.clone(), preset_quantity).ok().unwrap();
+        let token = market.borrow_mut().lock_sell(kind.clone(),preset_quantity, bid, String::from("test")).unwrap();
+        let mut good_to_sell = Good::new(kind.clone(), preset_quantity);
+        market.borrow_mut().sell(token, &mut good_to_sell);
 
-        let price_after_waiting= mrkt_bind.borrow().get_buy_price(kind.clone(), 1.0).ok().unwrap();
+        //get the price to compare
+        let price_after_trade = market.borrow().get_sell_price(kind.clone(), 1.0).ok().unwrap();
 
-        if kind.eq(&GoodKind::EUR) {
-            assert_eq!(starting_price, price_after_waiting);
-        } else {
-            assert_ne!(starting_price, price_after_waiting);
-        }
+        assert_ne!(starting_price, price_after_trade);
     }
 }
