@@ -229,7 +229,7 @@ impl Market for SOLMarket {
         good_label.quantity -= quantity_to_buy;
 
         // Update meta
-        let good_meta = GoodLockMeta::new(kind_to_buy.clone(), quantity_to_buy / bid, quantity_to_buy, self.meta.current_day);
+        let good_meta = GoodLockMeta::new(kind_to_buy.clone(), bid, quantity_to_buy, self.meta.current_day);
         self.meta.locked_buys.insert(token.clone(), good_meta);
 
         // Create and spread event
@@ -263,22 +263,13 @@ impl Market for SOLMarket {
 
         // Check cash qty
         let contained_quantity = cash.get_qty();
-        let pre_agreed_quantity = good_meta.quantity / good_meta.price;
+        let pre_agreed_quantity = good_meta.price;
         if contained_quantity < pre_agreed_quantity { return Err(BuyError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
 
         // Cash in, todo: Update good buy and sell price (in on_event method)
         let eur = cash.split(pre_agreed_quantity).unwrap();
         let default = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&eur.get_kind())).unwrap();
         default.quantity += eur.get_qty();
-
-        // Create and spread event
-        let e = Event {
-            kind: EventKind::Bought,
-            good_kind: good_meta.kind.clone(),
-            quantity: good_meta.quantity,
-            price: good_meta.price,
-        };
-        // self.notify_everyone(e);
 
         let release_good = Good::new(good_meta.kind.clone(), good_meta.quantity);
 
