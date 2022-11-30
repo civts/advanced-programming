@@ -306,15 +306,13 @@ mod test_buy {
         let expected = Good::new(s.buy_kind, s.init_qty);
         assert_eq!(result, expected)
     }
-
 }
 
 
 #[cfg(test)]
 mod test_sell{
-    use unitn_market_2022::{market::{MarketGetterError, Market}, good::good_kind::GoodKind};
-
-    use crate::market::SOLMarket;
+    use unitn_market_2022::{market::{MarketGetterError, Market, LockSellError}, good::{good_kind::GoodKind, consts::DEFAULT_GOOD_KIND}};
+    use crate::{market::SOLMarket, market_test::TRADER_NAME};
 
     #[test]
     fn test_get_sell_price() { // identical to test_get_buy_price but with some changes
@@ -349,7 +347,66 @@ mod test_sell{
             assert_eq!(result, expected);
         }
     }
+    
+    #[test]
+    fn test_lock_sell() {
+        let market_start_quantity = 1000.0;
+        let preset_quantity = 15.0;
+        
+        let mrkt_bind = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
+        let mut market = mrkt_bind.borrow_mut();
+
+        let kind_for_this_test = GoodKind::USD;
+
+        // Fail on negative quantity
+        let neg_qty = -1f32;
+        let result = market.lock_sell(kind_for_this_test.clone(), neg_qty, 1.0, TRADER_NAME.to_string()).unwrap_err();
+        let expected = LockSellError::NonPositiveQuantityToSell { negative_quantity_to_sell: neg_qty };
+        assert_eq!(result, expected);
+
+        // Fail on negative bid (while insufficient quantity)
+        let neg_offer = -10.0;
+        let result = market.lock_sell(kind_for_this_test.clone(), preset_quantity, neg_offer, TRADER_NAME.to_string()).unwrap_err();
+        let expected = LockSellError::NonPositiveOffer { negative_offer: neg_offer };
+        assert_eq!(result, expected);
+
+        // Fail on insufficient default good quantity = not enough money!
+        let offer_too_high = market_start_quantity + 1.0;
+        let result = market.lock_sell(kind_for_this_test.clone(), preset_quantity, offer_too_high, TRADER_NAME.to_string()).unwrap_err();
+        let expected = LockSellError::InsufficientDefaultGoodQuantityAvailable {
+            //change here in case changes in market.rs error are reverted
+            offered_good_kind: DEFAULT_GOOD_KIND,
+            offered_good_quantity: offer_too_high,
+            available_good_quantity: market_start_quantity,
+        };
+        assert_eq!(result, expected);
+
+        // Fail on offer too high
+        let mut good_offer = market.get_sell_price(kind_for_this_test.clone(), preset_quantity).ok().unwrap();
+        let offer_too_high =  good_offer + 1.0;
+        let result = market.lock_sell(kind_for_this_test.clone(), preset_quantity, offer_too_high, TRADER_NAME.to_string()).unwrap_err();
+        let expected = LockSellError::OfferTooHigh {
+            offered_good_kind: kind_for_this_test.clone(),
+            offered_good_quantity: preset_quantity,
+            high_offer: offer_too_high,
+            highest_acceptable_offer: good_offer,
+        };
+        assert_eq!(result, expected);
+
+        // // Success entire quantity
+        let full_quantity = market_start_quantity;
+        let full_price = market.get_sell_price(kind_for_this_test.clone(), full_quantity).ok().unwrap();
+        market.lock_buy(kind_for_this_test.clone(), full_quantity, full_price, TRADER_NAME.to_string()).unwrap();
+    }
+
+    #[test]
+    fn test_sell(){
+        assert_eq!(1,1)
+    }
+
 }
+
+
 #[test]
 fn price_unsold_decrease_over_time(){
 

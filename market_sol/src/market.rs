@@ -332,9 +332,15 @@ impl Market for SOLMarket {
         // Check money available
         let money_available = self.good_labels.iter_mut().find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND)).unwrap().quantity;
         if money_available < offer {
+            // return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
+            //     offered_good_kind: kind_to_sell,
+            //     offered_good_quantity: quantity_to_sell,
+            //     available_good_quantity: money_available,
+            // });
+            // changed, maybe revert changes later on
             return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
-                offered_good_kind: kind_to_sell,
-                offered_good_quantity: quantity_to_sell,
+                offered_good_kind: DEFAULT_GOOD_KIND,
+                offered_good_quantity: offer,
                 available_good_quantity: money_available,
             });
         }
