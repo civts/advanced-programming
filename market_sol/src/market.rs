@@ -61,7 +61,7 @@ impl Notifiable for SOLMarket {
                 // as time goes on with goods left unsold you tend to decrease the price
                 self.good_labels.iter_mut().for_each(|gl| {
                         if gl.good_kind.ne(&GoodKind::EUR){
-                            gl.exchange_rate_buy *= 1.05;
+                            gl.exchange_rate_sell *= 1.05;
                         }
                     });
             },
@@ -297,7 +297,7 @@ impl Market for SOLMarket {
         //Update price after successful buy, slightly decrease the price as qnty increases
         self.good_labels.iter_mut().for_each(|gl| {
             if gl.good_kind.eq(&release_good.get_kind()) {
-                gl.exchange_rate_buy *= 1.05;
+                gl.exchange_rate_sell *= 1.05;
             } });
 
         Ok(release_good)
