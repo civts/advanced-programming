@@ -38,6 +38,8 @@ impl SOLMarket {
         for subscriber in &mut self.subscribers {
             subscriber.on_event(e.clone())
         }
+        // UNCOMMENT THIS LINE TO NOTIFY YOURSELF TOO, AND NOT ONLY YOUR NEIGHBOURS
+        self.on_event(e.clone());
     }
 }
 
@@ -49,8 +51,15 @@ impl Notifiable for SOLMarket {
 
     fn on_event(&mut self, event: Event) {
         match event.kind { 
+
             EventKind::Bought => {
+                    //Update price after successful buy, slightly decrease the price as qnty increases
+                    self.good_labels.iter_mut().for_each(|gl| {
+                    if gl.good_kind.eq(&event.good_kind) {
+                        gl.exchange_rate_sell *= 1.05;
+                    } });
             },
+
             EventKind::Sold => {
             },
             EventKind::LockedBuy => {
@@ -239,6 +248,9 @@ impl Market for SOLMarket {
         let token = hasher.finish().to_string();
 
         // Update good quantity available, todo: Update good buy and sell price (in on_event method)
+        //problem with on_event method: the subscribed markets receive the notif, but you don't send the notif to yourself (at the moment) - but you can add that with one line
+        // also: updates should be done only after a successful buy/sell, not locks
+
         good_label.quantity -= quantity_to_buy;
 
         // Update meta
@@ -299,20 +311,78 @@ impl Market for SOLMarket {
 
         self.notify_everyone(e);
 
-        //Update price after successful buy, slightly decrease the price as qnty increases
-        self.good_labels.iter_mut().for_each(|gl| {
-            if gl.good_kind.eq(&release_good.get_kind()) {
-                gl.exchange_rate_sell *= 1.05;
-            } });
-
         Ok(release_good)
     }
 
     fn lock_sell(&mut self, kind_to_sell: GoodKind, quantity_to_sell: f32, offer: f32, trader_name: String) -> Result<String, LockSellError> {
-        todo!()
+        // Check positive quantity
+        if quantity_to_sell.is_sign_negative() { return Err(LockSellError::NonPositiveQuantityToSell { negative_quantity_to_sell: (quantity_to_sell) }); }
+
+        // Check positive bid
+        if offer.is_sign_negative() { return Err(LockSellError::NonPositiveOffer { negative_offer: offer }); }
+
+        // Check quantity available
+        let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_sell)).unwrap();
+        let quantity_available = good_label.quantity;
+        if quantity_available < quantity_to_sell {
+            return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
+                offered_good_kind: kind_to_sell,
+                offered_good_quantity: quantity_to_sell,
+                available_good_quantity: quantity_available,
+            });
+        }
+
+        // todo: Maximum locks reached (see Market Deadlock section)
+
+        // Check bid
+
+        //
+        //SHOULDN'T BE MIN-BID HERE!!!
+            // THIS IS JUST A PLACEHOLDER!
+        // 
+        let min_bid = quantity_to_sell / good_label.exchange_rate_buy;
+        if offer > min_bid {
+            return Err(LockSellError::OfferTooHigh {
+                offered_good_kind: kind_to_sell,
+                offered_good_quantity: quantity_to_sell,
+                high_offer: offer,
+                highest_acceptable_offer: min_bid,
+            });
+        }
+
+        let mut hasher = DefaultHasher::new();
+        let now = chrono::Local::now();
+        (kind_to_sell.clone(), quantity_to_sell.to_string(), offer.to_string(), now, trader_name).hash(&mut hasher);
+        let token = hasher.finish().to_string();
+
+        // Update good quantity available, todo: Update good buy and sell price (in on_event method)
+        // also: updates should be done only after a successful buy/sell, not locks
+
+
+        // ALSO THIS IS A PLACEHOLDER
+        good_label.quantity -= quantity_to_sell;
+
+        // Update meta
+        let good_meta = GoodLockMeta::new(kind_to_sell.clone(), offer, quantity_to_sell, self.meta.current_day);
+        self.meta.locked_buys.insert(token.clone(), good_meta);
+
+        // Create and spread event
+        let e = Event {
+            kind: EventKind::LockedSell,
+            good_kind: kind_to_sell,
+            quantity: quantity_to_sell,
+            price: offer,
+        };
+
+        self.notify_everyone(e);
+
+        Ok(token)
+        
     }
 
     fn sell(&mut self, token: String, good: &mut Good) -> Result<Good, SellError> {
         todo!()
+
+        //sell returns a ->
     }
 }
