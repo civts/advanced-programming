@@ -7,7 +7,7 @@ use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use std::rc::Rc;
 use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
 use unitn_market_2022::market::good_label::GoodLabel;
-use unitn_market_2022::market::{LockBuyError, Market};
+use unitn_market_2022::market::{LockBuyError, Market, BuyError, SellError};
 use unitn_market_2022::{subscribe_each_other, wait_one_day};
 use unitn_market_2022::event::event::Event;
 
@@ -420,7 +420,6 @@ mod test_sell{
         assert_eq!(result, expected);
 
         // Fail if passed cash
-        // let insufficient_qty = s.init_bid - 0.1f32;
         let mut cash = Good::new(invalid_kind.clone(), preset_quantity );
         let result = market.sell(token.clone(), &mut cash).unwrap_err();
         let expected = SellError::WrongGoodKind { wrong_good_kind: invalid_kind.clone(), pre_agreed_kind: kind_for_this_test.clone() };
@@ -567,4 +566,41 @@ fn test_price_change_after_sell(){
 
         assert_ne!(starting_price, price_after_trade);
     }
+}
+
+#[test]
+fn test_token_duration_and_passing_days(){
+    let preset_quantity = 15.0;
+    let market_start_quantity = 1000.0;
+
+    let mut markt_bind = SOLMarket::new_with_quantities(market_start_quantity,market_start_quantity,market_start_quantity, market_start_quantity);
+    // let mut market = markt_bind.borrow_mut();
+
+    let kind_for_this_test = GoodKind::USD;
+    let preset_quantity = 15.0;
+    let right_bid = markt_bind.borrow_mut().get_buy_price(kind_for_this_test.clone(), preset_quantity).ok().unwrap();
+    let right_offer = markt_bind.borrow_mut().get_sell_price(kind_for_this_test.clone(), preset_quantity).ok().unwrap();
+
+
+    let expiring_buy_token = markt_bind.borrow_mut().lock_buy(kind_for_this_test.clone(), preset_quantity, right_bid, TRADER_NAME.to_string()).ok().unwrap();
+    let expiring_sell_token = markt_bind.borrow_mut().lock_sell(kind_for_this_test.clone(), preset_quantity, right_offer, TRADER_NAME.to_string()).ok().unwrap();
+
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+    wait_one_day!(markt_bind);
+
+    let expected_for_buy = BuyError::ExpiredToken { expired_token: expiring_buy_token.clone() };
+    let expected_for_sell = SellError::ExpiredToken { expired_token: expiring_sell_token.clone() };
+    
+    let res_buy = markt_bind.borrow_mut().buy(expiring_buy_token, & mut Good::new(DEFAULT_GOOD_KIND, preset_quantity)).unwrap_err();
+    let res_sell = markt_bind.borrow_mut().sell(expiring_sell_token, &mut Good::new(kind_for_this_test.clone(), preset_quantity)).unwrap_err();
+    
+    assert_eq!(res_buy, expected_for_buy);
+    assert_eq!(res_sell, expected_for_sell);
 }
