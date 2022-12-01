@@ -404,17 +404,15 @@ impl Market for SOLMarket {
         let kind = good.get_kind();
         if kind.eq(&DEFAULT_GOOD_KIND) { return Err(SellError::WrongGoodKind { wrong_good_kind: kind.clone(), pre_agreed_kind: good_meta.kind.clone() }); }
 
-        // Check cash qty
+        // Check quantity of the good passed in the args, has to match the pre_agreed_quantity during lock
         let contained_quantity = good.get_qty();
         let pre_agreed_quantity = good_meta.quantity;
         if contained_quantity < pre_agreed_quantity { return Err(SellError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
-
 
         // Get your good now
         let selling_good = good.split(pre_agreed_quantity).unwrap();
         let my_good = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&selling_good.get_kind())).unwrap();
         my_good.quantity += selling_good.get_qty();
-
 
         let give_money = Good::new(DEFAULT_GOOD_KIND, good_meta.price);
 
@@ -427,7 +425,7 @@ impl Market for SOLMarket {
         };
 
         // Reset lock
-        self.meta.locked_buys.remove(&*token);
+        self.meta.locked_sells.remove(&*token);
 
         self.notify_everyone(e);
 

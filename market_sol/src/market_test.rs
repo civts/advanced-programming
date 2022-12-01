@@ -311,7 +311,7 @@ mod test_buy {
 
 #[cfg(test)]
 mod test_sell{
-    use unitn_market_2022::{market::{MarketGetterError, Market, LockSellError}, good::{good_kind::GoodKind, consts::DEFAULT_GOOD_KIND}};
+    use unitn_market_2022::{market::{MarketGetterError, Market, LockSellError, SellError}, good::{good_kind::GoodKind, consts::DEFAULT_GOOD_KIND, good::Good, self}};
     use crate::{market::SOLMarket, market_test::TRADER_NAME};
 
     #[test]
@@ -401,7 +401,47 @@ mod test_sell{
 
     #[test]
     fn test_sell(){
-        assert_eq!(1,1)
+        let market_start_quantity = 1000.0;
+        
+        let mrkt_bind = SOLMarket::new_with_quantities(market_start_quantity, market_start_quantity, market_start_quantity, market_start_quantity);
+        let mut market = mrkt_bind.borrow_mut();
+
+        let kind_for_this_test = GoodKind::USD;
+        let preset_quantity = 15.0;
+        let right_offer = market.get_sell_price(kind_for_this_test.clone(), preset_quantity).ok().unwrap();
+
+        let token = market.lock_sell(kind_for_this_test.clone(), preset_quantity, right_offer, TRADER_NAME.to_string()).unwrap();
+
+        // Fail on wrong token (while cash not default to test priority)
+        let invalid_token = "".to_string();
+        let invalid_kind = GoodKind::EUR;
+        let result = market.sell(invalid_token.clone(), &mut Good::new(invalid_kind.clone(), right_offer)).unwrap_err();
+        let expected = SellError::UnrecognizedToken { unrecognized_token: invalid_token };
+        assert_eq!(result, expected);
+
+        // Fail if passed cash
+        // let insufficient_qty = s.init_bid - 0.1f32;
+        let mut cash = Good::new(invalid_kind.clone(), preset_quantity );
+        let result = market.sell(token.clone(), &mut cash).unwrap_err();
+        let expected = SellError::WrongGoodKind { wrong_good_kind: invalid_kind.clone(), pre_agreed_kind: kind_for_this_test.clone() };
+        assert_eq!(result, expected);
+
+        // Fail on quantity insufficient
+        let mut good_to_sell = Good::new(kind_for_this_test.clone(), preset_quantity - 1.0 );
+        let result = market.sell(token.clone(), &mut good_to_sell).unwrap_err();
+        let expected = SellError::InsufficientGoodQuantity { contained_quantity: preset_quantity-1.0, pre_agreed_quantity: preset_quantity };
+        assert_eq!(result, expected);
+
+        // Check success
+        let mut good_to_sell = Good::new(kind_for_this_test.clone(), preset_quantity);
+        let result = market.sell(token.clone(), &mut good_to_sell).unwrap();
+        let expected = Good::new(DEFAULT_GOOD_KIND, right_offer);
+        assert_eq!(result, expected);
+
+        //try to reuse the token, it shouldn't be recognized
+        let result = market.sell(token.clone(), &mut good_to_sell).unwrap_err();
+        let expected = SellError::UnrecognizedToken { unrecognized_token: token };
+        assert_eq!(result, expected);
     }
 
 }
@@ -525,6 +565,6 @@ fn test_price_change_after_sell(){
         //get the price to compare
         let price_after_trade = market.borrow().get_sell_price(kind.clone(), 1.0).ok().unwrap();
 
-        // assert_ne!(starting_price, price_after_trade);
+        assert_ne!(starting_price, price_after_trade);
     }
 }
