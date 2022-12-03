@@ -8,6 +8,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
+use log::info;
 use unitn_market_2022::event::event::{Event, EventKind};
 use unitn_market_2022::event::notifiable::Notifiable;
 use unitn_market_2022::good::consts::{DEFAULT_GOOD_KIND, STARTING_CAPITAL};
@@ -22,9 +23,10 @@ const MARKET_NAME: &str = "SOL";
 const TOKEN_DURATION: u32 = 5;
 
 pub struct SOLMarket {
+    // TODO: Delete name, goods, old_meta ?
     name: String,
-    goods: Vec<Good>,
     // Deprecated
+    goods: Vec<Good>,
     good_labels: Vec<GoodLabel>,
     subscribers: Vec<Box<dyn Notifiable>>,
     // Deprecated
@@ -50,7 +52,7 @@ impl Notifiable for SOLMarket {
     }
 
     fn on_event(&mut self, event: Event) {
-        match event.kind { 
+        match event.kind {
 
             EventKind::Bought => {
                     //Update price after successful buy, slightly decrease the price as qnty increases
@@ -73,7 +75,7 @@ impl Notifiable for SOLMarket {
             EventKind::LockedBuy => {
             },
             EventKind::LockedSell => {},
-            EventKind::Wait => { 
+            EventKind::Wait => {
                 // change some exchange rate -> buy_prices - as for now it's enough to decrease the price a bit
                 // as time goes on with goods left unsold you tend to decrease the price
                 self.good_labels.iter_mut().for_each(|gl| {
@@ -117,6 +119,9 @@ impl Market for SOLMarket {
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
+        // Init logger
+        log4rs::init_file("logging_config.yaml", Default::default()).unwrap_or_default();
+
         if eur < 0.0 {
             panic!("Tried to initialize the market with a negative quantity of eur");
         }
@@ -152,6 +157,8 @@ impl Market for SOLMarket {
             })
             .collect();
 
+        info!("MARKET_INITIALIZATION\nEUR: {eur:+e}\nUSD: {usd:+e}\nYEN: {yen:+e}\nYUAN: {yuan:+e}\nEND_MARKET_INITIALIZATION");
+
         Rc::new(RefCell::new(SOLMarket {
             name: String::from(MARKET_NAME),
             goods,
@@ -173,6 +180,7 @@ impl Market for SOLMarket {
         return MARKET_NAME;
     }
 
+    // TODO: Check is we need to sum up all goods -> Specs not so clear
     fn get_budget(&self) -> f32 {
         self.goods.iter().fold(0f32, |acc, good| {
             let value = good.get_qty() * self.old_meta.goods_meta.get(&good.get_kind()).unwrap().sell_price;
@@ -211,7 +219,7 @@ impl Market for SOLMarket {
             });
         }
 
-        Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk 
+        Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
     }
 
     fn get_goods(&self) -> Vec<GoodLabel> {
@@ -219,16 +227,26 @@ impl Market for SOLMarket {
     }
 
     fn lock_buy(&mut self, kind_to_buy: GoodKind, quantity_to_buy: f32, bid: f32, trader_name: String) -> Result<String, LockBuyError> {
+        // Set error log
+        let log_error = format!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{quantity_to_buy:+e}-BID:{bid:+e}-ERROR");
+
         // Check positive quantity
-        if quantity_to_buy.is_sign_negative() { return Err(LockBuyError::NonPositiveQuantityToBuy { negative_quantity_to_buy: quantity_to_buy }); }
+        if quantity_to_buy.is_sign_negative() {
+            info!("{log_error}");
+            return Err(LockBuyError::NonPositiveQuantityToBuy { negative_quantity_to_buy: quantity_to_buy });
+        }
 
         // Check positive bid
-        if bid.is_sign_negative() { return Err(LockBuyError::NonPositiveBid { negative_bid: bid }); }
+        if bid.is_sign_negative() {
+            info!("{log_error}");
+            return Err(LockBuyError::NonPositiveBid { negative_bid: bid });
+        }
 
         // Check quantity available
         let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_buy)).unwrap();
         let quantity_available = good_label.quantity;
         if quantity_available < quantity_to_buy {
+            info!("{log_error}");
             return Err(LockBuyError::InsufficientGoodQuantityAvailable {
                 requested_good_kind: kind_to_buy,
                 requested_good_quantity: quantity_to_buy,
@@ -241,6 +259,7 @@ impl Market for SOLMarket {
         // Check bid
         let min_bid = quantity_to_buy / good_label.exchange_rate_sell;
         if bid < min_bid {
+            info!("{log_error}");
             return Err(LockBuyError::BidTooLow {
                 requested_good_kind: kind_to_buy,
                 requested_good_quantity: quantity_to_buy,
@@ -252,12 +271,12 @@ impl Market for SOLMarket {
         // Create token
         let mut hasher = DefaultHasher::new();
         let now = chrono::Local::now();
-        (kind_to_buy.clone(), quantity_to_buy.to_string(), bid.to_string(), now, trader_name).hash(&mut hasher);
+        (kind_to_buy.clone(), quantity_to_buy.to_string(), bid.to_string(), now, trader_name.clone()).hash(&mut hasher);
         let token = hasher.finish().to_string();
 
         // Update good quantity available, todo: Update good buy and sell price (in on_event method)
-        //problem with on_event method: the subscribed markets receive the notif, but you don't send the notif to yourself (at the moment) - but you can add that with one line
-        // also: updates should be done only after a successful buy/sell, not locks
+        // problem with on_event method: the subscribed markets receive the notif, but you don't send the notif to yourself (at the moment) - but you can add that with one line
+        // TODO: DISCUSS -> updates should be done only after a successful buy/sell, not locks
 
         good_label.quantity -= quantity_to_buy;
 
@@ -268,36 +287,54 @@ impl Market for SOLMarket {
         // Create and spread event
         let e = Event {
             kind: EventKind::LockedBuy,
-            good_kind: kind_to_buy,
+            good_kind: kind_to_buy.clone(),
             quantity: quantity_to_buy,
             price: bid,
         };
 
         self.notify_everyone(e);
 
+        // Success log
+        info!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{quantity_to_buy:+e}-BID:{bid:+e}-TOKEN:{token}");
+
         Ok(token)
     }
 
 
     fn buy(&mut self, token: String, cash: &mut Good) -> Result<Good, BuyError> {
+        // Set error log
+        let log_error = format!("BUY-TOKEN:{token}-ERROR");
+
         // Check token existence
         let good_meta = match self.meta.locked_buys.get(&*token) {
-            None => { return Err(BuyError::UnrecognizedToken { unrecognized_token: token }); }
+            None => {
+                info!("{log_error}");
+                return Err(BuyError::UnrecognizedToken { unrecognized_token: token });
+            }
             Some(g) => { g }
         };
 
         // Check token validity
         let days_since = self.meta.current_day - good_meta.created_on;
-        if days_since > TOKEN_DURATION { return Err(BuyError::ExpiredToken { expired_token: token }); }
+        if days_since > TOKEN_DURATION {
+            info!("{log_error}");
+            return Err(BuyError::ExpiredToken { expired_token: token });
+        }
 
         // Check cash is default
         let kind = cash.get_kind();
-        if kind.ne(&DEFAULT_GOOD_KIND) { return Err(BuyError::GoodKindNotDefault { non_default_good_kind: kind }); }
+        if kind.ne(&DEFAULT_GOOD_KIND) {
+            info!("{log_error}");
+            return Err(BuyError::GoodKindNotDefault { non_default_good_kind: kind });
+        }
 
         // Check cash qty
         let contained_quantity = cash.get_qty();
         let pre_agreed_quantity = good_meta.price;
-        if contained_quantity < pre_agreed_quantity { return Err(BuyError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
+        if contained_quantity < pre_agreed_quantity {
+            info!("{log_error}");
+            return Err(BuyError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity });
+        }
 
         // Cash in, todo: Update good buy and sell price (in on_event method)
         let eur = cash.split(pre_agreed_quantity).unwrap();
@@ -319,27 +356,34 @@ impl Market for SOLMarket {
 
         self.notify_everyone(e);
 
+        // Success log
+        info!("BUY-TOKEN:{token}-OK");
+
         Ok(release_good)
     }
 
     fn lock_sell(&mut self, kind_to_sell: GoodKind, quantity_to_sell: f32, offer: f32, trader_name: String) -> Result<String, LockSellError> {
+        // Set error log
+        let log_error = format!("LOCK_SELL-{trader_name}-KIND_TO_SELL:{kind_to_sell}-QUANTITY_TO_SELL:{quantity_to_sell:+e}-OFFER:{offer:+e}-ERROR");
+
         // Check positive quantity
-        if quantity_to_sell.is_sign_negative() { return Err(LockSellError::NonPositiveQuantityToSell { negative_quantity_to_sell: (quantity_to_sell) }); }
+        if quantity_to_sell.is_sign_negative() {
+            info!("{log_error}");
+            return Err(LockSellError::NonPositiveQuantityToSell { negative_quantity_to_sell: (quantity_to_sell) });
+        }
 
         // Check positive bid
-        if offer.is_sign_negative() { return Err(LockSellError::NonPositiveOffer { negative_offer: offer }); }
+        if offer.is_sign_negative() {
+            info!("{log_error}");
+            return Err(LockSellError::NonPositiveOffer { negative_offer: offer });
+        }
 
         // Check money available
         let money_available = self.good_labels.iter_mut().find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND)).unwrap().quantity;
         if money_available < offer {
-            // return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
-            //     offered_good_kind: kind_to_sell,
-            //     offered_good_quantity: quantity_to_sell,
-            //     available_good_quantity: money_available,
-            // });
-            // changed, maybe revert changes later on
+            info!("{log_error}");
             return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
-                offered_good_kind: DEFAULT_GOOD_KIND,
+                offered_good_kind: kind_to_sell,
                 offered_good_quantity: offer,
                 available_good_quantity: money_available,
             });
@@ -351,6 +395,7 @@ impl Market for SOLMarket {
         // Check offer not too high
         let max_offer = quantity_to_sell / good_label.exchange_rate_buy;
         if offer > max_offer {
+            info!("{log_error}");
             return Err(LockSellError::OfferTooHigh {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
@@ -361,7 +406,7 @@ impl Market for SOLMarket {
 
         let mut hasher = DefaultHasher::new();
         let now = chrono::Local::now();
-        (kind_to_sell.clone(), quantity_to_sell.to_string(), offer.to_string(), now, trader_name).hash(&mut hasher);
+        (kind_to_sell.clone(), quantity_to_sell.to_string(), offer.to_string(), now, trader_name.clone()).hash(&mut hasher);
         let token = hasher.finish().to_string();
 
         // Update good quantity available, todo: Update good buy and sell price (in on_event method)
@@ -376,38 +421,55 @@ impl Market for SOLMarket {
         // Create and spread event
         let e = Event {
             kind: EventKind::LockedSell,
-            good_kind: kind_to_sell,
+            good_kind: kind_to_sell.clone(),
             quantity: quantity_to_sell,
             price: offer,
         };
 
         self.notify_everyone(e);
 
+        // Success log
+        info!("LOCK_SELL-{trader_name}-KIND_TO_SELL:{kind_to_sell}-QUANTITY_TO_SELL:{quantity_to_sell:+e}-OFFER:{offer:+e}-TOKEN:{token}");
+
         Ok(token)
-        
+
     }
 
     fn sell(&mut self, token: String, good: &mut Good) -> Result<Good, SellError> {
-        //if buy returns a good, then sell returns EUR!
+        // Set error log
+        let log_error = format!("SELL-TOKEN:{token}-ERROR");
 
         // Check token existence
         let good_meta = match self.meta.locked_sells.get(&*token) {
-            None => { return Err(SellError::UnrecognizedToken { unrecognized_token: token }); }
+            None => {
+                info!("{log_error}");
+                return Err(SellError::UnrecognizedToken { unrecognized_token: token });
+            }
             Some(g) => { g }
         };
 
         // Check token validity
         let days_since = self.meta.current_day - good_meta.created_on;
-        if days_since > TOKEN_DURATION { return Err(SellError::ExpiredToken { expired_token: token }); }
+        if days_since > TOKEN_DURATION {
+            info!("{log_error}");
+            return Err(SellError::ExpiredToken { expired_token: token });
+        }
 
-        // Check good is not default
+        // Check good is the same as we agreed on lock
         let kind = good.get_kind();
-        if kind.eq(&DEFAULT_GOOD_KIND) { return Err(SellError::WrongGoodKind { wrong_good_kind: kind.clone(), pre_agreed_kind: good_meta.kind.clone() }); }
+        let expected_kind = good_meta.kind.clone();
+        if kind.ne(&expected_kind) {
+            info!("{log_error}");
+            return Err(SellError::WrongGoodKind { wrong_good_kind: kind.clone(), pre_agreed_kind: expected_kind.clone() });
+        }
 
         // Check quantity of the good passed in the args, has to match the pre_agreed_quantity during lock
         let contained_quantity = good.get_qty();
         let pre_agreed_quantity = good_meta.quantity;
-        if contained_quantity < pre_agreed_quantity { return Err(SellError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity }); }
+        if contained_quantity < pre_agreed_quantity {
+            info!("{log_error}");
+            return Err(SellError::InsufficientGoodQuantity { contained_quantity, pre_agreed_quantity });
+        }
 
         // Get your good now
         let selling_good = good.split(pre_agreed_quantity).unwrap();
@@ -428,6 +490,9 @@ impl Market for SOLMarket {
         self.meta.locked_sells.remove(&*token);
 
         self.notify_everyone(e);
+
+        // Sucess log
+        info!("SELL-TOKEN:{token}-OK");
 
         Ok(give_money)
     }
