@@ -1,5 +1,4 @@
-pub const BANNER: & [&str]= 
-&[
+pub const BANNER: & [&str]= &[
 "                                         This is the SOL market file                                ",
 "",
 "                                             (0[)C(..1CUCz~                                         ",

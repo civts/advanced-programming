@@ -228,7 +228,13 @@ mod test_buy {
         let kinds = vec![EUR, USD, YEN, YUAN];
         for k in kinds.iter() {
             let result = market.get_buy_price(k.clone(), s.init_qty).unwrap();
-            let expected = s.init_qty / k.get_default_exchange_rate(); // market sell price = default exchange rate when init
+            let market_sell_price = market
+                .get_goods()
+                .iter()
+                .find(|gl| gl.good_kind.eq(k))
+                .unwrap()
+                .exchange_rate_sell;
+            let expected = s.init_qty / market_sell_price;
             assert_eq!(result, expected);
         }
     }
@@ -398,9 +404,15 @@ mod test_sell {
         let kinds = vec![GoodKind::USD, GoodKind::YEN, GoodKind::YUAN];
         for kind in kinds {
             let result = market
-                .get_buy_price(kind.clone(), market_start_quantity)
+                .get_sell_price(kind.clone(), market_start_quantity)
                 .unwrap();
-            let expected = market_start_quantity / kind.get_default_exchange_rate(); // market sell price = default exchange rate when init
+            let market_buy_price = market
+                .get_goods()
+                .iter()
+                .find(|gl| gl.good_kind.eq(&kind))
+                .unwrap()
+                .exchange_rate_buy;
+            let expected = market_start_quantity / market_buy_price;
             assert_eq!(result, expected);
         }
     }
@@ -463,7 +475,7 @@ mod test_sell {
         let expected = LockSellError::InsufficientDefaultGoodQuantityAvailable {
             //change here in case changes in market.rs error are reverted
             offered_good_kind: kind_for_this_test.clone(),
-            offered_good_quantity: offer_too_high,
+            offered_good_quantity: preset_quantity,
             available_good_quantity: market_start_quantity,
         };
         assert_eq!(result, expected);
@@ -497,7 +509,7 @@ mod test_sell {
             .ok()
             .unwrap();
         market
-            .lock_buy(
+            .lock_sell(
                 kind_for_this_test.clone(),
                 full_quantity,
                 full_price,
@@ -876,7 +888,7 @@ fn should_return_err_if_lock_sell_limit_exceeded() {
             .borrow_mut()
             .lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
     });
-    
+
     // then 21 lock sell try will return an MaxAllowedLocksReached error
     let result = market
         .borrow_mut()
@@ -888,17 +900,125 @@ fn should_return_err_if_lock_sell_limit_exceeded() {
 fn should_return_err_if_lock_buy_limit_exceeded() {
     // given random market
     let market = SOLMarket::new_random();
-    
+
     // when 20 buy locks were performed
     (1..21).for_each(|_i: i32| {
         let _r = market
             .borrow_mut()
             .lock_buy(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
     });
-    
+
     // then 21 lock buy try will return an MaxAllowedLocksReached error
     let result = market
         .borrow_mut()
         .lock_buy(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
     assert_eq!(result.unwrap_err(), LockBuyError::MaxAllowedLocksReached)
+}
+
+#[cfg(test)]
+mod extern_test {
+    //import here the market_test module and the Market trait
+    use unitn_market_2022::market::market_test;
+    //import here your implementation of the market
+    use crate::market::SOLMarket;
+    //make an alias to your market
+    type MarketType = SOLMarket;
+    //test every aspect of your market using the generic function
+    #[test]
+    fn test_name() {
+        market_test::test_name::<MarketType>();
+    }
+    #[test]
+    fn test_get_buy_price_success() {
+        market_test::test_get_buy_price_success::<MarketType>();
+    }
+    #[test]
+    fn test_get_buy_price_non_positive_error() {
+        market_test::test_get_buy_price_non_positive_error::<MarketType>();
+    }
+    #[test]
+    fn test_get_buy_price_insufficient_qty_error() {
+        market_test::test_get_buy_price_insufficient_qty_error::<MarketType>();
+    }
+    #[test]
+    fn test_get_sell_price_success() {
+        market_test::test_get_sell_price_success::<MarketType>();
+    }
+    #[test]
+    fn test_get_sell_price_non_positive_error() {
+        market_test::test_get_sell_price_non_positive_error::<MarketType>();
+    }
+    #[test]
+    fn test_deadlock_prevention() {
+        market_test::test_deadlock_prevention::<MarketType>();
+    }
+    #[test]
+    fn test_new_random() {
+        market_test::test_new_random::<MarketType>();
+    }
+    #[test]
+    fn test_price_change_after_buy() {
+        market_test::test_price_change_after_buy::<MarketType>();
+    }
+    #[test]
+    fn price_changes_waiting() {
+        market_test::price_changes_waiting::<MarketType>();
+    }
+    #[test]
+    fn test_price_change_after_sell() {
+        market_test::test_price_change_after_sell::<MarketType>();
+    }
+    #[test]
+    fn should_initialize_with_right_quantity() {
+        market_test::should_initialize_with_right_quantity::<MarketType>();
+    }
+    #[test]
+    fn new_random_should_not_exceeed_starting_capital() {
+        market_test::new_random_should_not_exceeed_starting_capital::<MarketType>();
+    }
+    #[test]
+    fn test_sell_success() {
+        market_test::test_sell_success::<MarketType>();
+    }
+    #[test]
+    fn test_sell_err_unrecognized_token() {
+        market_test::test_sell_err_unrecognized_token::<MarketType>();
+    }
+    #[test]
+    fn test_sell_err_expired_token() {
+        market_test::test_sell_err_expired_token::<MarketType>();
+    }
+    #[test]
+    fn test_sell_err_wrong_good_kind() {
+        market_test::test_sell_err_wrong_good_kind::<MarketType>();
+    }
+    #[test]
+    fn test_sell_err_insufficient_good_quantity() {
+        market_test::test_sell_err_insufficient_good_quantity::<MarketType>();
+    }
+    #[test]
+    fn test_lock_sell_nonPositiveOffer() {
+        market_test::test_lock_sell_nonPositiveOffer::<MarketType>();
+    }
+    #[test]
+    fn test_lock_sell_defaultGoodAlreadyLocked() {
+        // Our market allows more than 1 lock per good
+        // market_test::test_lock_sell_defaultGoodAlreadyLocked::<MarketType>();
+    }
+    #[test]
+    fn test_lock_sell_maxAllowedLocksReached() {
+        market_test::test_lock_sell_maxAllowedLocksReached::<MarketType>();
+    }
+    #[test]
+    fn test_lock_sell_insufficientDefaultGoodQuantityAvailable() {
+        market_test::test_lock_sell_insufficientDefaultGoodQuantityAvailable::<MarketType>();
+    }
+    #[test]
+    fn test_lock_sell_offerTooHigh() {
+        market_test::test_lock_sell_offerTooHigh::<MarketType>();
+    }
+    #[test]
+    fn test_working_function_lock_sell_token() {
+        //test_working_function_lock_sell_token::test_lock_sell_offerTooHigh::<MarketType>();
+    }
 }

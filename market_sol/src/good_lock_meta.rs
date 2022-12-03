@@ -14,7 +14,7 @@ impl GoodLockMeta {
             kind,
             price,
             quantity,
-            created_on
+            created_on,
         }
     }
 }

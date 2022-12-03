@@ -12,8 +12,8 @@ pub(crate) struct GoodMeta {
 impl GoodMeta {
     pub fn new(price: f32, quantity: f32) -> Self {
         Self {
-            sell_price: price,
-            buy_price: price * 0.99, // TODO: Come with a better option
+            sell_price: price * 0.98, // Sell price should always be inferior
+            buy_price: price,
             quantity_locked: 0.0,
             price_locked: price,
             quantity_available: quantity,

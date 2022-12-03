@@ -25,8 +25,8 @@ use unitn_market_2022::market::{
 };
 
 const MARKET_NAME: &str = "SOL";
-const TOKEN_DURATION: u32 = 5;
-const LOCK_LIMIT: u32 = 20; 
+const TOKEN_DURATION: u32 = 15; // TODO: Either token duration need to be > Lock Limit or implement lock_limit per trader
+const LOCK_LIMIT: u32 = 10;
 mod sol_file_prefixes {
     pub const COMMENT_PREFIX: &str = "#";
     pub const GOOD_PREFIX: &str = "good ";
@@ -336,6 +336,32 @@ impl Notifiable for SOLMarket {
         }
         //progress one day in any case
         self.meta.current_day += 1;
+
+        // Reinstate any good which has an expired token
+        for (_, meta) in self.meta.locked_buys.iter() {
+            let days_since = self.meta.current_day - meta.created_on;
+            if days_since == TOKEN_DURATION {
+                let good = self
+                    .good_labels
+                    .iter_mut()
+                    .find(|l| l.good_kind.eq(&meta.kind))
+                    .unwrap();
+                good.quantity += meta.quantity;
+                self.meta.num_of_buy_locks -= 1;
+            }
+        }
+        for (_, meta) in self.meta.locked_sells.iter() {
+            let days_since = self.meta.current_day - meta.created_on;
+            if days_since == TOKEN_DURATION {
+                let default_good = self
+                    .good_labels
+                    .iter_mut()
+                    .find(|l| l.good_kind.eq(&DEFAULT_GOOD_KIND))
+                    .unwrap();
+                default_good.quantity += meta.price;
+                self.meta.num_of_sell_locks -= 1;
+            }
+        }
     }
 }
 
@@ -356,7 +382,9 @@ impl Market for SOLMarket {
         //Fix floating point operation errors
         let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
         let exceeding_capital = real_market_cap - STARTING_CAPITAL;
-        usd_mkt_cap -= exceeding_capital;
+        usd_mkt_cap -= exceeding_capital + 1f32;
+
+        // TODO: Check if usd_mkt_cap < 0
 
         //Calculate the quantity of each good
         let yen_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YEN) * yen_mkt_cap;
@@ -442,15 +470,6 @@ impl Market for SOLMarket {
             .find(|l| l.good_kind.eq(&kind))
             .unwrap();
 
-        let qty_available = good_label.quantity;
-        if qty_available < quantity {
-            return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
-                requested_good_kind: kind,
-                requested_good_quantity: quantity,
-                available_good_quantity: qty_available,
-            });
-        }
-
         Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
     }
 
@@ -501,7 +520,7 @@ impl Market for SOLMarket {
         // Lock limit check
         if lock_limit_exceeded(self.meta.num_of_buy_locks) {
             return Err(LockBuyError::MaxAllowedLocksReached);
-        } 
+        }
 
         // Check bid
         let min_bid = quantity_to_buy / good_label.exchange_rate_sell;
@@ -541,7 +560,9 @@ impl Market for SOLMarket {
             quantity_to_buy,
             self.meta.current_day,
         );
+
         self.meta.locked_buys.insert(token.clone(), good_meta);
+        self.meta.num_of_buy_locks += 1;
 
         // Create and spread event
         let e = Event {
@@ -550,8 +571,7 @@ impl Market for SOLMarket {
             quantity: quantity_to_buy,
             price: bid,
         };
-        
-        self.meta.num_of_buy_locks += 1;
+
         self.notify_everyone(e);
 
         // Success log
@@ -559,7 +579,7 @@ impl Market for SOLMarket {
 
         Ok(token)
     }
-    
+
     fn buy(&mut self, token: String, cash: &mut Good) -> Result<Good, BuyError> {
         // Set error log
         let log_error = format!("BUY-TOKEN:{token}-ERROR");
@@ -625,6 +645,7 @@ impl Market for SOLMarket {
 
         // Reset lock
         self.meta.locked_buys.remove(&*token);
+        self.meta.num_of_buy_locks -= 1;
 
         self.notify_everyone(e);
 
@@ -671,20 +692,24 @@ impl Market for SOLMarket {
             info!("{log_error}");
             return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
                 offered_good_kind: kind_to_sell,
-                offered_good_quantity: offer,
+                offered_good_quantity: quantity_to_sell,
                 available_good_quantity: money_available,
             });
         }
 
-        let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_sell)).unwrap();
-        
         // Lock limit check
         if lock_limit_exceeded(self.meta.num_of_sell_locks) {
             return Err(LockSellError::MaxAllowedLocksReached);
         }
 
         // Check offer not too high
-        let max_offer = quantity_to_sell / good_label.exchange_rate_buy;
+        let good_buying_rate = self
+            .good_labels
+            .iter()
+            .find(|l| l.good_kind.eq(&kind_to_sell))
+            .unwrap()
+            .exchange_rate_buy;
+        let max_offer = quantity_to_sell / good_buying_rate;
         if offer > max_offer {
             info!("{log_error}");
             return Err(LockSellError::OfferTooHigh {
@@ -707,10 +732,14 @@ impl Market for SOLMarket {
             .hash(&mut hasher);
         let token = hasher.finish().to_string();
 
-        // Update good quantity available, todo: Update good buy and sell price (in on_event method)
+        // Update default good quantity available, todo: Update good buy and sell price (in on_event method)
         // also: updates should be done only after a successful buy/sell, not locks
-
-        good_label.quantity += quantity_to_sell;
+        let default_good = self
+            .good_labels
+            .iter_mut()
+            .find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND))
+            .unwrap();
+        default_good.quantity -= offer;
 
         // Update meta
         let good_meta = GoodLockMeta::new(
@@ -719,7 +748,9 @@ impl Market for SOLMarket {
             quantity_to_sell,
             self.meta.current_day,
         );
+
         self.meta.locked_sells.insert(token.clone(), good_meta);
+        self.meta.num_of_sell_locks += 1;
 
         // Create and spread event
         let e = Event {
@@ -729,7 +760,6 @@ impl Market for SOLMarket {
             price: offer,
         };
 
-        self.meta.num_of_sell_locks += 1;
         self.notify_everyone(e);
 
         // Success log
@@ -805,7 +835,8 @@ impl Market for SOLMarket {
 
         // Reset lock
         self.meta.locked_sells.remove(&*token);
-        
+        self.meta.num_of_sell_locks -= 1;
+
         self.notify_everyone(e);
 
         // Sucess log
@@ -816,7 +847,7 @@ impl Market for SOLMarket {
 }
 
 fn lock_limit_exceeded(num_of_locks: u32) -> bool {
-    return num_of_locks + 1 > LOCK_LIMIT
+    return num_of_locks + 1 > LOCK_LIMIT;
 }
 
 impl Drop for SOLMarket {
