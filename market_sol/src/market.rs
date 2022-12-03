@@ -26,6 +26,7 @@ use unitn_market_2022::market::{
 
 const MARKET_NAME: &str = "SOL";
 const TOKEN_DURATION: u32 = 5;
+const LOCK_LIMIT: u32 = 20; 
 mod sol_file_prefixes {
     pub const COMMENT_PREFIX: &str = "#";
     pub const GOOD_PREFIX: &str = "good ";
@@ -497,7 +498,10 @@ impl Market for SOLMarket {
             });
         }
 
-        // todo: Maximum locks reached (see Market Deadlock section)
+        // Lock limit check
+        if lock_limit_exceeded(self.meta.num_of_buy_locks) {
+            return Err(LockBuyError::MaxAllowedLocksReached);
+        } 
 
         // Check bid
         let min_bid = quantity_to_buy / good_label.exchange_rate_sell;
@@ -546,7 +550,8 @@ impl Market for SOLMarket {
             quantity: quantity_to_buy,
             price: bid,
         };
-
+        
+        self.meta.num_of_buy_locks += 1;
         self.notify_everyone(e);
 
         // Success log
@@ -554,7 +559,7 @@ impl Market for SOLMarket {
 
         Ok(token)
     }
-
+    
     fn buy(&mut self, token: String, cash: &mut Good) -> Result<Good, BuyError> {
         // Set error log
         let log_error = format!("BUY-TOKEN:{token}-ERROR");
@@ -671,12 +676,12 @@ impl Market for SOLMarket {
             });
         }
 
-        let good_label = self
-            .good_labels
-            .iter_mut()
-            .find(|l| l.good_kind.eq(&kind_to_sell))
-            .unwrap();
-        // todo: Maximum locks reached (see Market Deadlock section)
+        let good_label = self.good_labels.iter_mut().find(|l| l.good_kind.eq(&kind_to_sell)).unwrap();
+        
+        // Lock limit check
+        if lock_limit_exceeded(self.meta.num_of_sell_locks) {
+            return Err(LockSellError::MaxAllowedLocksReached);
+        }
 
         // Check offer not too high
         let max_offer = quantity_to_sell / good_label.exchange_rate_buy;
@@ -724,6 +729,7 @@ impl Market for SOLMarket {
             price: offer,
         };
 
+        self.meta.num_of_sell_locks += 1;
         self.notify_everyone(e);
 
         // Success log
@@ -799,7 +805,7 @@ impl Market for SOLMarket {
 
         // Reset lock
         self.meta.locked_sells.remove(&*token);
-
+        
         self.notify_everyone(e);
 
         // Sucess log
@@ -807,6 +813,10 @@ impl Market for SOLMarket {
 
         Ok(give_money)
     }
+}
+
+fn lock_limit_exceeded(num_of_locks: u32) -> bool {
+    return num_of_locks + 1 > LOCK_LIMIT
 }
 
 impl Drop for SOLMarket {

@@ -10,6 +10,8 @@ pub struct MarketMeta {
     pub locked_sells: HashMap<String, GoodLockMeta>,
     pub min_bid: HashMap<GoodKind, f32>,
     pub current_day: u32,
+    pub num_of_sell_locks: u32,
+    pub num_of_buy_locks: u32,
     pub file_path: Option<String>,
 }
 
@@ -20,6 +22,8 @@ impl MarketMeta {
             locked_sells: Default::default(),
             min_bid: Default::default(), // todo: come up with min bid for each goods
             current_day: 0u32,
+            num_of_sell_locks: 0u32,
+            num_of_buy_locks: 0u32,
             file_path: None,
         }
     }
