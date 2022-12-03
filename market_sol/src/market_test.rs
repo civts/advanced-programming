@@ -462,7 +462,7 @@ mod test_sell {
             .unwrap_err();
         let expected = LockSellError::InsufficientDefaultGoodQuantityAvailable {
             //change here in case changes in market.rs error are reverted
-            offered_good_kind: DEFAULT_GOOD_KIND,
+            offered_good_kind: kind_for_this_test.clone(),
             offered_good_quantity: offer_too_high,
             available_good_quantity: market_start_quantity,
         };

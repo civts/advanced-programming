@@ -8,5 +8,7 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 rand_chacha = "0.3.1"
-chrono = "*"
+chrono = "0.4.23"
+log4rs = "1.2.0"
+log = "0.4.17"
 unitn_market_2022 = {version = "1.0.2", registry = "kellnr"}
