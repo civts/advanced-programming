@@ -36,6 +36,8 @@ impl MarketMeta {
             min_bid: Default::default(), // todo: come up with min bid for each goods
             current_day: 0u32,
             file_path: Some(String::from(file_str)),
+            num_of_sell_locks: 0,
+            num_of_buy_locks: 0,
         };
     }
 }
