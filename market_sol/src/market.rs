@@ -1,6 +1,6 @@
-use crate::banner::BANNER;
 use crate::good_meta::GoodMeta;
 use crate::market_metadata::MarketMetadata;
+use crate::misc::banner::BANNER;
 
 use crate::good_lock_meta::GoodLockMeta;
 use crate::market_meta::MarketMeta;
