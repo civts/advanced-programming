@@ -29,6 +29,7 @@
             rustc
             rustfmt
             cargo
+            clippy
             rustup
             gcc
             (vscode-with-extensions.override {
