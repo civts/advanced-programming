@@ -1,9 +1,9 @@
 use super::sol_market::{SOLMarket, MARKET_NAME};
+use crate::lib::market::sol_market::log;
 use crate::lib::{
     domain::{good_lock_meta::GoodLockMeta, market_meta::MarketMeta},
     market::sol_market::{lock_limit_exceeded, TOKEN_DURATION},
 };
-use log::info;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use std::{
@@ -151,7 +151,7 @@ impl Market for SOLMarket {
 
         // Check positive quantity
         if quantity_to_buy.is_sign_negative() {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockBuyError::NonPositiveQuantityToBuy {
                 negative_quantity_to_buy: quantity_to_buy,
             });
@@ -159,7 +159,7 @@ impl Market for SOLMarket {
 
         // Check positive bid
         if bid.is_sign_negative() {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockBuyError::NonPositiveBid { negative_bid: bid });
         }
 
@@ -171,7 +171,7 @@ impl Market for SOLMarket {
             .unwrap();
         let quantity_available = good_label.quantity;
         if quantity_available < quantity_to_buy {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockBuyError::InsufficientGoodQuantityAvailable {
                 requested_good_kind: kind_to_buy,
                 requested_good_quantity: quantity_to_buy,
@@ -182,15 +182,14 @@ impl Market for SOLMarket {
         // Lock limit check
         let num_of_locks = self.meta.num_of_buy_locks();
         if lock_limit_exceeded(num_of_locks) {
-            let b = lock_limit_exceeded(num_of_locks);
-            print!("{b}");
+            log(log_error);
             return Err(LockBuyError::MaxAllowedLocksReached);
         }
 
         // Check bid
         let min_bid = quantity_to_buy / good_label.exchange_rate_sell;
         if bid < min_bid {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockBuyError::BidTooLow {
                 requested_good_kind: kind_to_buy,
                 requested_good_quantity: quantity_to_buy,
@@ -233,8 +232,7 @@ impl Market for SOLMarket {
 
         self.notify_everyone(e);
 
-        // Success log
-        info!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{quantity_to_buy:+e}-BID:{bid:+e}-TOKEN:{token}");
+        log(format!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{quantity_to_buy:+e}-BID:{bid:+e}-TOKEN:{token}"));
 
         Ok(token)
     }
@@ -246,7 +244,7 @@ impl Market for SOLMarket {
         // Check token existence
         let good_meta = match self.meta.locked_buys.get(&*token) {
             None => {
-                info!("{log_error}");
+                log(log_error);
                 return Err(BuyError::UnrecognizedToken {
                     unrecognized_token: token,
                 });
@@ -257,7 +255,7 @@ impl Market for SOLMarket {
         // Check token validity
         let days_since = self.meta.current_day - good_meta.created_on;
         if days_since > TOKEN_DURATION {
-            info!("{log_error}");
+            log(log_error);
             return Err(BuyError::ExpiredToken {
                 expired_token: token,
             });
@@ -266,7 +264,7 @@ impl Market for SOLMarket {
         // Check cash is default
         let kind = cash.get_kind();
         if kind.ne(&DEFAULT_GOOD_KIND) {
-            info!("{log_error}");
+            log(log_error);
             return Err(BuyError::GoodKindNotDefault {
                 non_default_good_kind: kind,
             });
@@ -276,7 +274,7 @@ impl Market for SOLMarket {
         let contained_quantity = cash.get_qty();
         let pre_agreed_quantity = good_meta.price;
         if contained_quantity < pre_agreed_quantity {
-            info!("{log_error}");
+            log(log_error);
             return Err(BuyError::InsufficientGoodQuantity {
                 contained_quantity,
                 pre_agreed_quantity,
@@ -307,8 +305,7 @@ impl Market for SOLMarket {
 
         self.notify_everyone(e);
 
-        // Success log
-        info!("BUY-TOKEN:{token}-OK");
+        log(format!("BUY-TOKEN:{token}-OK"));
 
         Ok(release_good)
     }
@@ -325,7 +322,7 @@ impl Market for SOLMarket {
 
         // Check positive quantity
         if quantity_to_sell.is_sign_negative() {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockSellError::NonPositiveQuantityToSell {
                 negative_quantity_to_sell: (quantity_to_sell),
             });
@@ -333,7 +330,7 @@ impl Market for SOLMarket {
 
         // Check positive bid
         if offer.is_sign_negative() {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockSellError::NonPositiveOffer {
                 negative_offer: offer,
             });
@@ -347,7 +344,7 @@ impl Market for SOLMarket {
             .unwrap()
             .quantity;
         if money_available < offer {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
@@ -357,6 +354,7 @@ impl Market for SOLMarket {
 
         // Lock limit check
         if lock_limit_exceeded(self.meta.num_of_locked_sells()) {
+            log(log_error);
             return Err(LockSellError::MaxAllowedLocksReached);
         }
 
@@ -369,7 +367,7 @@ impl Market for SOLMarket {
             .exchange_rate_buy;
         let max_offer = quantity_to_sell / good_buying_rate;
         if offer > max_offer {
-            info!("{log_error}");
+            log(log_error);
             return Err(LockSellError::OfferTooHigh {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
@@ -415,8 +413,7 @@ impl Market for SOLMarket {
 
         self.notify_everyone(e);
 
-        // Success log
-        info!("LOCK_SELL-{trader_name}-KIND_TO_SELL:{kind_to_sell}-QUANTITY_TO_SELL:{quantity_to_sell:+e}-OFFER:{offer:+e}-TOKEN:{token}");
+        log(format!("LOCK_SELL-{trader_name}-KIND_TO_SELL:{kind_to_sell}-QUANTITY_TO_SELL:{quantity_to_sell:+e}-OFFER:{offer:+e}-TOKEN:{token}"));
 
         Ok(token)
     }
@@ -428,7 +425,7 @@ impl Market for SOLMarket {
         // Check token existence
         let good_meta = match self.meta.locked_sells.get(&*token) {
             None => {
-                info!("{log_error}");
+                log(log_error);
                 return Err(SellError::UnrecognizedToken {
                     unrecognized_token: token,
                 });
@@ -439,7 +436,7 @@ impl Market for SOLMarket {
         // Check token validity
         let days_since = self.meta.current_day - good_meta.created_on;
         if days_since > TOKEN_DURATION {
-            info!("{log_error}");
+            log(log_error);
             return Err(SellError::ExpiredToken {
                 expired_token: token,
             });
@@ -449,7 +446,7 @@ impl Market for SOLMarket {
         let kind = good.get_kind();
         let expected_kind = good_meta.kind;
         if kind.ne(&expected_kind) {
-            info!("{log_error}");
+            log(log_error);
             return Err(SellError::WrongGoodKind {
                 wrong_good_kind: kind,
                 pre_agreed_kind: expected_kind,
@@ -460,7 +457,7 @@ impl Market for SOLMarket {
         let contained_quantity = good.get_qty();
         let pre_agreed_quantity = good_meta.quantity;
         if contained_quantity < pre_agreed_quantity {
-            info!("{log_error}");
+            log(log_error);
             return Err(SellError::InsufficientGoodQuantity {
                 contained_quantity,
                 pre_agreed_quantity,
@@ -491,8 +488,7 @@ impl Market for SOLMarket {
 
         self.notify_everyone(e);
 
-        // Sucess log
-        info!("SELL-TOKEN:{token}-OK");
+        log(format!("SELL-TOKEN:{token}-OK"));
 
         Ok(give_money)
     }

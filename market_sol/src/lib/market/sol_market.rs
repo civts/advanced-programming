@@ -1,9 +1,10 @@
 use crate::lib::domain::good_meta::GoodMeta;
 use crate::lib::domain::market_meta::MarketMeta;
 use crate::lib::domain::market_metadata::MarketMetadata;
-use log::info;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::rc::Rc;
 use unitn_market_2022::event::notifiable::Notifiable;
 use unitn_market_2022::good::good::Good;
@@ -32,9 +33,6 @@ impl SOLMarket {
         yuan: f32,
         meta: MarketMeta,
     ) -> Rc<RefCell<dyn Market>> {
-        // Init logger
-        log4rs::init_file("logging_config.yaml", Default::default()).unwrap_or_default();
-
         if eur < 0.0 {
             panic!("Tried to initialize the market with a negative quantity of eur");
         }
@@ -70,7 +68,7 @@ impl SOLMarket {
             })
             .collect();
 
-        info!("MARKET_INITIALIZATION\nEUR: {eur:+e}\nUSD: {usd:+e}\nYEN: {yen:+e}\nYUAN: {yuan:+e}\nEND_MARKET_INITIALIZATION");
+        log(format!("MARKET_INITIALIZATION\nEUR: {eur:+e}\nUSD: {usd:+e}\nYEN: {yen:+e}\nYUAN: {yuan:+e}\nEND_MARKET_INITIALIZATION"));
 
         Rc::new(RefCell::new(SOLMarket {
             goods,
@@ -86,4 +84,21 @@ impl SOLMarket {
 
 pub(crate) fn lock_limit_exceeded(num_of_locks: u32) -> bool {
     num_of_locks + 1 > LOCK_LIMIT
+}
+
+pub(crate) fn log(log_code: String) {
+    let filename = format!("log_{}.txt", MARKET_NAME);
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(filename)
+        .unwrap();
+
+    let time = chrono::Local::now()
+        .format("%y:%m:%d:%H:%M:%S:%3f")
+        .to_string();
+
+    if let Err(e) = writeln!(file, "{}|{}|{}", MARKET_NAME, time, log_code) {
+        eprintln!("Error while writing to file {}", e);
+    }
 }
