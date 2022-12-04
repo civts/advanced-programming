@@ -846,44 +846,62 @@ mod solmarket_tests {
     #[test]
     fn should_return_err_if_lock_sell_limit_exceeded() {
         // given random market
-        let market = SOLMarket::new_random();
+        let market_ref = SOLMarket::new_random();
+        let mut market = market_ref.borrow_mut();
 
-        // when 20 buy locks were performed
-        (1..21).for_each(|_i: i32| {
-            let _r =
-                market
-                    .borrow_mut()
-                    .lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
-        });
+        // Create the maximum amount of allowed sell locks
+        for i in 0..LOCK_LIMIT {
+            let r = market.lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
+            assert!(r.is_ok(), "Lock number {i} should be successful");
+        }
 
-        // then 21 lock sell try will return an MaxAllowedLocksReached error
-        let result =
-            market
-                .borrow_mut()
-                .lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
-        assert_eq!(result.unwrap_err(), LockSellError::MaxAllowedLocksReached)
+        // Test than next lock returns a MaxAllowedLocksReached error
+        let result = market.lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
+        assert_eq!(result.unwrap_err(), LockSellError::MaxAllowedLocksReached);
     }
 
     #[test]
     fn should_return_err_if_lock_buy_limit_exceeded() {
         // given random market
-        let market = SOLMarket::new_random();
+        let market_ref = SOLMarket::new_random();
+        let mut market = market_ref.borrow_mut();
 
         // Create the maximum amount of allowed buy locks
         for i in 0..LOCK_LIMIT {
-            let r =
-                market
-                    .borrow_mut()
-                    .lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
+            let r = market.lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
             assert!(r.is_ok(), "Lock number {i} should be successful");
         }
 
         // Test than next lock returns a MaxAllowedLocksReached error
-        let result =
-            market
-                .borrow_mut()
-                .lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
-        assert_eq!(result.unwrap_err(), LockBuyError::MaxAllowedLocksReached)
+        let result = market.lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
+        assert_eq!(result.unwrap_err(), LockBuyError::MaxAllowedLocksReached);
+    }
+
+    #[test]
+    fn should_return_err_if_lock_buy_and_sell_limit_exceeded() {
+        // given random market
+        let market_ref = SOLMarket::new_random();
+        let mut market = market_ref.borrow_mut();
+
+        // Create the maximum amount of allowed buy locks
+        for i in 0..LOCK_LIMIT {
+            let r = market.lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
+            assert!(r.is_ok(), "Buy lock number {i} should be successful");
+        }
+
+        // Create the maximum amount of allowed sell locks
+        for i in 0..LOCK_LIMIT {
+            let r = market.lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
+            assert!(r.is_ok(), "Sell lock number {i} should be successful");
+        }
+
+        // Test than next buy lock returns a MaxAllowedLocksReached error
+        let result = market.lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
+        assert_eq!(result.unwrap_err(), LockBuyError::MaxAllowedLocksReached);
+
+        // Test than next lock returns a MaxAllowedLocksReached error
+        let result = market.lock_sell(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
+        assert_eq!(result.unwrap_err(), LockSellError::MaxAllowedLocksReached);
     }
 
     #[cfg(test)]
