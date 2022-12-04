@@ -1,4 +1,4 @@
-use crate::good_lock_meta::GoodLockMeta;
+use crate::lib::domain::good_lock_meta::GoodLockMeta;
 use std::{collections::HashMap, path::Path};
 use unitn_market_2022::good::good_kind::GoodKind;
 

@@ -1,4 +1,4 @@
-use crate::market::SOLMarket;
+use crate::lib::market::sol_market::SOLMarket;
 
 #[test]
 /// When a market gets created using the `new_with_quantities` constructor,

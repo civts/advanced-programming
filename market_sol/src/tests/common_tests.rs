@@ -2,7 +2,7 @@ mod extern_test {
     //import here the market_test module and the Market trait
     use unitn_market_2022::market::market_test;
     //import here your implementation of the market
-    use crate::market::SOLMarket;
+    use crate::lib::market::sol_market::SOLMarket;
     //make an alias to your market
     type MarketType = SOLMarket;
     //test every aspect of your market using the generic function

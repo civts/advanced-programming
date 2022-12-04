@@ -1,4 +1,4 @@
-use crate::market::SOLMarket;
+use crate::lib::market::sol_market::SOLMarket;
 use unitn_market_2022::market::Market;
 
 #[test]

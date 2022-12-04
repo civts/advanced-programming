@@ -1,11 +1,12 @@
 mod test_buy {
-    use crate::market::SOLMarket;
     use std::cell::RefCell;
     use std::rc::Rc;
     use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
     use unitn_market_2022::good::good::Good;
     use unitn_market_2022::good::good_kind::GoodKind::{self, *};
     use unitn_market_2022::market::{BuyError, LockBuyError, Market, MarketGetterError};
+
+    use crate::lib::market::sol_market::SOLMarket;
 
     // Setup a struct with default test value
     struct TestMarketSetup {

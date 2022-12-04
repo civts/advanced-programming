@@ -4,7 +4,7 @@ use unitn_market_2022::{
     wait_one_day,
 };
 
-use crate::market::{SOLMarket, TOKEN_DURATION};
+use crate::lib::market::sol_market::{SOLMarket, TOKEN_DURATION};
 
 const TRADER_NAME: &str = "foobar";
 

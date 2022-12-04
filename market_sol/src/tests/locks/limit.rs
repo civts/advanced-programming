@@ -3,7 +3,7 @@ use unitn_market_2022::{
     market::{LockBuyError, LockSellError, Market},
 };
 
-use crate::market::{SOLMarket, LOCK_LIMIT};
+use crate::lib::market::sol_market::{SOLMarket, LOCK_LIMIT};
 
 const TRADER_NAME: &str = "foobar";
 

@@ -1,10 +1,4 @@
-mod good_lock_meta;
-mod good_meta;
-mod market;
-mod market_meta;
-mod market_metadata;
-mod misc;
-
+mod lib;
 mod tests;
 
 fn main() {

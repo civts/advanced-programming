@@ -1,5 +1,5 @@
 mod test_sell {
-    use crate::market::SOLMarket;
+    use crate::lib::market::sol_market::SOLMarket;
     use unitn_market_2022::{
         good::{consts::DEFAULT_GOOD_KIND, good::Good, good_kind::GoodKind},
         market::{LockSellError, Market, MarketGetterError, SellError},

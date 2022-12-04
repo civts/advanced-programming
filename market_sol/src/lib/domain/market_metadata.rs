@@ -1,5 +1,4 @@
-use crate::good_meta::GoodMeta;
-
+use crate::lib::domain::good_meta::GoodMeta;
 use std::collections::HashMap;
 use unitn_market_2022::good::good_kind::GoodKind;
 
