@@ -30,7 +30,7 @@ impl MarketMeta {
 
     pub fn new_with_file(f: &Path) -> Self {
         let file_str = f.to_str().unwrap();
-        return Self {
+        Self {
             locked_buys: Default::default(),
             locked_sells: Default::default(),
             min_bid: Default::default(), // todo: come up with min bid for each goods
@@ -38,6 +38,6 @@ impl MarketMeta {
             num_of_sell_locks: 0,
             num_of_buy_locks: 0,
             file_path: Some(String::from(file_str)),
-        };
+        }
     }
 }

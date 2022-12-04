@@ -48,7 +48,7 @@ impl SOLMarket {
             subscriber.on_event(e.clone())
         }
         // UNCOMMENT THIS LINE TO NOTIFY YOURSELF TOO, AND NOT ONLY YOUR NEIGHBOURS
-        self.on_event(e.clone());
+        self.on_event(e);
     }
 
     fn new_with_quantities_and_meta(
@@ -89,7 +89,7 @@ impl SOLMarket {
         let good_labels: Vec<GoodLabel> = goods_metadata
             .iter()
             .map(|(k, g)| GoodLabel {
-                good_kind: k.clone(),
+                good_kind: *k,
                 quantity: g.quantity_available,
                 exchange_rate_buy: g.buy_price,
                 exchange_rate_sell: g.sell_price,
@@ -121,21 +121,16 @@ impl SOLMarket {
                 if !exists {
                     let parent = Path::parent(path);
                     //If needed, create parent directory
-                    match parent {
-                        Some(directory_path) => {
-                            let parent_exists = Path::exists(directory_path);
-                            if !parent_exists {
-                                match fs::create_dir_all(directory_path) {
-                                    Ok(_) => {}
-                                    Err(_) => {
-                                        panic!(
-                                            "Could not create directory for SOL market status file"
-                                        );
-                                    }
+                    if let Some(directory_path) = parent {
+                        let parent_exists = Path::exists(directory_path);
+                        if !parent_exists {
+                            match fs::create_dir_all(directory_path) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    panic!("Could not create directory for SOL market status file");
                                 }
                             }
                         }
-                        None => {}
                     }
                     println!("SOL Market file at {} does not seem to exist", pts);
                     return;
@@ -166,7 +161,7 @@ impl SOLMarket {
             s += "\n";
             contents.push_str(&s);
         }
-        contents.push_str("\n");
+        contents.push('\n');
         for good in self.goods.iter() {
             contents.push_str(sol_file_prefixes::GOOD_PREFIX);
             let kind = match good.get_kind() {
@@ -176,9 +171,9 @@ impl SOLMarket {
                 GoodKind::YUAN => "YUAN",
             };
             contents.push_str(kind);
-            contents.push_str(" ");
+            contents.push(' ');
             contents.push_str(good.get_qty().to_string().as_str());
-            contents.push_str(" ");
+            contents.push(' ');
             let exchange_rate = self.meta.min_bid.get(&good.get_kind());
             if exchange_rate.is_none() {
                 println!("⚠️ Exchange rate should be something at this point");
@@ -193,9 +188,9 @@ impl SOLMarket {
                 },
             };
             contents.push_str(exchange_rate.to_string().as_str());
-            contents.push_str("\n");
+            contents.push('\n');
         }
-        return contents;
+        contents
     }
 
     /// Reads the file at the provided path and optionally returns a tuple with 4
@@ -213,18 +208,16 @@ impl SOLMarket {
             return None;
         }
         let contents = fs::read_to_string(path)
-            .expect(format!("Should have been able to read the file at {pts}").as_str());
-        let mut line_number = 0;
+            .unwrap_or_else(|_| panic!("Should have been able to read the file at {pts}"));
         let mut reading_failed = false;
         let mut goodmap: HashMap<GoodKind, f32> = HashMap::new();
-        for line in contents.split("\n").into_iter() {
-            line_number += 1;
+        for (line_number, line) in contents.split('\n').into_iter().enumerate() {
             if line.starts_with(COMMENT_PREFIX) {
                 continue;
             } else if line.starts_with(GOOD_PREFIX) {
                 let parts = line.replace(GOOD_PREFIX, "");
-                let parts: Vec<&str> = parts.split(" ").collect();
-                let good_kind = match parts.get(0) {
+                let parts: Vec<&str> = parts.split(' ').collect();
+                let good_kind = match parts.first() {
                     Some(ticket) => match *ticket {
                         "USD" => GoodKind::USD,
                         "YEN" => GoodKind::YEN,
@@ -288,9 +281,9 @@ impl SOLMarket {
         }
 
         if reading_failed {
-            return None;
+            None
         } else {
-            return Some((eur_qty, yen_qty, usd_qty, yuan_qty));
+            Some((eur_qty, yen_qty, usd_qty, yuan_qty))
         }
     }
 }
@@ -391,11 +384,11 @@ impl Market for SOLMarket {
         let yuan_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YUAN) * yuan_mkt_cap;
         let usd_quantity = GoodKind::get_default_exchange_rate(&GoodKind::USD) * usd_mkt_cap;
         //Get the market
-        return Self::new_with_quantities(eur_quantity, yen_quantity, usd_quantity, yuan_quantity);
+        Self::new_with_quantities(eur_quantity, yen_quantity, usd_quantity, yuan_quantity)
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
-        return Self::new_with_quantities_and_meta(eur, yen, usd, yuan, MarketMeta::new());
+        Self::new_with_quantities_and_meta(eur, yen, usd, yuan, MarketMeta::new())
     }
 
     fn new_file(path: &str) -> Rc<RefCell<dyn Market>>
@@ -408,18 +401,18 @@ impl Market for SOLMarket {
             let quantities = Self::read_quantities_from_file(path);
             return match quantities {
                 Some(q) => {
-                    let meta = MarketMeta::new_with_file(&path);
+                    let meta = MarketMeta::new_with_file(path);
                     return Self::new_with_quantities_and_meta(q.0, q.1, q.2, q.3, meta);
                 }
                 None => Self::new_random(),
             };
         } else {
-            return Self::new_random();
+            Self::new_random()
         }
     }
 
     fn get_name(&self) -> &'static str {
-        return MARKET_NAME;
+        MARKET_NAME
     }
 
     // TODO: Check is we need to sum up all goods -> Specs not so clear
@@ -538,7 +531,7 @@ impl Market for SOLMarket {
         let mut hasher = DefaultHasher::new();
         let now = chrono::Local::now();
         (
-            kind_to_buy.clone(),
+            kind_to_buy,
             quantity_to_buy.to_string(),
             bid.to_string(),
             now,
@@ -554,12 +547,7 @@ impl Market for SOLMarket {
         good_label.quantity -= quantity_to_buy;
 
         // Update meta
-        let good_meta = GoodLockMeta::new(
-            kind_to_buy.clone(),
-            bid,
-            quantity_to_buy,
-            self.meta.current_day,
-        );
+        let good_meta = GoodLockMeta::new(kind_to_buy, bid, quantity_to_buy, self.meta.current_day);
 
         self.meta.locked_buys.insert(token.clone(), good_meta);
         self.meta.num_of_buy_locks += 1;
@@ -567,7 +555,7 @@ impl Market for SOLMarket {
         // Create and spread event
         let e = Event {
             kind: EventKind::LockedBuy,
-            good_kind: kind_to_buy.clone(),
+            good_kind: kind_to_buy,
             quantity: quantity_to_buy,
             price: bid,
         };
@@ -633,7 +621,7 @@ impl Market for SOLMarket {
             .unwrap();
         default.quantity += eur.get_qty();
 
-        let release_good = Good::new(good_meta.kind.clone(), good_meta.quantity);
+        let release_good = Good::new(good_meta.kind, good_meta.quantity);
 
         // Create and spread event
         let e = Event {
@@ -723,7 +711,7 @@ impl Market for SOLMarket {
         let mut hasher = DefaultHasher::new();
         let now = chrono::Local::now();
         (
-            kind_to_sell.clone(),
+            kind_to_sell,
             quantity_to_sell.to_string(),
             offer.to_string(),
             now,
@@ -742,12 +730,8 @@ impl Market for SOLMarket {
         default_good.quantity -= offer;
 
         // Update meta
-        let good_meta = GoodLockMeta::new(
-            kind_to_sell.clone(),
-            offer,
-            quantity_to_sell,
-            self.meta.current_day,
-        );
+        let good_meta =
+            GoodLockMeta::new(kind_to_sell, offer, quantity_to_sell, self.meta.current_day);
 
         self.meta.locked_sells.insert(token.clone(), good_meta);
         self.meta.num_of_sell_locks += 1;
@@ -755,7 +739,7 @@ impl Market for SOLMarket {
         // Create and spread event
         let e = Event {
             kind: EventKind::LockedSell,
-            good_kind: kind_to_sell.clone(),
+            good_kind: kind_to_sell,
             quantity: quantity_to_sell,
             price: offer,
         };
@@ -794,12 +778,12 @@ impl Market for SOLMarket {
 
         // Check good is the same as we agreed on lock
         let kind = good.get_kind();
-        let expected_kind = good_meta.kind.clone();
+        let expected_kind = good_meta.kind;
         if kind.ne(&expected_kind) {
             info!("{log_error}");
             return Err(SellError::WrongGoodKind {
-                wrong_good_kind: kind.clone(),
-                pre_agreed_kind: expected_kind.clone(),
+                wrong_good_kind: kind,
+                pre_agreed_kind: expected_kind,
             });
         }
 
@@ -828,7 +812,7 @@ impl Market for SOLMarket {
         // Create and spread event
         let e = Event {
             kind: EventKind::Sold,
-            good_kind: good_meta.kind.clone(),
+            good_kind: good_meta.kind,
             quantity: good_meta.quantity,
             price: good_meta.price,
         };
@@ -847,7 +831,7 @@ impl Market for SOLMarket {
 }
 
 fn lock_limit_exceeded(num_of_locks: u32) -> bool {
-    return num_of_locks + 1 > LOCK_LIMIT;
+    num_of_locks + 1 > LOCK_LIMIT
 }
 
 impl Drop for SOLMarket {

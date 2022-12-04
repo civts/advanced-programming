@@ -1,5 +1,3 @@
-use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
-
 pub(crate) struct GoodMeta {
     pub sell_price: f32,
     pub buy_price: f32,
