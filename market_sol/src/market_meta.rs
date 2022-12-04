@@ -10,8 +10,6 @@ pub struct MarketMeta {
     pub locked_sells: HashMap<String, GoodLockMeta>,
     pub min_bid: HashMap<GoodKind, f32>,
     pub current_day: u32,
-    pub num_of_sell_locks: u32,
-    pub num_of_buy_locks: u32,
     pub file_path: Option<String>,
 }
 
@@ -21,11 +19,17 @@ impl MarketMeta {
             locked_buys: Default::default(),
             locked_sells: Default::default(),
             min_bid: Default::default(), // todo: come up with min bid for each goods
-            current_day: 0u32,
-            num_of_sell_locks: 0u32,
-            num_of_buy_locks: 0u32,
+            current_day: 1,
             file_path: None,
         }
+    }
+
+    pub fn num_of_locked_sells(&self) -> u32 {
+        self.locked_sells.len() as u32
+    }
+
+    pub fn num_of_buy_locks(&self) -> u32 {
+        self.locked_buys.len() as u32
     }
 
     pub fn new_with_file(f: &Path) -> Self {
@@ -34,9 +38,7 @@ impl MarketMeta {
             locked_buys: Default::default(),
             locked_sells: Default::default(),
             min_bid: Default::default(), // todo: come up with min bid for each goods
-            current_day: 0u32,
-            num_of_sell_locks: 0,
-            num_of_buy_locks: 0,
+            current_day: 1,
             file_path: Some(String::from(file_str)),
         }
     }

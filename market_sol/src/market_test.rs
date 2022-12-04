@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod solmarket_tests {
-    use crate::market::SOLMarket;
+    use crate::market::{SOLMarket, LOCK_LIMIT, TOKEN_DURATION};
     use std::cell::RefCell;
     use std::rc::Rc;
     use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
@@ -738,8 +738,10 @@ mod solmarket_tests {
     }
 
     #[test]
-    fn test_token_duration_and_passing_days() {
+    fn buy_locks_expire() {
         let market_start_quantity = 1000.0;
+        let kind_for_this_test = GoodKind::USD;
+        let preset_quantity = 15.0;
 
         let markt_bind = SOLMarket::new_with_quantities(
             market_start_quantity,
@@ -747,21 +749,12 @@ mod solmarket_tests {
             market_start_quantity,
             market_start_quantity,
         );
-        // let mut market = markt_bind.borrow_mut();
 
-        let kind_for_this_test = GoodKind::USD;
-        let preset_quantity = 15.0;
+        //Create a buy lock
         let right_bid = markt_bind
             .borrow_mut()
             .get_buy_price(kind_for_this_test, preset_quantity)
-            .ok()
             .unwrap();
-        let right_offer = markt_bind
-            .borrow_mut()
-            .get_sell_price(kind_for_this_test, preset_quantity)
-            .ok()
-            .unwrap();
-
         let expiring_buy_token = markt_bind
             .borrow_mut()
             .lock_buy(
@@ -770,7 +763,50 @@ mod solmarket_tests {
                 right_bid,
                 TRADER_NAME.to_string(),
             )
-            .ok()
+            .unwrap();
+
+        //Wait the minimum days to make the locks expire (TOKEN_DURATION)
+        for _ in 0..TOKEN_DURATION {
+            wait_one_day!(markt_bind);
+        }
+
+        //Have to re-declare it here otherwise wait_one_day will panic due to two mutable references
+        let mut market = markt_bind.borrow_mut();
+
+        //Try to finish the buy
+        let res_buy = market
+            .buy(
+                expiring_buy_token.clone(),
+                &mut Good::new(DEFAULT_GOOD_KIND, preset_quantity),
+            )
+            .unwrap_err();
+
+        //Compute the expected error
+        let expected_for_buy = BuyError::ExpiredToken {
+            expired_token: expiring_buy_token,
+        };
+
+        //Check we got this error
+        assert_eq!(res_buy, expected_for_buy);
+    }
+
+    #[test]
+    fn sell_locks_expire() {
+        let market_start_quantity = 1000.0;
+        let kind_for_this_test = GoodKind::USD;
+        let preset_quantity = 15.0;
+
+        let markt_bind = SOLMarket::new_with_quantities(
+            market_start_quantity,
+            market_start_quantity,
+            market_start_quantity,
+            market_start_quantity,
+        );
+
+        //Create a sell lock
+        let right_offer = markt_bind
+            .borrow_mut()
+            .get_sell_price(kind_for_this_test, preset_quantity)
             .unwrap();
         let expiring_sell_token = markt_bind
             .borrow_mut()
@@ -780,42 +816,30 @@ mod solmarket_tests {
                 right_offer,
                 TRADER_NAME.to_string(),
             )
-            .ok()
             .unwrap();
 
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
-        wait_one_day!(markt_bind);
+        //Wait the minimum days to make the locks expire (TOKEN_DURATION)
+        for _ in 0..TOKEN_DURATION {
+            wait_one_day!(markt_bind);
+        }
 
-        let expected_for_buy = BuyError::ExpiredToken {
-            expired_token: expiring_buy_token.clone(),
-        };
-        let expected_for_sell = SellError::ExpiredToken {
-            expired_token: expiring_sell_token.clone(),
-        };
+        //Have to re-declare it here otherwise wait_one_day will panic due to two mutable references
+        let mut market = markt_bind.borrow_mut();
 
-        let res_buy = markt_bind
-            .borrow_mut()
-            .buy(
-                expiring_buy_token,
-                &mut Good::new(DEFAULT_GOOD_KIND, preset_quantity),
-            )
-            .unwrap_err();
-        let res_sell = markt_bind
-            .borrow_mut()
+        //Try to finish the sell
+        let res_sell = market
             .sell(
-                expiring_sell_token,
+                expiring_sell_token.clone(),
                 &mut Good::new(kind_for_this_test, preset_quantity),
             )
             .unwrap_err();
 
-        assert_eq!(res_buy, expected_for_buy);
+        //Compute the expected error
+        let expected_for_sell = SellError::ExpiredToken {
+            expired_token: expiring_sell_token,
+        };
+
+        //Check we got those error
         assert_eq!(res_sell, expected_for_sell);
     }
 
@@ -845,17 +869,20 @@ mod solmarket_tests {
         // given random market
         let market = SOLMarket::new_random();
 
-        // when 20 buy locks were performed
-        (1..21).for_each(|_i: i32| {
-            let _r = market
-                .borrow_mut()
-                .lock_buy(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
-        });
+        // Create the maximum amount of allowed buy locks
+        for i in 0..LOCK_LIMIT {
+            let r =
+                market
+                    .borrow_mut()
+                    .lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
+            assert!(r.is_ok(), "Lock number {i} should be successful");
+        }
 
-        // then 21 lock buy try will return an MaxAllowedLocksReached error
-        let result = market
-            .borrow_mut()
-            .lock_buy(GoodKind::EUR, 1.0, 1.0, TRADER_NAME.to_string());
+        // Test than next lock returns a MaxAllowedLocksReached error
+        let result =
+            market
+                .borrow_mut()
+                .lock_buy(GoodKind::EUR, 1.0, f32::MAX, TRADER_NAME.to_string());
         assert_eq!(result.unwrap_err(), LockBuyError::MaxAllowedLocksReached)
     }
 

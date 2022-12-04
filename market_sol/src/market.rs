@@ -25,8 +25,8 @@ use unitn_market_2022::market::{
 };
 
 const MARKET_NAME: &str = "SOL";
-const TOKEN_DURATION: u32 = 15; // TODO: Either token duration need to be > Lock Limit or implement lock_limit per trader
-const LOCK_LIMIT: u32 = 10;
+pub(crate) const TOKEN_DURATION: u32 = 15; // TODO: Either token duration need to be > Lock Limit or implement lock_limit per trader
+pub(crate) const LOCK_LIMIT: u32 = 10;
 mod sol_file_prefixes {
     pub const COMMENT_PREFIX: &str = "#";
     pub const GOOD_PREFIX: &str = "good ";
@@ -340,7 +340,6 @@ impl Notifiable for SOLMarket {
                     .find(|l| l.good_kind.eq(&meta.kind))
                     .unwrap();
                 good.quantity += meta.quantity;
-                self.meta.num_of_buy_locks -= 1;
             }
         }
         for (_, meta) in self.meta.locked_sells.iter() {
@@ -352,7 +351,6 @@ impl Notifiable for SOLMarket {
                     .find(|l| l.good_kind.eq(&DEFAULT_GOOD_KIND))
                     .unwrap();
                 default_good.quantity += meta.price;
-                self.meta.num_of_sell_locks -= 1;
             }
         }
     }
@@ -511,7 +509,10 @@ impl Market for SOLMarket {
         }
 
         // Lock limit check
-        if lock_limit_exceeded(self.meta.num_of_buy_locks) {
+        let num_of_locks = self.meta.num_of_buy_locks();
+        if lock_limit_exceeded(num_of_locks) {
+            let b = lock_limit_exceeded(num_of_locks);
+            print!("{b}");
             return Err(LockBuyError::MaxAllowedLocksReached);
         }
 
@@ -550,7 +551,6 @@ impl Market for SOLMarket {
         let good_meta = GoodLockMeta::new(kind_to_buy, bid, quantity_to_buy, self.meta.current_day);
 
         self.meta.locked_buys.insert(token.clone(), good_meta);
-        self.meta.num_of_buy_locks += 1;
 
         // Create and spread event
         let e = Event {
@@ -633,7 +633,6 @@ impl Market for SOLMarket {
 
         // Reset lock
         self.meta.locked_buys.remove(&*token);
-        self.meta.num_of_buy_locks -= 1;
 
         self.notify_everyone(e);
 
@@ -686,7 +685,7 @@ impl Market for SOLMarket {
         }
 
         // Lock limit check
-        if lock_limit_exceeded(self.meta.num_of_sell_locks) {
+        if lock_limit_exceeded(self.meta.num_of_locked_sells()) {
             return Err(LockSellError::MaxAllowedLocksReached);
         }
 
@@ -734,7 +733,6 @@ impl Market for SOLMarket {
             GoodLockMeta::new(kind_to_sell, offer, quantity_to_sell, self.meta.current_day);
 
         self.meta.locked_sells.insert(token.clone(), good_meta);
-        self.meta.num_of_sell_locks += 1;
 
         // Create and spread event
         let e = Event {
@@ -819,7 +817,6 @@ impl Market for SOLMarket {
 
         // Reset lock
         self.meta.locked_sells.remove(&*token);
-        self.meta.num_of_sell_locks -= 1;
 
         self.notify_everyone(e);
 
