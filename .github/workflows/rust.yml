@@ -12,7 +12,7 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     env:
       CARGO_REGISTRIES_KELLNR_TOKEN: ${{secrets.kellnr_token}}
@@ -32,7 +32,15 @@ jobs:
     - name: Connect to VPN
       run: |
         # CREATE VPN SCRIPT
-        curl -o ./unitn_hireport.sh https://raw.githubusercontent.com/openconnect/openconnect/master/trojans/hipreport.sh
+        curl -o ./unitn_hireport.sh https://raw.githubusercontent.com/openconnect/openconnect/ca7bc36520e53561eda2c44186dd2a2e20f69d20/trojans/hipreport.sh
+        echo "3e1cdd282bf7eb0046f1f8ed18d4978755b07691ed1e4a0bc809833b0ff076be unitn_hireport.sh" > checksums
+        sha256sum -c checksums
+        CHECKSUM_EXIT_CODE=$?
+        if [ $CHECKSUM_EXIT_CODE != 0 ]; then
+          echo "The checksum for the script does not match"
+          exit 1
+        fi
+        rm checksums
         chmod +x ./unitn_hireport.sh
         echo "echo -n ${{secrets.PANCAKES}} | sudo openconnect --protocol=gp --user=${{secrets.UNITN_USERNAME}} https://vpn.icts.unitn.it --csd-wrapper=./unitn_hireport.sh --verbose --passwd-on-stdin" > unitn_vpn_script.sh
         chmod +x unitn_vpn_script.sh
