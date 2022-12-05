@@ -7,7 +7,6 @@ use unitn_market_2022::event::notifiable::Notifiable;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::good_label::GoodLabel;
-use unitn_market_2022::market::Market;
 
 pub(crate) const MARKET_NAME: &str = "SOL";
 pub(crate) const TOKEN_DURATION: u32 = 15;
@@ -27,7 +26,7 @@ impl SOLMarket {
         usd: f32,
         yuan: f32,
         meta: MarketMeta,
-    ) -> Rc<RefCell<dyn Market>> {
+    ) -> Rc<RefCell<SOLMarket>> {
         if eur < 0.0 {
             panic!("Tried to initialize the market with a negative quantity of eur");
         }

@@ -17,26 +17,28 @@ use unitn_market_2022::good::{
 };
 
 ///How long a season can be, max
-const MAX_SEASON_LENGTH: u16 = 365;
-const MIN_SEASON_LENGTH: u16 = 20;
+const MAX_SEASON_LENGTH: u32 = 365;
+const MIN_SEASON_LENGTH: u32 = 20;
 const MIN_VARIATION_IN_SEASON: f32 = 0.3;
 
 ///Holds all the info that we need to determine the price of a good on a given day
 #[derive(Debug)]
 pub(crate) struct PriceState {
     historic_prices: HashMap<GoodKind, Vec<f32>>,
-    seasons: HashMap<GoodKind, Season>,
+    pub(crate)seasons: HashMap<GoodKind, Season>,
     rand: ChaCha20Rngg,
     gaus: Gaussian,
     max_increase_in_season: f32,
     max_decrease_per_season: f32,
+    //debug_only
+    pub(crate) past_seasons: HashMap<GoodKind, Vec<Season>>,
 }
 
-#[derive(Debug)]
-struct Season {
-    starting_day: u32,
-    duration: u16,
-    starting_price: f32,
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Season {
+    pub(crate) starting_day: u32,
+    duration: u32,
+    pub(crate) starting_price: f32,
     ending_price: f32,
 }
 
@@ -79,9 +81,18 @@ impl Season {
     ) -> Self {
         let duration = rng.gen_range(MIN_SEASON_LENGTH..=MAX_SEASON_LENGTH);
         let intensity = gauss.sample(rng) as f32;
-        let change = starting_price * (intensity.clamp(-max_decrease, max_increase) as f32);
+        let change_percentage = intensity.clamp(-max_decrease, max_increase) as f32;
+        let change = starting_price * change_percentage;
         let final_price = starting_price + change;
         let final_price = f32::max(final_price, 0.001);
+        println!(">>>>>>>>>>> New season");
+        println!("Today is the {current_day}");
+        let d = current_day + duration;
+        println!("End: {d}");
+        println!("Starting price: {starting_price}");
+        println!("Target price: {final_price}");
+        let cp = change_percentage * 100.0;
+        println!("Change %: {cp}");
         Season {
             starting_day: current_day,
             duration,
@@ -92,7 +103,7 @@ impl Season {
 
     ///Returns the day when this season ends
     fn end(&self) -> u32 {
-        self.starting_day + (self.duration as u32)
+        self.starting_day + self.duration
     }
 
     fn get_price(&self, day: u32, random_for_noise: f64) -> f32 {
@@ -117,6 +128,7 @@ impl PriceState {
             gaus: Gaussian::new(0.0, 0.25),
             max_decrease_per_season,
             max_increase_in_season,
+            past_seasons: HashMap::new(),
         }
     }
 
@@ -150,7 +162,7 @@ impl PriceState {
     fn get_current_season(&mut self, good_kind: &GoodKind, day: u32) -> &Season {
         let season_opt = self.seasons.get(good_kind);
         let need_new_season = match season_opt {
-            Some(s) => s.end() > day,
+            Some(s) => day > s.end(),
             None => true,
         };
         if need_new_season {
@@ -163,6 +175,17 @@ impl PriceState {
                 self.max_decrease_per_season,
                 self.max_increase_in_season,
             );
+            let s = self.seasons.get_mut(good_kind);
+            if let Some(ended_season) = s {
+                let vec_opt = self.past_seasons.get_mut(good_kind);
+                match vec_opt {
+                    Some(v) => v.push(*ended_season),
+                    None => {
+                        let v: Vec<Season> = Vec::from_iter([*ended_season]);
+                        self.past_seasons.insert(*good_kind, v);
+                    }
+                }
+            }
             self.seasons.insert(*good_kind, new_season);
         }
         let season = self
