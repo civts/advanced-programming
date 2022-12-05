@@ -1,0 +1,61 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    env:
+      CARGO_REGISTRIES_KELLNR_TOKEN: ${{secrets.kellnr_token}}
+    
+    steps:
+    - name: Download the repo
+      uses: actions/checkout@v3
+    - name: Setup rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: "sol-market-rust"
+        workspaces: "market_sol -> target"
+    - name: Install openconnect client
+      run: |
+        sudo apt-get update
+        sudo apt-get install -qy openconnect
+    - name: Connect to VPN
+      run: |
+        # CREATE VPN SCRIPT
+        curl -o ./unitn_hireport.sh https://raw.githubusercontent.com/openconnect/openconnect/master/trojans/hipreport.sh
+        chmod +x ./unitn_hireport.sh
+        echo "echo -n ${{secrets.PANCAKE}} | sudo openconnect --protocol=gp --user=${{secrets.UNITN_USERNAME}} https://vpn.icts.unitn.it --csd-wrapper=./unitn_hireport.sh --verbose --passwd-on-stdin" > unitn_vpn_script.sh
+        chmod +x unitn_vpn_script.sh
+        # CONNECT TO VPN
+        ./unitn_vpn_script.sh &
+        VPN_PROC_ID=$!
+        # GIVE IT A LITTLE TIME TO CONNECT
+        sleep 10
+        # CHECK THAT WE ARE CONNECTED TO UNITN's VPN
+        ping -c 1 advancedprogramming.disi.unitn.it
+        cd market_sol
+        # GET DEPENDENCIES
+        cargo check || true
+        # STOP VPN
+        kill -15 $VPN_PROC_ID
+        cd ..
+        rm ./unitn_vpn_script.sh
+        rm ./unitn_hireport.sh
+    - name: Build
+      run: |
+        cd market_sol
+        cargo build --verbose
+    - name: Run tests
+      run: |
+        cd market_sol
+        cargo test --verbose
