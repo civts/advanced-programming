@@ -1,6 +1,6 @@
 use crate::lib::domain::good_lock_meta::GoodLockMeta;
+use crate::lib::market::sol_market::TOKEN_DURATION;
 use std::{collections::HashMap, path::Path};
-use unitn_market_2022::good::good_kind::GoodKind;
 
 #[derive(Debug)]
 pub struct MarketMeta {
@@ -8,7 +8,6 @@ pub struct MarketMeta {
     pub locked_buys: HashMap<String, GoodLockMeta>,
     // Key is token
     pub locked_sells: HashMap<String, GoodLockMeta>,
-    pub min_bid: HashMap<GoodKind, f32>,
     pub current_day: u32,
     pub file_path: Option<String>,
 }
@@ -18,18 +17,33 @@ impl MarketMeta {
         Self {
             locked_buys: Default::default(),
             locked_sells: Default::default(),
-            min_bid: Default::default(), // todo: come up with min bid for each goods
             current_day: 1,
             file_path: None,
         }
     }
 
+    /// Return the number of buy locks that are not expired
     pub fn num_of_locked_sells(&self) -> u32 {
-        self.locked_sells.len() as u32
+        let mut not_expired_locks = 0u32;
+        for (_, glm) in self.locked_sells.iter() {
+            let days_since = self.current_day - glm.created_on;
+            if days_since <= TOKEN_DURATION {
+                not_expired_locks += 1
+            }
+        }
+        not_expired_locks
     }
 
+    /// Return the number of buy locks that are not expired
     pub fn num_of_buy_locks(&self) -> u32 {
-        self.locked_buys.len() as u32
+        let mut not_expired_locks = 0u32;
+        for (_, glm) in self.locked_buys.iter() {
+            let days_since = self.current_day - glm.created_on;
+            if days_since <= TOKEN_DURATION {
+                not_expired_locks += 1
+            }
+        }
+        not_expired_locks
     }
 
     pub fn new_with_file(f: &Path) -> Self {
@@ -37,7 +51,6 @@ impl MarketMeta {
         Self {
             locked_buys: Default::default(),
             locked_sells: Default::default(),
-            min_bid: Default::default(), // todo: come up with min bid for each goods
             current_day: 1,
             file_path: Some(String::from(file_str)),
         }

@@ -86,7 +86,12 @@ impl Market for SOLMarket {
 
     fn get_budget(&self) -> f32 {
         self.goods.iter().fold(0f32, |acc, good| {
-            let sell_price = self.meta.min_bid.get(&good.get_kind()).unwrap();
+            let sell_price = self
+                .good_labels
+                .iter()
+                .find(|gl| gl.good_kind.eq(&good.get_kind()))
+                .unwrap()
+                .exchange_rate_sell;
             let good_quantity = good.get_qty();
             let good_market_cap = good_quantity * sell_price;
             acc + good_market_cap
@@ -206,10 +211,6 @@ impl Market for SOLMarket {
             .hash(&mut hasher);
         let token = hasher.finish().to_string();
 
-        // Update good quantity available, todo: Update good buy and sell price (in on_event method)
-        // problem with on_event method: the subscribed markets receive the notif, but you don't send the notif to yourself (at the moment) - but you can add that with one line
-        // TODO: DISCUSS -> updates should be done only after a successful buy/sell, not locks
-
         good_label.quantity -= quantity_to_buy;
 
         // Update meta
@@ -276,7 +277,7 @@ impl Market for SOLMarket {
             });
         }
 
-        // Cash in, todo: Update good buy and sell price (in on_event method)
+        // Cash in: update label & good
         let eur = cash.split(pre_agreed_quantity).unwrap();
         let default = self
             .good_labels
@@ -284,8 +285,20 @@ impl Market for SOLMarket {
             .find(|g| g.good_kind.eq(&eur.get_kind()))
             .unwrap();
         default.quantity += eur.get_qty();
+        let eur_good = self
+            .goods
+            .iter_mut()
+            .find(|g| g.get_kind().eq(&DEFAULT_GOOD_KIND))
+            .unwrap();
+        eur_good.merge(eur).unwrap();
 
-        let release_good = Good::new(good_meta.kind, good_meta.quantity);
+        // Prepare releasing good
+        let good_to_update = self
+            .goods
+            .iter_mut()
+            .find(|g| g.get_kind().eq(&good_meta.kind))
+            .unwrap();
+        let release_good = good_to_update.split(good_meta.quantity).unwrap();
 
         // Create and spread event
         let e = Event {
@@ -461,14 +474,25 @@ impl Market for SOLMarket {
 
         // Get your good now
         let selling_good = good.split(pre_agreed_quantity).unwrap();
-        let my_good = self
+        let my_good_label = self
             .good_labels
             .iter_mut()
             .find(|l| l.good_kind.eq(&selling_good.get_kind()))
             .unwrap();
-        my_good.quantity += selling_good.get_qty();
+        my_good_label.quantity += selling_good.get_qty();
+        let my_good = self
+            .goods
+            .iter_mut()
+            .find(|g| g.get_kind().eq(&good_meta.kind))
+            .unwrap();
+        my_good.merge(selling_good).unwrap();
 
-        let give_money = Good::new(DEFAULT_GOOD_KIND, good_meta.price);
+        let money_to_update = self
+            .goods
+            .iter_mut()
+            .find(|g| g.get_kind().eq(&DEFAULT_GOOD_KIND))
+            .unwrap();
+        let give_money = money_to_update.split(good_meta.price).unwrap();
 
         // Create and spread event
         let e = Event {

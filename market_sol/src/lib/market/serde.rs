@@ -1,13 +1,7 @@
 use super::sol_market::SOLMarket;
 use crate::lib::misc::banner::BANNER;
 use std::{collections::HashMap, fs, path::Path};
-use unitn_market_2022::good::{
-    consts::{
-        DEFAULT_EUR_USD_EXCHANGE_RATE, DEFAULT_EUR_YEN_EXCHANGE_RATE,
-        DEFAULT_EUR_YUAN_EXCHANGE_RATE,
-    },
-    good_kind::GoodKind,
-};
+use unitn_market_2022::good::good_kind::GoodKind;
 
 mod sol_file_prefixes {
     pub const COMMENT_PREFIX: &str = "#";
@@ -81,19 +75,12 @@ impl SOLMarket {
             contents.push(' ');
             contents.push_str(good.get_qty().to_string().as_str());
             contents.push(' ');
-            let exchange_rate = self.meta.min_bid.get(&good.get_kind());
-            if exchange_rate.is_none() {
-                println!("⚠️ Exchange rate should be something at this point");
-            }
-            let exchange_rate = match exchange_rate {
-                Some(e) => *e,
-                None => match good.get_kind() {
-                    GoodKind::EUR => 1f32,
-                    GoodKind::YEN => DEFAULT_EUR_YEN_EXCHANGE_RATE,
-                    GoodKind::USD => DEFAULT_EUR_USD_EXCHANGE_RATE,
-                    GoodKind::YUAN => DEFAULT_EUR_YUAN_EXCHANGE_RATE,
-                },
-            };
+            let exchange_rate = self
+                .good_labels
+                .iter()
+                .find(|gl| gl.good_kind.eq(&good.get_kind()))
+                .unwrap()
+                .exchange_rate_sell;
             contents.push_str(exchange_rate.to_string().as_str());
             contents.push('\n');
         }
