@@ -1,7 +1,5 @@
-use crate::lib::domain::good_meta::GoodMeta;
 use crate::lib::domain::market_meta::MarketMeta;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::rc::Rc;
@@ -12,7 +10,7 @@ use unitn_market_2022::market::good_label::GoodLabel;
 use unitn_market_2022::market::Market;
 
 pub(crate) const MARKET_NAME: &str = "SOL";
-pub(crate) const TOKEN_DURATION: u32 = 15; // TODO: Either token duration need to be > Lock Limit or implement lock_limit per trader
+pub(crate) const TOKEN_DURATION: u32 = 15;
 pub(crate) const LOCK_LIMIT: u32 = 10;
 
 pub struct SOLMarket {
@@ -49,19 +47,14 @@ impl SOLMarket {
             Good::new(GoodKind::YUAN, yuan),
             Good::new(GoodKind::USD, usd),
         ];
-        fn to_map_item(good: &Good) -> (GoodKind, GoodMeta) {
-            let kind = good.get_kind();
-            let meta = GoodMeta::new(kind.get_default_exchange_rate(), good.get_qty());
-            (kind, meta)
-        }
-        let goods_metadata: HashMap<GoodKind, GoodMeta> = goods.iter().map(to_map_item).collect();
-        let good_labels: Vec<GoodLabel> = goods_metadata
+        let good_labels: Vec<GoodLabel> = goods
             .iter()
-            .map(|(k, g)| GoodLabel {
-                good_kind: *k,
-                quantity: g.quantity_available,
-                exchange_rate_buy: g.buy_price,
-                exchange_rate_sell: g.sell_price,
+            .map(|g| GoodLabel {
+                good_kind: g.get_kind(),
+                quantity: g.get_qty(),
+                exchange_rate_buy: g.get_kind().get_default_exchange_rate(),
+                // Selling price should always be slightly lower
+                exchange_rate_sell: g.get_kind().get_default_exchange_rate() * 0.98,
             })
             .collect();
 
