@@ -34,7 +34,7 @@ jobs:
         # CREATE VPN SCRIPT
         curl -o ./unitn_hireport.sh https://raw.githubusercontent.com/openconnect/openconnect/master/trojans/hipreport.sh
         chmod +x ./unitn_hireport.sh
-        echo "echo -n ${{secrets.PANCAKE}} | sudo openconnect --protocol=gp --user=${{secrets.UNITN_USERNAME}} https://vpn.icts.unitn.it --csd-wrapper=./unitn_hireport.sh --verbose --passwd-on-stdin" > unitn_vpn_script.sh
+        echo "echo -n ${{secrets.PANCAKES}} | sudo openconnect --protocol=gp --user=${{secrets.UNITN_USERNAME}} https://vpn.icts.unitn.it --csd-wrapper=./unitn_hireport.sh --verbose --passwd-on-stdin" > unitn_vpn_script.sh
         chmod +x unitn_vpn_script.sh
         # CONNECT TO VPN
         ./unitn_vpn_script.sh &
