@@ -98,22 +98,26 @@ impl Market for SOLMarket {
             return Err(MarketGetterError::NonPositiveQuantityAsked);
         }
 
-        let good_label = self
-            .good_labels
-            .iter()
-            .find(|g| g.good_kind.eq(&kind))
-            .unwrap();
+        // let good_label = self
+        //     .good_labels
+        //     .iter()
+        //     .find(|g| g.good_kind.eq(&kind))
+        //     .unwrap();
 
-        let qty_available = good_label.quantity;
-        if qty_available < quantity {
-            return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
-                requested_good_kind: kind,
-                requested_good_quantity: quantity,
-                available_good_quantity: qty_available,
-            });
-        }
+        // let qty_available = good_label.quantity;
+        // if qty_available < quantity {
+        //     return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
+        //         requested_good_kind: kind,
+        //         requested_good_quantity: quantity,
+        //         available_good_quantity: qty_available,
+        //     });
+        // }
 
-        Ok(quantity / good_label.exchange_rate_sell)
+        // Ok(quantity / good_label.exchange_rate_sell)
+
+        let mut state = self.meta.price_state.borrow_mut();
+        let unit_price = state.get_price(&kind, self.meta.current_day);
+        Ok(unit_price * quantity)
     }
 
     fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {

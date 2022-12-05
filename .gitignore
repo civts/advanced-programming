@@ -26,3 +26,6 @@ Cargo.lock
 #Log file
 log_SOL.txt
 *.log
+
+#Charts
+*.png

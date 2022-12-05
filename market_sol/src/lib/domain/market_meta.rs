@@ -1,9 +1,11 @@
 use crate::lib::domain::good_lock_meta::GoodLockMeta;
-use std::{collections::HashMap, path::Path};
+use std::{cell::RefCell, collections::HashMap, path::Path};
 use unitn_market_2022::good::good_kind::GoodKind;
 
+use super::price_state::PriceState;
+
 #[derive(Debug)]
-pub struct MarketMeta {
+pub(crate) struct MarketMeta {
     // Key is token
     pub locked_buys: HashMap<String, GoodLockMeta>,
     // Key is token
@@ -11,6 +13,7 @@ pub struct MarketMeta {
     pub min_bid: HashMap<GoodKind, f32>,
     pub current_day: u32,
     pub file_path: Option<String>,
+    pub price_state: RefCell<PriceState>,
 }
 
 impl MarketMeta {
@@ -21,6 +24,7 @@ impl MarketMeta {
             min_bid: Default::default(), // todo: come up with min bid for each goods
             current_day: 1,
             file_path: None,
+            price_state: RefCell::new(PriceState::new()),
         }
     }
 
@@ -40,6 +44,7 @@ impl MarketMeta {
             min_bid: Default::default(), // todo: come up with min bid for each goods
             current_day: 1,
             file_path: Some(String::from(file_str)),
+            price_state: RefCell::new(PriceState::new()),
         }
     }
 }
