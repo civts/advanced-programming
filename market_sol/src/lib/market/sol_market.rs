@@ -1,6 +1,5 @@
 use crate::lib::domain::good_meta::GoodMeta;
 use crate::lib::domain::market_meta::MarketMeta;
-use crate::lib::domain::market_metadata::MarketMetadata;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
@@ -20,8 +19,6 @@ pub struct SOLMarket {
     pub(crate) goods: Vec<Good>,
     pub(crate) good_labels: Vec<GoodLabel>,
     pub(crate) subscribers: Vec<Box<dyn Notifiable>>,
-    // Deprecated
-    pub(crate) old_meta: MarketMetadata,
     pub(crate) meta: MarketMeta,
 }
 
@@ -74,9 +71,6 @@ impl SOLMarket {
             goods,
             good_labels,
             subscribers: vec![],
-            old_meta: MarketMetadata {
-                goods_meta: goods_metadata,
-            },
             meta,
         }))
     }

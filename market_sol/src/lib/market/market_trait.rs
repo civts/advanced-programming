@@ -84,17 +84,12 @@ impl Market for SOLMarket {
         MARKET_NAME
     }
 
-    // TODO: Check is we need to sum up all goods -> Specs not so clear
     fn get_budget(&self) -> f32 {
         self.goods.iter().fold(0f32, |acc, good| {
-            let value = good.get_qty()
-                * self
-                    .old_meta
-                    .goods_meta
-                    .get(&good.get_kind())
-                    .unwrap()
-                    .sell_price;
-            acc + value
+            let sell_price = self.meta.min_bid.get(&good.get_kind()).unwrap();
+            let good_quantity = good.get_qty();
+            let good_market_cap = good_quantity * sell_price;
+            acc + good_market_cap
         })
     }
 
