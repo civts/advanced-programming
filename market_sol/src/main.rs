@@ -1,68 +1,92 @@
 use lib::{domain::market_meta::MarketMeta, market::sol_market::SOLMarket};
 use plotters::{
-    prelude::{BitMapBackend, ChartBuilder, Circle, IntoDrawingArea, LabelAreaPosition},
-    series::LineSeries,
-    style::{Color, BLUE, RED, WHITE},
+    prelude::{
+        BitMapBackend, ChartBuilder, Circle, IntoDrawingArea, IntoLinspace, IntoSegmentedCoord,
+        LabelAreaPosition, PathElement, Rectangle,
+    },
+    series::{Histogram, LineSeries},
+    style::{Color, BLUE, GREEN, RED, WHITE},
 };
+use probability::prelude::{Gaussian, Sample};
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 use unitn_market_2022::event::notifiable::Notifiable;
 use unitn_market_2022::{good::good_kind::GoodKind, market::Market, wait_one_day};
+
+use crate::lib::domain::price_state::ChaCha20Rngg;
 
 mod lib;
 mod tests;
 
 fn main() {
-    // Create market
-    let sum = 10000.0;
-    let market_ref = SOLMarket::new_with_quantities_and_meta(sum, sum, sum, sum, MarketMeta::new());
+    let sd = 0.25;
 
-    let days = 365;
-    let interval = 1;
-    // Simulate time passing
-    let mut prices: Vec<f32> = Vec::new();
-    let mut min = f32::MAX;
-    let mut max = f32::MIN;
-    let gk = GoodKind::YEN;
-    for _ in 0..days {
-        let price = market_ref.borrow().get_buy_price(gk, 1.0).unwrap();
-        prices.push(price);
-        min = f32::min(min, price);
-        max = f32::max(max, price);
-        for _ in 0..interval {
-            wait_one_day!(market_ref);
-        }
+    let mut rrng = ChaCha20Rngg::new();
+    let gaus = Gaussian::new(0.0, sd);
+    let mut random_points = Vec::new();
+    for _ in 0..1000 {
+        random_points.push(gaus.sample(&mut rrng));
     }
-    // Config chart
-    let date_now = chrono::offset::Local::now();
-    let name = format!("./test_{gk}_{:?}.png", date_now);
-    let drawing_area = BitMapBackend::new(name.as_str(), (1920, 1080)).into_drawing_area();
-    drawing_area.fill(&WHITE).unwrap();
-    let mut drawing_context = ChartBuilder::on(&drawing_area)
-        .set_label_area_size(LabelAreaPosition::Left, 40.0)
-        .set_label_area_size(LabelAreaPosition::Bottom, 40.0)
-        .set_label_area_size(LabelAreaPosition::Right, 40.0)
-        .set_label_area_size(LabelAreaPosition::Top, 40.0)
-        .caption(format!("SOL Market going, {gk}"), ("sans-serif", 40.0))
-        .build_cartesian_2d(0.0..(days as f32), min..max)
+
+    let root = BitMapBackend::new("./gaus.png", (1024, 768)).into_drawing_area();
+
+    root.fill(&WHITE).unwrap();
+
+    let mut chart = ChartBuilder::on(&root)
+        .margin(5)
+        .caption("1D Gaussian Distribution Demo", ("sans-serif", 30))
+        .set_label_area_size(LabelAreaPosition::Left, 60)
+        .set_label_area_size(LabelAreaPosition::Bottom, 60)
+        .set_label_area_size(LabelAreaPosition::Right, 60)
+        .build_cartesian_2d(-4f64..4f64, 0f64..0.1)
+        .unwrap()
+        .set_secondary_coord(
+            (-4f64..4f64).step(0.1).use_round().into_segmented(),
+            0u32..500u32,
+        );
+
+    chart
+        .configure_mesh()
+        .disable_x_mesh()
+        .disable_y_mesh()
+        .y_label_formatter(&|y| format!("{:.0}%", *y * 100.0))
+        .y_desc("Percentage")
+        .draw()
         .unwrap();
 
-    drawing_context.configure_mesh().draw().unwrap();
+    chart.configure_secondary_axes().y_desc("Count").draw().unwrap();
 
-    let price_points = LineSeries::new(
-        prices.into_iter().enumerate().map(|t| (t.0 as f32, t.1)),
-        &BLUE,
+    let actual = Histogram::vertical(chart.borrow_secondary())
+        .style(GREEN.filled())
+        .margin(3)
+        .data(random_points.iter().map(|x| (*x, 1)));
+
+    chart
+        .draw_secondary_series(actual)
+        .unwrap()
+        .label("Observed")
+        .legend(|(x, y)| Rectangle::new([(x, y - 5), (x + 10, y + 5)], GREEN.filled()));
+
+    let pdf = LineSeries::new(
+        (-400..400).map(|x| x as f64 / 100.0).map(|x| {
+            (
+                x,
+                (-x * x / 2.0 / sd / sd).exp() / (2.0 * std::f64::consts::PI * sd * sd).sqrt()
+                    * 0.1,
+            )
+        }),
+        &RED,
     );
-    drawing_context.draw_series(price_points).unwrap();
 
-    let meta = &market_ref.borrow().meta;
-    let binding = meta.price_state.borrow();
-    let mut past_seasons = binding.past_seasons.get(&gk).unwrap().clone();
-    if let Some(current_season) = binding.seasons.get(&gk) {
-        past_seasons.push(*current_season);
-    }
-    let season_marks = past_seasons
-        .iter()
-        .map(|s| Circle::new((s.starting_day as f32, s.starting_price), 4.0, RED.filled()));
-    drawing_context.draw_series(season_marks).unwrap();
+    chart
+        .draw_series(pdf)
+        .unwrap()
+        .label("PDF")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED.filled()));
 
-    println!("Drawn");
+    chart.configure_series_labels().draw().unwrap();
+
+    // To avoid the IO failure being ignored silently, we manually call the present function
+    root.present().expect("Unable to write result to file, please make sure 'plotters-doc-data' dir exists under current dir");
+    println!("Result has been saved to ./gaus.png");
 }
