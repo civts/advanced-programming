@@ -17,9 +17,11 @@ use unitn_market_2022::good::{
 };
 
 ///How long a season can be, max
-const MAX_SEASON_LENGTH: u32 = 365;
-const MIN_SEASON_LENGTH: u32 = 20;
-const MIN_VARIATION_IN_SEASON: f32 = 0.3;
+pub(crate) const MAX_SEASON_LENGTH: u32 = 65;
+pub(crate) const MIN_SEASON_LENGTH: u32 = 20;
+pub(crate) const MIN_VARIATION_IN_SEASON: f32 = 0.3;
+pub(crate) const MIN_NOISE_CLAMP: f32 = -1.0;
+pub(crate) const MAX_NOISE_CLAMP: f32 = 1.0;
 
 ///Holds all the info that we need to determine the price of a good on a given day
 #[derive(Debug)]
@@ -111,8 +113,9 @@ impl Season {
         let perc = passed_since_start as f32 / (self.duration as f32);
         let price_diff = self.ending_price - self.starting_price;
         let price = self.starting_price + (price_diff * perc);
-        let noise: f32 = (random_for_noise as f32).clamp(-1.0, 1.0) * price_diff;
-        f32::max(price + noise, 0.0)
+        let noise: f32 =
+            (random_for_noise as f32).clamp(MIN_NOISE_CLAMP, MAX_NOISE_CLAMP) * price_diff;
+        f32::max(price + noise, 0.05)
     }
 }
 
