@@ -4,6 +4,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::rc::Rc;
 use unitn_market_2022::event::notifiable::Notifiable;
+use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::good_label::GoodLabel;
@@ -54,7 +55,11 @@ impl SOLMarket {
                 quantity: g.get_qty(),
                 exchange_rate_buy: g.get_kind().get_default_exchange_rate(),
                 // Selling price should always be slightly lower
-                exchange_rate_sell: g.get_kind().get_default_exchange_rate() * 0.98,
+                exchange_rate_sell: if g.get_kind().ne(&DEFAULT_GOOD_KIND) {
+                    g.get_kind().get_default_exchange_rate() * 0.98
+                } else {
+                    g.get_kind().get_default_exchange_rate()
+                },
             })
             .collect();
 

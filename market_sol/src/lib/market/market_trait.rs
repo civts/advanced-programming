@@ -85,17 +85,7 @@ impl Market for SOLMarket {
     }
 
     fn get_budget(&self) -> f32 {
-        self.goods.iter().fold(0f32, |acc, good| {
-            let sell_price = self
-                .good_labels
-                .iter()
-                .find(|gl| gl.good_kind.eq(&good.get_kind()))
-                .unwrap()
-                .exchange_rate_sell;
-            let good_quantity = good.get_qty();
-            let good_market_cap = good_quantity * sell_price;
-            acc + good_market_cap
-        })
+        self.goods.iter().find(|g| g.get_kind().eq(&DEFAULT_GOOD_KIND)).unwrap().get_qty()
     }
 
     fn get_buy_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {

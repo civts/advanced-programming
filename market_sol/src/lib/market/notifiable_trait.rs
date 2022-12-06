@@ -19,6 +19,7 @@ impl Notifiable for SOLMarket {
                 self.good_labels.iter_mut().for_each(|gl| {
                     if gl.good_kind.eq(&event.good_kind) {
                         gl.exchange_rate_sell *= 1.05;
+                        gl.exchange_rate_buy *= 1.05;
                     }
                 });
             }
@@ -29,6 +30,7 @@ impl Notifiable for SOLMarket {
                 self.good_labels.iter_mut().for_each(|gl| {
                     if gl.good_kind.eq(&event.good_kind) {
                         gl.exchange_rate_buy *= 0.95;
+                        gl.exchange_rate_sell *= 0.95;
                         // println!("ciaoo {}", gl.exchange_rate_buy);
                     }
                 });
@@ -42,17 +44,16 @@ impl Notifiable for SOLMarket {
                 self.good_labels.iter_mut().for_each(|gl| {
                     if gl.good_kind.ne(&GoodKind::EUR) {
                         gl.exchange_rate_sell *= 1.05;
+                        gl.exchange_rate_buy *= 1.05;
                     }
                 });
             }
         }
-        //progress one day in any case
-        self.meta.current_day += 1;
 
         // Reinstate any good which has an expired token
         for (_, meta) in self.meta.locked_buys.iter() {
             let days_since = self.meta.current_day - meta.created_on;
-            if days_since == TOKEN_DURATION {
+            if days_since == TOKEN_DURATION + 1 {
                 let good = self
                     .good_labels
                     .iter_mut()
@@ -63,7 +64,7 @@ impl Notifiable for SOLMarket {
         }
         for (_, meta) in self.meta.locked_sells.iter() {
             let days_since = self.meta.current_day - meta.created_on;
-            if days_since == TOKEN_DURATION {
+            if days_since == TOKEN_DURATION + 1 {
                 let default_good = self
                     .good_labels
                     .iter_mut()
@@ -72,6 +73,9 @@ impl Notifiable for SOLMarket {
                 default_good.quantity += meta.price;
             }
         }
+
+        //progress one day in any case
+        self.meta.current_day += 1;
     }
 }
 
