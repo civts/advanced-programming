@@ -75,6 +75,39 @@ mod test_buy {
     }
 
     #[test]
+    fn should_use_adaptive_margin_on_buy() {
+        let s = TestMarketSetup::new();
+        let market = s.market.borrow();
+
+        //Trade one unit less than the max quantity
+        let quantity1 = s.init_qty - 1f32;
+        let buy_price_result1 = market.get_buy_price(s.buy_kind, quantity1);
+        let sell_price_result1 = market.get_sell_price(s.buy_kind, quantity1);
+
+        assert!(buy_price_result1.is_ok());
+        assert!(sell_price_result1.is_ok());
+        let buy_price1 = buy_price_result1.unwrap();
+        let sell_price1 = sell_price_result1.unwrap();
+        assert!(buy_price1 > sell_price1);
+        let margin1 = buy_price1 - sell_price1;
+
+        //Trade one unit
+        let quantity2 = 1f32;
+        let buy_price_result2 = market.get_buy_price(s.buy_kind, quantity2);
+        let sell_price_result2 = market.get_sell_price(s.buy_kind, quantity2);
+
+        assert!(buy_price_result2.is_ok());
+        assert!(sell_price_result2.is_ok());
+        let buy_price2 = buy_price_result2.unwrap();
+        let sell_price2 = sell_price_result2.unwrap();
+        assert!(buy_price2 > sell_price2);
+        let margin2 = buy_price2 - sell_price2;
+
+        // Testing this assumption: we charge higher margins for bigger trades
+        assert!(margin2 < margin1);
+    }
+
+    #[test]
     fn lock_buy() {
         let s = TestMarketSetup::new();
         let mut market = s.market.borrow_mut();
