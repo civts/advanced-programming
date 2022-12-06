@@ -27,24 +27,37 @@ use unitn_market_2022::{
     },
 };
 
+pub(crate) const MIN_MARGIN_PERCENTAGE: f32 = 0.6;
+pub(crate) const MAX_MARGIN_PERCENTAGE: f32 = 3.0;
+
 impl Market for SOLMarket {
     fn new_random() -> Rc<RefCell<dyn Market>> {
         //https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs
         let mut rng = ChaCha20Rng::from_entropy();
         //Generate the market cap of each good, randomly
         let mut remaining_market_cap = STARTING_CAPITAL;
-        let eur_quantity = rng.gen_range(1.0..remaining_market_cap);
+        let mut eur_quantity = rng.gen_range(1.0..remaining_market_cap);
         remaining_market_cap -= eur_quantity;
-        let yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        let mut yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
         remaining_market_cap -= yen_mkt_cap;
-        let yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        let mut yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
         remaining_market_cap -= yuan_mkt_cap;
         let mut usd_mkt_cap = remaining_market_cap;
 
         //Fix floating point operation errors
         let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
         let exceeding_capital = real_market_cap - STARTING_CAPITAL;
-        usd_mkt_cap -= exceeding_capital + 1f32;
+        if (yen_mkt_cap - exceeding_capital).is_sign_positive() {
+            yen_mkt_cap -= exceeding_capital;
+        } else if (yuan_mkt_cap - exceeding_capital).is_sign_positive() {
+            yuan_mkt_cap -= exceeding_capital;
+        } else if (usd_mkt_cap - exceeding_capital).is_sign_positive() {
+            usd_mkt_cap -= exceeding_capital;
+        } else if (eur_quantity - exceeding_capital).is_sign_positive() {
+            eur_quantity -= exceeding_capital;
+        } else {
+            panic!("We are doing something wrong in this initialization");
+        }
 
         // TODO: Check if usd_mkt_cap < 0
 
@@ -98,26 +111,32 @@ impl Market for SOLMarket {
             return Err(MarketGetterError::NonPositiveQuantityAsked);
         }
 
-        // let good_label = self
-        //     .good_labels
-        //     .iter()
-        //     .find(|g| g.good_kind.eq(&kind))
-        //     .unwrap();
-
-        // let qty_available = good_label.quantity;
-        // if qty_available < quantity {
-        //     return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
-        //         requested_good_kind: kind,
-        //         requested_good_quantity: quantity,
-        //         available_good_quantity: qty_available,
-        //     });
-        // }
-
-        // Ok(quantity / good_label.exchange_rate_sell)
+        //TODO: check that this is the total unlocked quantity!
+        let total_quantity_in_the_market = self
+            .goods
+            .iter()
+            .filter(|g| g.get_kind() == kind)
+            .fold(0.0, |acc, good| acc + good.get_qty());
+        if quantity > total_quantity_in_the_market {
+            return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
+                requested_good_kind: kind,
+                requested_good_quantity: quantity,
+                available_good_quantity: total_quantity_in_the_market,
+            });
+        }
 
         let mut state = self.meta.price_state.borrow_mut();
         let unit_price = state.get_price(&kind, self.meta.current_day);
-        Ok(unit_price * quantity)
+
+        let asked_quantity_ratio = quantity / total_quantity_in_the_market;
+        let margin_percentage = asked_quantity_ratio
+            * (MAX_MARGIN_PERCENTAGE - MIN_MARGIN_PERCENTAGE)
+            + MIN_MARGIN_PERCENTAGE;
+
+        let initial_price = unit_price * quantity;
+        let margin = initial_price * margin_percentage / 100.0;
+        let price = initial_price + margin;
+        Ok(price)
     }
 
     fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
@@ -125,13 +144,17 @@ impl Market for SOLMarket {
             return Err(MarketGetterError::NonPositiveQuantityAsked);
         }
 
-        let good_label = self
-            .good_labels
-            .iter()
-            .find(|l| l.good_kind.eq(&kind))
-            .unwrap();
+        // let good_label = self
+        //     .good_labels
+        //     .iter()
+        //     .find(|l| l.good_kind.eq(&kind))
+        //     .unwrap();
 
-        Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
+        // Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
+
+        let mut state = self.meta.price_state.borrow_mut();
+        let unit_price = state.get_price(&kind, self.meta.current_day);
+        Ok(unit_price * quantity)
     }
 
     fn get_goods(&self) -> Vec<GoodLabel> {
