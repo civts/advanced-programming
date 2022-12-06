@@ -43,12 +43,12 @@ pub(crate) struct Season {
 }
 
 #[derive(Debug)]
-pub struct ChaCha20Rngg {
+struct ChaCha20Rngg {
     rng: ChaCha20Rng,
 }
 
 impl ChaCha20Rngg {
-    pub fn new() -> Self {
+    fn new() -> Self {
         ChaCha20Rngg {
             rng: ChaCha20Rng::from_entropy(),
         }
