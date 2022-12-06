@@ -98,7 +98,7 @@ impl Market for SOLMarket {
     }
 
     fn get_budget(&self) -> f32 {
-        self.goods.iter().fold(0f32, |acc, good| {
+        self.goods.values().fold(0f32, |acc, good| {
             let sell_price = self.meta.min_bid.get(&good.get_kind()).unwrap();
             let good_quantity = good.get_qty();
             let good_market_cap = good_quantity * sell_price;
@@ -114,9 +114,9 @@ impl Market for SOLMarket {
         //TODO: check that this is the total unlocked quantity!
         let total_quantity_in_the_market = self
             .goods
-            .iter()
-            .filter(|g| g.get_kind() == kind)
-            .fold(0.0, |acc, good| acc + good.get_qty());
+            .get(&kind)
+            .and_then(|g| Some(g.get_qty()))
+            .unwrap_or(0.0);
         if quantity > total_quantity_in_the_market {
             return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
                 requested_good_kind: kind,

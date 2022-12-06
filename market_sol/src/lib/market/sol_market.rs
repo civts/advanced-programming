@@ -1,5 +1,6 @@
 use crate::lib::domain::market_meta::MarketMeta;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::rc::Rc;
@@ -13,8 +14,8 @@ pub(crate) const TOKEN_DURATION: u32 = 15;
 pub(crate) const LOCK_LIMIT: u32 = 10;
 
 pub struct SOLMarket {
-    pub(crate) goods: Vec<Good>,
-    pub(crate) good_labels: Vec<GoodLabel>,
+    pub(crate) goods: HashMap<GoodKind, Good>,
+    pub(crate) good_labels: Vec<GoodLabel>, //TODO: remove
     pub(crate) subscribers: Vec<Box<dyn Notifiable>>,
     pub(crate) meta: MarketMeta,
 }
@@ -40,14 +41,13 @@ impl SOLMarket {
             panic!("Tried to initialize the market with a negative quantity of yuan");
         }
         //Initialize the market
-        let goods = vec![
-            Good::new(GoodKind::EUR, eur),
-            Good::new(GoodKind::YEN, yen),
-            Good::new(GoodKind::YUAN, yuan),
-            Good::new(GoodKind::USD, usd),
-        ];
+        let goods = HashMap::new();
+        goods.insert(GoodKind::EUR, Good::new(GoodKind::EUR, eur));
+        goods.insert(GoodKind::YEN, Good::new(GoodKind::YEN, yen));
+        goods.insert(GoodKind::YUAN, Good::new(GoodKind::YUAN, yuan));
+        goods.insert(GoodKind::USD, Good::new(GoodKind::USD, usd));
         let good_labels: Vec<GoodLabel> = goods
-            .iter()
+            .values()
             .map(|g| GoodLabel {
                 good_kind: g.get_kind(),
                 quantity: g.get_qty(),
@@ -65,6 +65,13 @@ impl SOLMarket {
             subscribers: vec![],
             meta,
         }))
+    }
+
+    fn get_good_buy_price(&mut self, day: u32, good_kind: GoodKind) -> f32 {
+        todo!();
+    }
+    fn get_good_sell_price(&mut self, day: u32, good_kind: GoodKind) -> f32 {
+        todo!();
     }
 }
 
