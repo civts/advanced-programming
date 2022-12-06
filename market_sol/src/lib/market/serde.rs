@@ -69,7 +69,7 @@ impl SOLMarket {
             contents.push_str(&s);
         }
         contents.push('\n');
-        for good in self.goods.iter() {
+        for good in self.goods.values() {
             contents.push_str(sol_file_prefixes::GOOD_PREFIX);
             let kind = match good.get_kind() {
                 GoodKind::EUR => "EUR",

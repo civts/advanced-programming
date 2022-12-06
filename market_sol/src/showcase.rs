@@ -40,9 +40,9 @@ pub(crate) fn test_overall_market_change_percentage() {
             let mut prices: Vec<f32> = Vec::new();
             let mut min = f32::MAX;
             let mut max = f32::MIN;
-            let starting_price = market_ref.borrow().get_buy_price(gk, 1.0).unwrap();
+            let starting_price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
             for _ in 0..days {
-                let price = market_ref.borrow().get_buy_price(gk, 1.0).unwrap();
+                let price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
                 prices.push(price);
                 min = f32::min(min, price);
                 max = f32::max(max, price);
@@ -50,7 +50,7 @@ pub(crate) fn test_overall_market_change_percentage() {
                     wait_one_day!(market_ref);
                 }
             }
-            let final_price = market_ref.borrow().get_buy_price(gk, 1.0).unwrap();
+            let final_price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
             overall.push(final_price / starting_price);
         }
         let sum = overall.iter().fold(0.0, |acc, i| acc + i);
@@ -89,7 +89,7 @@ pub(crate) fn cool_graphs() {
         let mut min = f32::MAX;
         let mut max = f32::MIN;
         for _ in 0..days {
-            let price = market_ref.borrow().get_buy_price(gk, 1.0).unwrap();
+            let price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
             prices.push(price);
             min = f32::min(min, price);
             max = f32::max(max, price);

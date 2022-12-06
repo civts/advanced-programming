@@ -27,9 +27,6 @@ use unitn_market_2022::{
     },
 };
 
-pub(crate) const MIN_MARGIN_PERCENTAGE: f32 = 0.6;
-pub(crate) const MAX_MARGIN_PERCENTAGE: f32 = 3.0;
-
 impl Market for SOLMarket {
     fn new_random() -> Rc<RefCell<dyn Market>> {
         //https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs
@@ -112,11 +109,8 @@ impl Market for SOLMarket {
         }
 
         //TODO: check that this is the total unlocked quantity!
-        let total_quantity_in_the_market = self
-            .goods
-            .get(&kind)
-            .and_then(|g| Some(g.get_qty()))
-            .unwrap_or(0.0);
+        let total_quantity_in_the_market =
+            self.goods.get(&kind).map(|g| g.get_qty()).unwrap_or(0.0);
         if quantity > total_quantity_in_the_market {
             return Err(MarketGetterError::InsufficientGoodQuantityAvailable {
                 requested_good_kind: kind,
@@ -125,17 +119,22 @@ impl Market for SOLMarket {
             });
         }
 
-        let mut state = self.meta.price_state.borrow_mut();
-        let unit_price = state.get_price(&kind, self.meta.current_day);
+        let unit_price = self.get_good_buy_exchange_rate(kind);
 
-        let asked_quantity_ratio = quantity / total_quantity_in_the_market;
-        let margin_percentage = asked_quantity_ratio
-            * (MAX_MARGIN_PERCENTAGE - MIN_MARGIN_PERCENTAGE)
-            + MIN_MARGIN_PERCENTAGE;
+        // Adaptive margin
+        // pub(crate) const MIN_MARGIN_PERCENTAGE: f32 = 0.6;
+        // pub(crate) const MAX_MARGIN_PERCENTAGE: f32 = 3.0;
+        // // let asked_quantity_ratio = quantity / total_quantity_in_the_market;
+        // // let margin_percentage = asked_quantity_ratio
+        // //     * (MAX_MARGIN_PERCENTAGE - MIN_MARGIN_PERCENTAGE)
+        // //     + MIN_MARGIN_PERCENTAGE;
+        // // let initial_price = unit_price * quantity;
+        // // let margin = initial_price * margin_percentage / 100.0;
+        // // let price = initial_price + margin;
 
-        let initial_price = unit_price * quantity;
-        let margin = initial_price * margin_percentage / 100.0;
-        let price = initial_price + margin;
+        //no more using the adaptive margin
+        let price = unit_price * quantity;
+
         Ok(price)
     }
 
@@ -158,7 +157,7 @@ impl Market for SOLMarket {
     }
 
     fn get_goods(&self) -> Vec<GoodLabel> {
-        self.good_labels.clone()
+        self.get_good_labels()
     }
 
     fn lock_buy(
@@ -186,12 +185,7 @@ impl Market for SOLMarket {
         }
 
         // Check quantity available
-        let good_label = self
-            .good_labels
-            .iter_mut()
-            .find(|g| g.good_kind.eq(&kind_to_buy))
-            .unwrap();
-        let quantity_available = good_label.quantity;
+        let quantity_available = self.get_available_quantity(kind_to_buy);
         if quantity_available < quantity_to_buy {
             log(log_error);
             return Err(LockBuyError::InsufficientGoodQuantityAvailable {
@@ -209,7 +203,8 @@ impl Market for SOLMarket {
         }
 
         // Check bid
-        let min_bid = quantity_to_buy / good_label.exchange_rate_sell;
+        let unit_sell_price = self.get_good_buy_exchange_rate(kind_to_buy);
+        let min_bid = quantity_to_buy / unit_sell_price;
         if bid < min_bid {
             log(log_error);
             return Err(LockBuyError::BidTooLow {
@@ -237,7 +232,11 @@ impl Market for SOLMarket {
         // problem with on_event method: the subscribed markets receive the notif, but you don't send the notif to yourself (at the moment) - but you can add that with one line
         // TODO: DISCUSS -> updates should be done only after a successful buy/sell, not locks
 
-        good_label.quantity -= quantity_to_buy;
+        let previous_quantity = self.goods.get(&kind_to_buy).unwrap().get_qty();
+        self.goods.insert(
+            kind_to_buy,
+            Good::new(kind_to_buy, previous_quantity - quantity_to_buy),
+        );
 
         // Update meta
         let good_meta = GoodLockMeta::new(kind_to_buy, bid, quantity_to_buy, self.meta.current_day);
@@ -304,13 +303,13 @@ impl Market for SOLMarket {
         }
 
         // Cash in, todo: Update good buy and sell price (in on_event method)
-        let eur = cash.split(pre_agreed_quantity).unwrap();
-        let default = self
-            .good_labels
-            .iter_mut()
-            .find(|g| g.good_kind.eq(&eur.get_kind()))
-            .unwrap();
-        default.quantity += eur.get_qty();
+        let paid_eur = cash.split(pre_agreed_quantity).unwrap();
+        let total_quantity =
+            self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty() + paid_eur.get_qty();
+        self.goods.insert(
+            DEFAULT_GOOD_KIND,
+            Good::new(DEFAULT_GOOD_KIND, total_quantity),
+        );
 
         let release_good = Good::new(good_meta.kind, good_meta.quantity);
 
@@ -332,6 +331,7 @@ impl Market for SOLMarket {
         Ok(release_good)
     }
 
+    ///Allow the trader to get a lock to SELL a good to this market
     fn lock_sell(
         &mut self,
         kind_to_sell: GoodKind,
@@ -359,12 +359,7 @@ impl Market for SOLMarket {
         }
 
         // Check money available
-        let money_available = self
-            .good_labels
-            .iter_mut()
-            .find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND))
-            .unwrap()
-            .quantity;
+        let money_available = self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty();
         if money_available < offer {
             log(log_error);
             return Err(LockSellError::InsufficientDefaultGoodQuantityAvailable {
@@ -381,20 +376,16 @@ impl Market for SOLMarket {
         }
 
         // Check offer not too high
-        let good_buying_rate = self
-            .good_labels
-            .iter()
-            .find(|l| l.good_kind.eq(&kind_to_sell))
-            .unwrap()
-            .exchange_rate_buy;
-        let max_offer = quantity_to_sell / good_buying_rate;
-        if offer > max_offer {
+        let good_sell_rate = self.get_good_sell_exchange_rate(kind_to_sell);
+        // TODO: check that offer is the exchange rate at which the trader is willing to sell (give) their good tot he market
+        // therefore the market must pay the trader at the exchange rate
+        if offer > good_sell_rate {
             log(log_error);
             return Err(LockSellError::OfferTooHigh {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
                 high_offer: offer,
-                highest_acceptable_offer: max_offer,
+                highest_acceptable_offer: good_sell_rate,
             });
         }
 
@@ -412,12 +403,12 @@ impl Market for SOLMarket {
 
         // Update default good quantity available, todo: Update good buy and sell price (in on_event method)
         // also: updates should be done only after a successful buy/sell, not locks
-        let default_good = self
-            .good_labels
-            .iter_mut()
-            .find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND))
-            .unwrap();
-        default_good.quantity -= offer;
+        let mut remaining_quantity = self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty();
+        remaining_quantity -= offer;
+        self.goods.insert(
+            DEFAULT_GOOD_KIND,
+            Good::new(DEFAULT_GOOD_KIND, remaining_quantity),
+        );
 
         // Update meta
         let good_meta =
@@ -488,16 +479,15 @@ impl Market for SOLMarket {
 
         // Get your good now
         let selling_good = good.split(pre_agreed_quantity).unwrap();
-        let my_good = self
-            .good_labels
-            .iter_mut()
-            .find(|l| l.good_kind.eq(&selling_good.get_kind()))
-            .unwrap();
-        my_good.quantity += selling_good.get_qty();
+        let selling_kind = selling_good.get_kind();
+        let my_good = self.goods.get(&selling_kind).unwrap();
+        let final_quantity = my_good.get_qty() + selling_good.get_qty();
+        self.goods
+            .insert(selling_kind, Good::new(selling_kind, final_quantity));
 
         let give_money = Good::new(DEFAULT_GOOD_KIND, good_meta.price);
 
-        // Create and spread event
+        // Create and sold event
         let e = Event {
             kind: EventKind::Sold,
             good_kind: good_meta.kind,

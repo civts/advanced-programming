@@ -13,9 +13,11 @@ pub(crate) const MARKET_NAME: &str = "SOL";
 pub(crate) const TOKEN_DURATION: u32 = 15;
 pub(crate) const LOCK_LIMIT: u32 = 10;
 
+pub(crate) const ALL_GOOD_KINDS: [GoodKind; 4] =
+    [GoodKind::EUR, GoodKind::USD, GoodKind::YEN, GoodKind::YUAN];
+
 pub struct SOLMarket {
     pub(crate) goods: HashMap<GoodKind, Good>,
-    pub(crate) good_labels: Vec<GoodLabel>, //TODO: remove
     pub(crate) subscribers: Vec<Box<dyn Notifiable>>,
     pub(crate) meta: MarketMeta,
 }
@@ -41,37 +43,62 @@ impl SOLMarket {
             panic!("Tried to initialize the market with a negative quantity of yuan");
         }
         //Initialize the market
-        let goods = HashMap::new();
-        goods.insert(GoodKind::EUR, Good::new(GoodKind::EUR, eur));
-        goods.insert(GoodKind::YEN, Good::new(GoodKind::YEN, yen));
-        goods.insert(GoodKind::YUAN, Good::new(GoodKind::YUAN, yuan));
-        goods.insert(GoodKind::USD, Good::new(GoodKind::USD, usd));
-        let good_labels: Vec<GoodLabel> = goods
-            .values()
-            .map(|g| GoodLabel {
-                good_kind: g.get_kind(),
-                quantity: g.get_qty(),
-                exchange_rate_buy: g.get_kind().get_default_exchange_rate(),
-                // Selling price should always be slightly lower
-                exchange_rate_sell: g.get_kind().get_default_exchange_rate() * 0.98,
-            })
-            .collect();
+        let mut goods = HashMap::new();
+        //Use a for-match to ensure we always do all of them
+        for gk in ALL_GOOD_KINDS {
+            match gk {
+                GoodKind::EUR => goods.insert(gk, Good::new(gk, eur)),
+                GoodKind::YEN => goods.insert(gk, Good::new(gk, yen)),
+                GoodKind::USD => goods.insert(gk, Good::new(gk, yuan)),
+                GoodKind::YUAN => goods.insert(gk, Good::new(gk, usd)),
+            };
+        }
 
         log(format!("MARKET_INITIALIZATION\nEUR: {eur:+e}\nUSD: {usd:+e}\nYEN: {yen:+e}\nYUAN: {yuan:+e}\nEND_MARKET_INITIALIZATION"));
 
         Rc::new(RefCell::new(SOLMarket {
             goods,
-            good_labels,
             subscribers: vec![],
             meta,
         }))
     }
 
-    fn get_good_buy_price(&mut self, day: u32, good_kind: GoodKind) -> f32 {
-        todo!();
+    /// Returns how much of the asked GoodKind is available (not locked)
+    pub(crate) fn get_available_quantity(&self, good_kind: GoodKind) -> f32 {
+        let good = self.goods.get(&good_kind).expect("Should be initialized");
+        good.get_qty()
     }
-    fn get_good_sell_price(&mut self, day: u32, good_kind: GoodKind) -> f32 {
-        todo!();
+
+    fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
+        self.meta
+            .price_state
+            .borrow_mut()
+            .get_price(&good_kind, self.meta.current_day)
+    }
+
+    ///Return the rate applied when the trader wants to BUY the good from this market
+    pub(crate) fn get_good_buy_exchange_rate(&self, good_kind: GoodKind) -> f32 {
+        //Apply margin of 0.6%
+        self.get_exchange_rate(good_kind) * 1.06
+    }
+
+    ///Return the rate applied when the trader wants to SELL the good to this market
+    pub(crate) fn get_good_sell_exchange_rate(&self, good_kind: GoodKind) -> f32 {
+        self.get_exchange_rate(good_kind)
+    }
+
+    pub(crate) fn get_good_labels(&self) -> Vec<GoodLabel> {
+        let values = self.goods.values();
+        let iter = values.map(|g: &Good| -> GoodLabel {
+            let good_kind = g.get_kind();
+            GoodLabel {
+                good_kind,
+                quantity: g.get_qty(),
+                exchange_rate_buy: self.get_good_buy_exchange_rate(good_kind),
+                exchange_rate_sell: self.get_good_sell_exchange_rate(good_kind),
+            }
+        });
+        Vec::from_iter(iter)
     }
 }
 

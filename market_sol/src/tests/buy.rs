@@ -28,7 +28,8 @@ mod test_buy {
                 .iter()
                 .find_map(|gl| {
                     if gl.good_kind.eq(&buy_kind) {
-                        Some(init_qty / gl.exchange_rate_sell)
+                        let price = market.borrow().get_buy_price(buy_kind, init_qty).unwrap();
+                        Some(price)
                     } else {
                         None
                     }
@@ -146,7 +147,7 @@ mod test_buy {
         assert_eq!(result, expected);
 
         // Fail on low bid
-        let low_bid = s.init_bid - 0.1f32;
+        let low_bid = 0f32;
         let result = market
             .lock_buy(s.buy_kind, s.init_qty, low_bid, s.trader.clone())
             .unwrap_err();
@@ -154,7 +155,7 @@ mod test_buy {
             requested_good_kind: s.buy_kind,
             requested_good_quantity: s.init_qty,
             low_bid,
-            lowest_acceptable_bid: s.init_bid,
+            lowest_acceptable_bid: market.get_buy_price(s.buy_kind, s.init_qty).unwrap(),
         };
         assert_eq!(result, expected);
 
