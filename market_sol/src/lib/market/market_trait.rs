@@ -46,7 +46,7 @@ impl Market for SOLMarket {
 
         //Fix floating point operation errors
         let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
-        let exceeding_capital = real_market_cap - STARTING_CAPITAL;
+        let exceeding_capital = (real_market_cap - STARTING_CAPITAL) + 1.0;
         if (yen_mkt_cap - exceeding_capital).is_sign_positive() {
             yen_mkt_cap -= exceeding_capital;
         } else if (yuan_mkt_cap - exceeding_capital).is_sign_positive() {

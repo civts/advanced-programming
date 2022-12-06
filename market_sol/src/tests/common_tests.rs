@@ -56,7 +56,9 @@ mod extern_test {
     }
     #[test]
     fn new_random_should_not_exceeed_starting_capital() {
-        market_test::new_random_should_not_exceeed_starting_capital::<MarketType>();
+        for _ in 0..1000 {
+            market_test::new_random_should_not_exceeed_starting_capital::<MarketType>();
+        }
     }
     #[test]
     fn test_sell_success() {
