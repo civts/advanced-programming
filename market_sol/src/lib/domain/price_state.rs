@@ -24,8 +24,8 @@ const MIN_VARIATION_IN_SEASON: f32 = 0.3;
 ///Holds all the info that we need to determine the price of a good on a given day
 #[derive(Debug)]
 pub(crate) struct PriceState {
-    historic_prices: HashMap<GoodKind, Vec<f32>>,
-    pub(crate)seasons: HashMap<GoodKind, Season>,
+    last_price: HashMap<GoodKind, f32>,
+    pub(crate) seasons: HashMap<GoodKind, Season>,
     rand: ChaCha20Rngg,
     gaus: Gaussian,
     max_increase_in_season: f32,
@@ -109,9 +109,9 @@ impl Season {
     fn get_price(&self, day: u32, random_for_noise: f64) -> f32 {
         let passed_since_start = day - self.starting_day;
         let perc = passed_since_start as f32 / (self.duration as f32);
-        let price_diff = self.ending_price + self.starting_price;
+        let price_diff = self.ending_price - self.starting_price;
         let price = self.starting_price + (price_diff * perc);
-        let noise: f32 = (random_for_noise as f32 * 2.0).clamp(-1.0, 1.0) * price_diff;
+        let noise: f32 = (random_for_noise as f32).clamp(-1.0, 1.0) * price_diff;
         f32::max(price + noise, 0.0)
     }
 }
@@ -122,7 +122,7 @@ impl PriceState {
         let max_decrease_per_season = rng.gen_range(MIN_VARIATION_IN_SEASON..0.95);
         let max_increase_in_season = rng.gen_range(MIN_VARIATION_IN_SEASON..5.0);
         PriceState {
-            historic_prices: HashMap::new(),
+            last_price: HashMap::new(),
             seasons: HashMap::new(),
             rand: rng,
             gaus: Gaussian::new(0.0, 0.25),
@@ -146,7 +146,7 @@ impl PriceState {
     }
 
     fn latest_price(&self, gk: &GoodKind) -> f32 {
-        let historic = self.historic_prices.get(gk).and_then(|v| v.last());
+        let historic = self.last_price.get(gk);
         let default_price: f32 = match gk {
             &DEFAULT_GOOD_KIND => 1.0,
             GoodKind::YEN => DEFAULT_EUR_YEN_EXCHANGE_RATE,
@@ -162,7 +162,13 @@ impl PriceState {
     fn get_current_season(&mut self, good_kind: &GoodKind, day: u32) -> &Season {
         let season_opt = self.seasons.get(good_kind);
         let need_new_season = match season_opt {
-            Some(s) => day > s.end(),
+            Some(s) => {
+                let finished = day >= s.end();
+                if finished {
+                    self.last_price.insert(*good_kind, s.ending_price);
+                }
+                finished
+            }
             None => true,
         };
         if need_new_season {

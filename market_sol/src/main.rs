@@ -21,7 +21,7 @@ fn main() {
     let mut prices: Vec<f32> = Vec::new();
     let mut min = f32::MAX;
     let mut max = f32::MIN;
-    let gk = GoodKind::USD;
+    let gk = GoodKind::YEN;
     for _ in 0..days {
         let price = market_ref.borrow().get_buy_price(gk, 1.0).unwrap();
         prices.push(price);
@@ -32,14 +32,16 @@ fn main() {
         }
     }
     // Config chart
-    let drawing_area = BitMapBackend::new("./test.png", (1920, 1080)).into_drawing_area();
+    let date_now = chrono::offset::Local::now();
+    let name = format!("./test_{gk}_{:?}.png", date_now);
+    let drawing_area = BitMapBackend::new(name.as_str(), (1920, 1080)).into_drawing_area();
     drawing_area.fill(&WHITE).unwrap();
     let mut drawing_context = ChartBuilder::on(&drawing_area)
         .set_label_area_size(LabelAreaPosition::Left, 40.0)
         .set_label_area_size(LabelAreaPosition::Bottom, 40.0)
         .set_label_area_size(LabelAreaPosition::Right, 40.0)
         .set_label_area_size(LabelAreaPosition::Top, 40.0)
-        .caption("SOL Market going, USD", ("sans-serif", 40.0))
+        .caption(format!("SOL Market going, {gk}"), ("sans-serif", 40.0))
         .build_cartesian_2d(0.0..(days as f32), min..max)
         .unwrap();
 
@@ -61,4 +63,6 @@ fn main() {
         .iter()
         .map(|s| Circle::new((s.starting_day as f32, s.starting_price), 4.0, RED.filled()));
     drawing_context.draw_series(season_marks).unwrap();
+
+    println!("Drawn");
 }
