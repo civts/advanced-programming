@@ -69,15 +69,8 @@ mod test_buy {
         // Success with total amount
         let kinds = vec![EUR, USD, YEN, YUAN];
         for k in kinds.iter() {
-            let result = market.get_buy_price(*k, s.init_qty).unwrap();
-            let market_sell_price = market
-                .get_goods()
-                .iter()
-                .find(|gl| gl.good_kind.eq(k))
-                .unwrap()
-                .exchange_rate_sell;
-            let expected = s.init_qty / market_sell_price;
-            assert_eq!(result, expected);
+            let get_buy_price_opt = market.get_buy_price(*k, s.init_qty);
+            assert!(get_buy_price_opt.is_ok());
         }
     }
 
