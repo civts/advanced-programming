@@ -20,13 +20,14 @@ use unitn_market_2022::good::{
 pub(crate) const MAX_SEASON_LENGTH: u32 = 65;
 pub(crate) const MIN_SEASON_LENGTH: u32 = 20;
 pub(crate) const MIN_VARIATION_IN_SEASON: f32 = 0.3;
-pub(crate) const MIN_NOISE_CLAMP: f32 = -1.0;
 pub(crate) const MAX_NOISE_CLAMP: f32 = 1.0;
+pub(crate) const MIN_NOISE_CLAMP: f32 = -MAX_NOISE_CLAMP;
 
 ///Holds all the info that we need to determine the price of a good on a given day
 #[derive(Debug)]
 pub(crate) struct PriceState {
     last_price: HashMap<GoodKind, f32>,
+    day_price: HashMap<GoodKind, (u32, f32)>,
     pub(crate) seasons: HashMap<GoodKind, Season>,
     rand: ChaCha20Rngg,
     gaus: Gaussian,
@@ -132,6 +133,7 @@ impl PriceState {
             max_decrease_per_season,
             max_increase_in_season,
             past_seasons: HashMap::new(),
+            day_price: HashMap::new(),
         }
     }
 
@@ -139,13 +141,24 @@ impl PriceState {
     pub fn get_price(&mut self, good_kind: &GoodKind, day: u32) -> f32 {
         //If we talk about the default good, its price is one.
         if *good_kind == DEFAULT_GOOD_KIND {
-            return 1.0;
-        }
-        let random = self.gaus.sample(&mut self.rand);
+            1.0
+        } else {
+            let day_price_opt = self.day_price.get(good_kind);
+            let already_have_price_for_today =
+                day_price_opt.map(|tuple| tuple.0 == day).unwrap_or(false);
+            //If we already generated the price for today, we return that
+            if already_have_price_for_today {
+                day_price_opt.unwrap().1
+            } else {
+                //Else we generate a new one
+                let random = self.gaus.sample(&mut self.rand);
 
-        //Get the current season of the market
-        let current_season = self.get_current_season(good_kind, day);
-        current_season.get_price(day, random)
+                let current_season = self.get_current_season(good_kind, day);
+                let price = current_season.get_price(day, random);
+                self.day_price.insert(*good_kind, (day, price));
+                price
+            }
+        }
     }
 
     fn latest_price(&self, gk: &GoodKind) -> f32 {
