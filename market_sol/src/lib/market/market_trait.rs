@@ -118,7 +118,7 @@ impl Market for SOLMarket {
             });
         }
 
-        let unit_price = self.get_good_buy_exchange_rate(kind);
+        let exchange_rate_eur_good = self.get_good_buy_exchange_rate(kind);
 
         // Adaptive margin
         // pub(crate) const MIN_MARGIN_PERCENTAGE: f32 = 0.6;
@@ -132,7 +132,7 @@ impl Market for SOLMarket {
         // // let price = initial_price + margin;
 
         //no more using the adaptive margin
-        let price = unit_price * quantity;
+        let price = quantity / exchange_rate_eur_good;
 
         Ok(price)
     }
@@ -151,8 +151,8 @@ impl Market for SOLMarket {
         // Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
 
         let mut state = self.meta.price_state.borrow_mut();
-        let unit_price = state.get_price(&kind, self.meta.current_day);
-        Ok(unit_price * quantity)
+        let eur_good_exchange_rate = state.get_price(&kind, self.meta.current_day);
+        Ok(eur_good_exchange_rate * quantity)
     }
 
     fn get_goods(&self) -> Vec<GoodLabel> {
@@ -161,19 +161,22 @@ impl Market for SOLMarket {
 
     fn lock_buy(
         &mut self,
+        // What we want to buy (e.g., YEN)
         kind_to_buy: GoodKind,
-        quantity_to_buy: f32,
+        // How much of kind_to_buy we want to lock (e.g., 100.0)
+        good_quantity_to_lock: f32,
+        // How much we will pay in DEFAULT_GOOD
         bid: f32,
         trader_name: String,
     ) -> Result<String, LockBuyError> {
         // Set error log
-        let log_error = format!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{quantity_to_buy:+e}-BID:{bid:+e}-ERROR");
+        let log_error = format!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{good_quantity_to_lock:+e}-BID:{bid:+e}-ERROR");
 
         // Check positive quantity
-        if quantity_to_buy.is_sign_negative() {
+        if good_quantity_to_lock.is_sign_negative() {
             log(log_error);
             return Err(LockBuyError::NonPositiveQuantityToBuy {
-                negative_quantity_to_buy: quantity_to_buy,
+                negative_quantity_to_buy: good_quantity_to_lock,
             });
         }
 
@@ -183,17 +186,6 @@ impl Market for SOLMarket {
             return Err(LockBuyError::NonPositiveBid { negative_bid: bid });
         }
 
-        // Check quantity available
-        let quantity_available = self.get_available_quantity(kind_to_buy);
-        if quantity_available < quantity_to_buy {
-            log(log_error);
-            return Err(LockBuyError::InsufficientGoodQuantityAvailable {
-                requested_good_kind: kind_to_buy,
-                requested_good_quantity: quantity_to_buy,
-                available_good_quantity: quantity_available,
-            });
-        }
-
         // Lock limit check
         let num_of_locks = self.meta.num_of_buy_locks();
         if lock_limit_exceeded(num_of_locks) {
@@ -201,14 +193,25 @@ impl Market for SOLMarket {
             return Err(LockBuyError::MaxAllowedLocksReached);
         }
 
+        // Check quantity available
+        let quantity_available = self.get_available_quantity(kind_to_buy);
+        if quantity_available < good_quantity_to_lock {
+            log(log_error);
+            return Err(LockBuyError::InsufficientGoodQuantityAvailable {
+                requested_good_kind: kind_to_buy,
+                requested_good_quantity: good_quantity_to_lock,
+                available_good_quantity: quantity_available,
+            });
+        }
+
         // Check bid
-        let unit_sell_price = self.get_good_buy_exchange_rate(kind_to_buy);
-        let min_bid = quantity_to_buy / unit_sell_price;
+        let sell_exchange_rate_eur_good = self.get_good_buy_exchange_rate(kind_to_buy);
+        let min_bid = good_quantity_to_lock / sell_exchange_rate_eur_good;
         if bid < min_bid {
             log(log_error);
             return Err(LockBuyError::BidTooLow {
                 requested_good_kind: kind_to_buy,
-                requested_good_quantity: quantity_to_buy,
+                requested_good_quantity: good_quantity_to_lock,
                 low_bid: bid,
                 lowest_acceptable_bid: min_bid,
             });
@@ -219,7 +222,7 @@ impl Market for SOLMarket {
         let now = chrono::Local::now();
         (
             kind_to_buy,
-            quantity_to_buy.to_string(),
+            good_quantity_to_lock.to_string(),
             bid.to_string(),
             now,
             trader_name.clone(),
@@ -234,11 +237,16 @@ impl Market for SOLMarket {
         let previous_quantity = self.goods.get(&kind_to_buy).unwrap().get_qty();
         self.goods.insert(
             kind_to_buy,
-            Good::new(kind_to_buy, previous_quantity - quantity_to_buy),
+            Good::new(kind_to_buy, previous_quantity - good_quantity_to_lock),
         );
 
         // Update meta
-        let good_meta = GoodLockMeta::new(kind_to_buy, bid, quantity_to_buy, self.meta.current_day);
+        let good_meta = GoodLockMeta::new(
+            kind_to_buy,
+            bid,
+            good_quantity_to_lock,
+            self.meta.current_day,
+        );
 
         self.meta.locked_buys.insert(token.clone(), good_meta);
 
@@ -246,13 +254,13 @@ impl Market for SOLMarket {
         let e = Event {
             kind: EventKind::LockedBuy,
             good_kind: kind_to_buy,
-            quantity: quantity_to_buy,
+            quantity: good_quantity_to_lock,
             price: bid,
         };
 
         self.notify_everyone(e);
 
-        log(format!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{quantity_to_buy:+e}-BID:{bid:+e}-TOKEN:{token}"));
+        log(format!("LOCK_BUY-{trader_name}-KIND_TO_BUY:{kind_to_buy}-QUANTITY_TO_BUY:{good_quantity_to_lock:+e}-BID:{bid:+e}-TOKEN:{token}"));
 
         Ok(token)
     }
