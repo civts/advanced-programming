@@ -137,6 +137,7 @@ impl Market for SOLMarket {
         Ok(price)
     }
 
+    //Returns how many of the default good we want to receive for quantity of the given good
     fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
         if quantity.is_sign_negative() {
             return Err(MarketGetterError::NonPositiveQuantityAsked);
@@ -152,7 +153,7 @@ impl Market for SOLMarket {
 
         let mut state = self.meta.price_state.borrow_mut();
         let eur_good_exchange_rate = state.get_price(&kind, self.meta.current_day);
-        Ok(eur_good_exchange_rate * quantity)
+        Ok(quantity / eur_good_exchange_rate)
     }
 
     fn get_goods(&self) -> Vec<GoodLabel> {

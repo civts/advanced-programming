@@ -137,7 +137,7 @@ impl PriceState {
         }
     }
 
-    ///Returns the price of the given goodkind on the given day
+    ///Returns the price of (a unit of) the given goodkind on the given day
     pub fn get_price(&mut self, good_kind: &GoodKind, day: u32) -> f32 {
         //If we talk about the default good, its price is one.
         if *good_kind == DEFAULT_GOOD_KIND {

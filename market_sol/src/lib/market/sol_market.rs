@@ -12,6 +12,8 @@ use unitn_market_2022::market::good_label::GoodLabel;
 pub(crate) const MARKET_NAME: &str = "SOL";
 pub(crate) const TOKEN_DURATION: u32 = 15;
 pub(crate) const LOCK_LIMIT: u32 = 10;
+// The margin this market applies on buy orders
+pub(crate) const MARKET_MARGIN: f32 = 0.06;
 
 pub(crate) const ALL_GOOD_KINDS: [GoodKind; 4] =
     [GoodKind::EUR, GoodKind::USD, GoodKind::YEN, GoodKind::YUAN];
@@ -69,6 +71,7 @@ impl SOLMarket {
         good.get_qty()
     }
 
+    /// Exchange rate (EUR/goodkind) for this good
     fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
         self.meta
             .price_state
@@ -76,13 +79,15 @@ impl SOLMarket {
             .get_price(&good_kind, self.meta.current_day)
     }
 
-    ///Return the rate applied when the trader wants to BUY the good from this market
+    /// Return the rate applied when the trader wants to BUY the good from this market
+    /// The rate is EUR/goodkind
     pub(crate) fn get_good_buy_exchange_rate(&self, good_kind: GoodKind) -> f32 {
-        //Apply margin of 0.6%
-        self.get_exchange_rate(good_kind) * 1.06
+        //we divide, since the rate is eur/kind and not kind/eur
+        self.get_exchange_rate(good_kind) / (1.0 + MARKET_MARGIN)
     }
 
-    ///Return the rate applied when the trader wants to SELL the good to this market
+    /// Return the rate applied when the trader wants to SELL the good to this market
+    /// The rate is EUR/goodkind
     pub(crate) fn get_good_sell_exchange_rate(&self, good_kind: GoodKind) -> f32 {
         self.get_exchange_rate(good_kind)
     }

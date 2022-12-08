@@ -1,12 +1,11 @@
 mod test_buy {
+    use crate::lib::market::sol_market::{SOLMarket, MARKET_MARGIN};
     use std::cell::RefCell;
     use std::rc::Rc;
     use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
     use unitn_market_2022::good::good::Good;
     use unitn_market_2022::good::good_kind::GoodKind::{self, *};
-    use unitn_market_2022::market::{BuyError, LockBuyError, Market, MarketGetterError};
-
-    use crate::lib::market::sol_market::SOLMarket;
+    use unitn_market_2022::market::{BuyError, Market, MarketGetterError};
 
     // Setup a struct with default test value
     struct TestMarketSetup {
@@ -76,106 +75,215 @@ mod test_buy {
     }
 
     #[test]
-    fn should_use_adaptive_margin_on_buy() {
+    fn should_use_a_fixed_margin_on_buy() {
         let s = TestMarketSetup::new();
         let market = s.market.borrow();
 
-        //Trade one unit less than the max quantity
-        let quantity1 = s.init_qty - 1f32;
-        let buy_price_result1 = market.get_buy_price(s.buy_kind, quantity1);
-        let sell_price_result1 = market.get_sell_price(s.buy_kind, quantity1);
-
-        assert!(buy_price_result1.is_ok());
-        assert!(sell_price_result1.is_ok());
-        let buy_price1 = buy_price_result1.unwrap();
-        let sell_price1 = sell_price_result1.unwrap();
-        assert!(buy_price1 > sell_price1);
-        let margin1 = buy_price1 - sell_price1;
-
-        //Trade one unit
-        let quantity2 = 1f32;
-        let buy_price_result2 = market.get_buy_price(s.buy_kind, quantity2);
-        let sell_price_result2 = market.get_sell_price(s.buy_kind, quantity2);
-
-        assert!(buy_price_result2.is_ok());
-        assert!(sell_price_result2.is_ok());
-        let buy_price2 = buy_price_result2.unwrap();
-        let sell_price2 = sell_price_result2.unwrap();
-        assert!(buy_price2 > sell_price2);
-        let margin2 = buy_price2 - sell_price2;
-
-        // Testing this assumption: we charge higher margins for bigger trades
-        assert!(margin2 < margin1);
+        let quantity = s.init_qty / 2.0;
+        let buy_price_result = market.get_buy_price(s.buy_kind, quantity);
+        assert!(buy_price_result.is_ok());
+        let buy_price = buy_price_result.unwrap();
+        let sell_price_result = market.get_sell_price(s.buy_kind, quantity);
+        assert!(sell_price_result.is_ok());
+        let sell_price = sell_price_result.unwrap();
+        let sell_plus_margin = sell_price * (1.0 + MARKET_MARGIN);
+        assert!(buy_price > sell_price);
+        assert_eq!(sell_plus_margin, buy_price);
     }
 
     #[test]
-    fn lock_buy() {
+    fn multiple_calls_to_get_buy_price_yield_same_result() {
         let s = TestMarketSetup::new();
-        let mut market = s.market.borrow_mut();
+        let market = s.market.borrow();
 
-        // Fail on negative quantity (while negative bid to see if priority is maintain)
-        let neg_qty = -1f32;
-        let neg_bid = neg_qty / s.buy_kind.get_default_exchange_rate();
-        let result = market
-            .lock_buy(s.buy_kind, neg_qty, neg_bid - 1f32, s.trader.clone())
-            .unwrap_err();
-        let expected = LockBuyError::NonPositiveQuantityToBuy {
-            negative_quantity_to_buy: neg_qty,
-        };
-        assert_eq!(result, expected);
+        let quantity = s.init_qty / 2.0;
+        let buy_price_result1 = market.get_buy_price(s.buy_kind, quantity);
+        assert!(buy_price_result1.is_ok());
+        let buy_price1 = buy_price_result1.unwrap();
+        for _ in 0..10 {
+            let buy_price_result2 = market.get_buy_price(s.buy_kind, quantity);
+            assert!(buy_price_result2.is_ok());
+            let buy_price2 = buy_price_result2.unwrap();
+            assert_eq!(buy_price2, buy_price1);
+        }
+    }
 
-        // Fail on negative bid (while insufficient quantity)
-        let extra_qty = s.init_qty + 0.1f32;
-        let result = market
-            .lock_buy(s.buy_kind, extra_qty, neg_bid, s.trader.clone())
-            .unwrap_err();
-        let expected = LockBuyError::NonPositiveBid {
-            negative_bid: neg_bid,
-        };
-        assert_eq!(result, expected);
+    #[test]
+    fn multiple_calls_to_get_sell_price_yield_same_result() {
+        let s = TestMarketSetup::new();
+        let market = s.market.borrow();
 
-        // Fail on insufficient quantity (while low bid)
-        let low_bid = 0f32;
-        let result = market
-            .lock_buy(s.buy_kind, extra_qty, low_bid, s.trader.clone())
-            .unwrap_err();
-        let expected = LockBuyError::InsufficientGoodQuantityAvailable {
-            requested_good_kind: s.buy_kind,
-            requested_good_quantity: extra_qty,
-            available_good_quantity: s.init_qty,
-        };
-        assert_eq!(result, expected);
+        let quantity = s.init_qty / 2.0;
+        let sell_price_result1 = market.get_sell_price(s.buy_kind, quantity);
+        assert!(sell_price_result1.is_ok());
+        let sell_price1 = sell_price_result1.unwrap();
+        for _ in 0..10 {
+            let sell_price_result2 = market.get_sell_price(s.buy_kind, quantity);
+            assert!(sell_price_result2.is_ok());
+            let sell_price2 = sell_price_result2.unwrap();
+            assert_eq!(sell_price2, sell_price1);
+        }
+    }
 
-        // Fail on low bid
-        let low_bid = 0f32;
-        let result = market
-            .lock_buy(s.buy_kind, s.init_qty, low_bid, s.trader.clone())
-            .unwrap_err();
-        let expected = LockBuyError::BidTooLow {
-            requested_good_kind: s.buy_kind,
-            requested_good_quantity: s.init_qty,
-            low_bid,
-            lowest_acceptable_bid: market.get_buy_price(s.buy_kind, s.init_qty).unwrap(),
-        };
-        assert_eq!(result, expected);
+    mod lock_buy {
+        use crate::tests::buy::test_buy::TestMarketSetup;
+        use unitn_market_2022::market::LockBuyError;
 
-        // Success entire quantity
-        let qty_taken = s.init_qty;
-        market
-            .lock_buy(s.buy_kind, qty_taken, s.init_bid, s.trader.clone())
-            .unwrap();
+        mod on_negative_quantity {
+            use crate::tests::buy::test_buy::TestMarketSetup;
+            use unitn_market_2022::market::LockBuyError;
 
-        // Fail after locking all quantity of USD available
-        let qty = 0.1f32;
-        let result = market
-            .lock_buy(s.buy_kind, qty, s.init_bid, s.trader.clone())
-            .unwrap_err();
-        let expected = LockBuyError::InsufficientGoodQuantityAvailable {
-            requested_good_kind: s.buy_kind,
-            requested_good_quantity: qty,
-            available_good_quantity: s.init_qty - qty_taken,
-        };
-        assert_eq!(result, expected);
+            #[test]
+            fn fails() {
+                let s = TestMarketSetup::new();
+                let mut market = s.market.borrow_mut();
+
+                // Fail on negative quantity
+                let neg_qty = -1f32;
+                let bid = f32::MAX;
+                let result = market
+                    .lock_buy(s.buy_kind, neg_qty, bid, s.trader.clone())
+                    .unwrap_err();
+                let expected = LockBuyError::NonPositiveQuantityToBuy {
+                    negative_quantity_to_buy: neg_qty,
+                };
+                assert_eq!(result, expected);
+            }
+
+            #[test]
+            fn fails_on_negative_quantity_before_negative_bid() {
+                let s = TestMarketSetup::new();
+                let mut market = s.market.borrow_mut();
+
+                // Fail on negative quantity (while negative bid to see if priority is maintained)
+                let neg_qty = -1f32;
+                let neg_bid = neg_qty / s.buy_kind.get_default_exchange_rate();
+                let result = market
+                    .lock_buy(s.buy_kind, neg_qty, neg_bid - 1f32, s.trader.clone())
+                    .unwrap_err();
+                let expected = LockBuyError::NonPositiveQuantityToBuy {
+                    negative_quantity_to_buy: neg_qty,
+                };
+                assert_eq!(result, expected);
+            }
+        }
+
+        mod on_negative_bid {
+            use crate::tests::buy::test_buy::TestMarketSetup;
+            use unitn_market_2022::market::LockBuyError;
+
+            #[test]
+            fn fails_with_non_positive_bid_error() {
+                let s = TestMarketSetup::new();
+                let mut market = s.market.borrow_mut();
+
+                // Fail on negative bid (while insufficient quantity)
+                let neg_bid = -1.0;
+                let result = market.lock_buy(s.buy_kind, 0.1, neg_bid, s.trader.clone());
+                assert!(result.is_err());
+                let expected = LockBuyError::NonPositiveBid {
+                    negative_bid: neg_bid,
+                };
+                assert_eq!(result.unwrap_err(), expected);
+            }
+
+            #[test]
+            fn fails_before_quantity_check() {
+                let s = TestMarketSetup::new();
+                let mut market = s.market.borrow_mut();
+
+                // Fail on negative bid (while insufficient quantity)
+                let neg_bid = -12.0;
+                let result = market.lock_buy(s.buy_kind, f32::MAX, neg_bid, s.trader.clone());
+                assert!(result.is_err());
+                let expected = LockBuyError::NonPositiveBid {
+                    negative_bid: neg_bid,
+                };
+                assert_eq!(result.unwrap_err(), expected);
+            }
+        }
+
+        mod on_low_bid {
+            use crate::tests::buy::test_buy::TestMarketSetup;
+            use unitn_market_2022::market::LockBuyError;
+
+            #[test]
+            fn fails_on_insufficient_quantity_before_low_bid() {
+                let s = TestMarketSetup::new();
+                let mut market = s.market.borrow_mut();
+                // Fail on insufficient quantity (while low bid)
+                let low_bid = 0f32;
+                let extra_qty = f32::MAX;
+                let result = market
+                    .lock_buy(s.buy_kind, extra_qty, low_bid, s.trader.clone())
+                    .unwrap_err();
+                let expected = LockBuyError::InsufficientGoodQuantityAvailable {
+                    requested_good_kind: s.buy_kind,
+                    requested_good_quantity: extra_qty,
+                    available_good_quantity: s.init_qty,
+                };
+                assert_eq!(result, expected);
+            }
+
+            #[test]
+            fn fails_on_low_bid() {
+                let s = TestMarketSetup::new();
+                let mut market = s.market.borrow_mut();
+
+                // Fail on low bid
+                let low_bid = 0f32;
+                let result = market
+                    .lock_buy(s.buy_kind, s.init_qty, low_bid, s.trader.clone())
+                    .unwrap_err();
+                let expected = LockBuyError::BidTooLow {
+                    requested_good_kind: s.buy_kind,
+                    requested_good_quantity: s.init_qty,
+                    low_bid,
+                    lowest_acceptable_bid: market.get_buy_price(s.buy_kind, s.init_qty).unwrap(),
+                };
+                assert_eq!(result, expected);
+            }
+        }
+
+        #[test]
+        fn fails_upon_locking_everything() {
+            let s = TestMarketSetup::new();
+            let mut market = s.market.borrow_mut();
+
+            // Lock the entire quantity of a good
+            let qty_taken = s.init_qty;
+            let first_lock_result =
+                market.lock_buy(s.buy_kind, qty_taken, s.init_bid, s.trader.clone());
+            assert!(first_lock_result.is_ok());
+
+            // Fail after locking all quantity of USD available
+            let qty = 0.1f32;
+            let second_lock_result = market.lock_buy(s.buy_kind, qty, s.init_bid, s.trader.clone());
+            assert!(second_lock_result.is_err());
+            let expected = LockBuyError::InsufficientGoodQuantityAvailable {
+                requested_good_kind: s.buy_kind,
+                requested_good_quantity: qty,
+                available_good_quantity: s.init_qty - qty_taken,
+            };
+            assert_eq!(second_lock_result.unwrap_err(), expected);
+        }
+
+        #[test]
+        fn succeeds_when_bid_is_exactly_the_buy_price() {
+            let s = TestMarketSetup::new();
+            let mut market = s.market.borrow_mut();
+
+            let quantity_to_buy = 0.5;
+            let buy_price = market.get_buy_price(s.buy_kind, quantity_to_buy);
+            assert!(buy_price.is_ok());
+            let first_lock_result = market.lock_buy(
+                s.buy_kind,
+                quantity_to_buy,
+                buy_price.unwrap(),
+                s.trader.clone(),
+            );
+            assert!(first_lock_result.is_ok());
+        }
     }
 
     #[test]
