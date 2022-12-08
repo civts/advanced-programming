@@ -49,8 +49,8 @@ impl SOLMarket {
             match gk {
                 GoodKind::EUR => goods.insert(gk, Good::new(gk, eur)),
                 GoodKind::YEN => goods.insert(gk, Good::new(gk, yen)),
-                GoodKind::USD => goods.insert(gk, Good::new(gk, yuan)),
-                GoodKind::YUAN => goods.insert(gk, Good::new(gk, usd)),
+                GoodKind::USD => goods.insert(gk, Good::new(gk, usd)),
+                GoodKind::YUAN => goods.insert(gk, Good::new(gk, yuan)),
             };
         }
 

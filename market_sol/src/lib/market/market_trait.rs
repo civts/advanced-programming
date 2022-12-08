@@ -35,33 +35,32 @@ impl Market for SOLMarket {
         let mut remaining_market_cap = STARTING_CAPITAL;
         let mut eur_quantity = rng.gen_range(1.0..remaining_market_cap);
         remaining_market_cap -= eur_quantity;
-        let mut yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        let yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
         remaining_market_cap -= yen_mkt_cap;
-        let mut yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        let yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
         remaining_market_cap -= yuan_mkt_cap;
-        let mut usd_mkt_cap = remaining_market_cap;
+        let usd_mkt_cap = remaining_market_cap;
+
+        //Calculate the quantity of each good
+        let mut yen_quantity = yen_mkt_cap * GoodKind::YEN.get_default_exchange_rate();
+        let mut yuan_quantity = yuan_mkt_cap * GoodKind::YUAN.get_default_exchange_rate();
+        let mut usd_quantity = usd_mkt_cap * GoodKind::USD.get_default_exchange_rate();
 
         //Fix floating point operation errors
         let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
         let exceeding_capital = (real_market_cap - STARTING_CAPITAL) + 1.0;
         if (yen_mkt_cap - exceeding_capital).is_sign_positive() {
-            yen_mkt_cap -= exceeding_capital;
+            yen_quantity -= exceeding_capital * GoodKind::YEN.get_default_exchange_rate();
         } else if (yuan_mkt_cap - exceeding_capital).is_sign_positive() {
-            yuan_mkt_cap -= exceeding_capital;
+            yuan_quantity -= exceeding_capital * GoodKind::YUAN.get_default_exchange_rate();
         } else if (usd_mkt_cap - exceeding_capital).is_sign_positive() {
-            usd_mkt_cap -= exceeding_capital;
+            usd_quantity -= exceeding_capital * GoodKind::USD.get_default_exchange_rate();
         } else if (eur_quantity - exceeding_capital).is_sign_positive() {
             eur_quantity -= exceeding_capital;
         } else {
             panic!("We are doing something wrong in this initialization");
         }
 
-        // TODO: Check if usd_mkt_cap < 0
-
-        //Calculate the quantity of each good
-        let yen_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YEN) * yen_mkt_cap;
-        let yuan_quantity = GoodKind::get_default_exchange_rate(&GoodKind::YUAN) * yuan_mkt_cap;
-        let usd_quantity = GoodKind::get_default_exchange_rate(&GoodKind::USD) * usd_mkt_cap;
         //Get the market
         Self::new_with_quantities(eur_quantity, yen_quantity, usd_quantity, yuan_quantity)
     }
