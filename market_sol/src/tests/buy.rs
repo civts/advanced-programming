@@ -88,7 +88,9 @@ mod test_buy {
         let sell_price = sell_price_result.unwrap();
         let sell_plus_margin = sell_price * (1.0 + MARKET_MARGIN);
         assert!(buy_price > sell_price);
-        assert_eq!(sell_plus_margin, buy_price);
+        let difference = (sell_plus_margin - buy_price).abs();
+        let epsilon = buy_price / 10000.0;
+        assert!(difference < epsilon);
     }
 
     #[test]

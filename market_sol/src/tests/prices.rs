@@ -6,31 +6,33 @@ use unitn_market_2022::{
 
 use crate::lib::market::sol_market::SOLMarket;
 
-#[test]
-fn price_unsold_decrease_over_time() {
-    let market_start_quantity = 1000.0;
-    let mrkt_bind = SOLMarket::new_with_quantities(
-        market_start_quantity,
-        market_start_quantity,
-        market_start_quantity,
-        market_start_quantity,
-    );
+// This one is untrue with the current price strategy. TODO: add this to the
+// tests of the strategy that accounts for other markets
+// #[test]
+// fn price_unsold_decrease_over_time() {
+//     let market_start_quantity = 1000.0;
+//     let mrkt_bind = SOLMarket::new_with_quantities(
+//         market_start_quantity,
+//         market_start_quantity,
+//         market_start_quantity,
+//         market_start_quantity,
+//     );
 
-    let kinds = vec![GoodKind::USD, GoodKind::YEN, GoodKind::YUAN, GoodKind::EUR];
-    for kind in kinds {
-        let starting_price = mrkt_bind.borrow().get_buy_price(kind, 1.0).ok().unwrap();
+//     let kinds = vec![GoodKind::USD, GoodKind::YEN, GoodKind::YUAN, GoodKind::EUR];
+//     for kind in kinds {
+//         let starting_price = mrkt_bind.borrow().get_buy_price(kind, 1.0).ok().unwrap();
 
-        wait_one_day!(mrkt_bind);
+//         wait_one_day!(mrkt_bind);
 
-        let price_after_waiting = mrkt_bind.borrow().get_buy_price(kind, 1.0).ok().unwrap();
+//         let price_after_waiting = mrkt_bind.borrow().get_buy_price(kind, 1.0).ok().unwrap();
 
-        if kind.eq(&GoodKind::EUR) {
-            assert_eq!(starting_price, price_after_waiting);
-        } else {
-            assert!(starting_price > price_after_waiting);
-        }
-    }
-}
+//         if kind.eq(&GoodKind::EUR) {
+//             assert_eq!(starting_price, price_after_waiting);
+//         } else {
+//             assert!(starting_price > price_after_waiting);
+//         }
+//     }
+// }
 
 #[test]
 fn price_changes_waiting() {

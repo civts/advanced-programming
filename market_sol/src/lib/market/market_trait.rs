@@ -343,7 +343,10 @@ impl Market for SOLMarket {
     fn lock_sell(
         &mut self,
         kind_to_sell: GoodKind,
+        // the quantity of good the trader wants to sell
         quantity_to_sell: f32,
+        // the quantity of the default good kind the trader wants in exchange
+        // for the good kind_to_sell with quantity quantity_to_sell
         offer: f32,
         trader_name: String,
     ) -> Result<String, LockSellError> {
@@ -385,15 +388,14 @@ impl Market for SOLMarket {
 
         // Check offer not too high
         let good_sell_rate = self.get_good_sell_exchange_rate(kind_to_sell);
-        // TODO: check that offer is the exchange rate at which the trader is willing to sell (give) their good tot he market
-        // therefore the market must pay the trader at the exchange rate
-        if offer > good_sell_rate {
+        let acceptable_eur_we_give_the_trader_on_sell = quantity_to_sell / good_sell_rate;
+        if offer > acceptable_eur_we_give_the_trader_on_sell {
             log(log_error);
             return Err(LockSellError::OfferTooHigh {
                 offered_good_kind: kind_to_sell,
                 offered_good_quantity: quantity_to_sell,
                 high_offer: offer,
-                highest_acceptable_offer: good_sell_rate,
+                highest_acceptable_offer: acceptable_eur_we_give_the_trader_on_sell,
             });
         }
 
