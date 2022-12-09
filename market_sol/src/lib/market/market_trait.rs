@@ -93,13 +93,9 @@ impl Market for SOLMarket {
         MARKET_NAME
     }
 
+    // [from the specs] returns the quantity of good EUR of the market
     fn get_budget(&self) -> f32 {
-        self.goods.values().fold(0f32, |acc, good| {
-            let sell_price = self.meta.min_bid.get(&good.get_kind()).unwrap();
-            let good_quantity = good.get_qty();
-            let good_market_cap = good_quantity * sell_price;
-            acc + good_market_cap
-        })
+        self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty()
     }
 
     fn get_buy_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
