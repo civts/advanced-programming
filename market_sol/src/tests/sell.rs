@@ -182,33 +182,51 @@ mod test_sell {
         }
 
         #[test]
-        fn should_succeed_on_entire_quantity() {
+        fn should_succeed_on_entire_quantity_if_market_has_enough_eur() {
             let market_start_quantity = 1000.0;
 
-            let mrkt_bind = SOLMarket::new_with_quantities(
-                market_start_quantity,
-                market_start_quantity,
-                market_start_quantity,
-                market_start_quantity,
-            );
+            let mrkt_bind =
+                SOLMarket::new_with_quantities(f32::MAX, 0.0, market_start_quantity, 0.0);
             let mut market = mrkt_bind.borrow_mut();
 
             let kind_for_this_test = GoodKind::USD;
 
-            // // Success entire quantity
+            // Success entire quantity
             let full_quantity = market_start_quantity;
-            let full_price = market
-                .get_sell_price(kind_for_this_test, full_quantity)
-                .ok()
-                .unwrap();
-            market
-                .lock_sell(
-                    kind_for_this_test,
-                    full_quantity,
-                    full_price,
-                    TRADER_NAME.to_string(),
-                )
-                .unwrap();
+            let full_price_result = market.get_sell_price(kind_for_this_test, full_quantity);
+            assert!(full_price_result.is_ok());
+            let full_price = full_price_result.unwrap();
+            let lock_result = market.lock_sell(
+                kind_for_this_test,
+                full_quantity,
+                full_price,
+                TRADER_NAME.to_string(),
+            );
+            assert!(lock_result.is_ok())
+        }
+
+        #[test]
+        fn should_fail_if_market_does_not_have_enough_eur() {
+            let insufficient_quantity = 1.0;
+
+            let mrkt_bind = SOLMarket::new_with_quantities(insufficient_quantity, 0.0, 0.0, 0.0);
+            let mut market = mrkt_bind.borrow_mut();
+
+            let kind_for_this_test = GoodKind::USD;
+
+            let quantity = 1000.0;
+            let sell_price_result = market.get_sell_price(kind_for_this_test, quantity);
+            assert!(sell_price_result.is_ok());
+            let price = sell_price_result.unwrap();
+            let lock_result =
+                market.lock_sell(kind_for_this_test, quantity, price, TRADER_NAME.to_string());
+            assert!(lock_result.is_err());
+            let expected_error = LockSellError::InsufficientDefaultGoodQuantityAvailable {
+                offered_good_kind: kind_for_this_test,
+                offered_good_quantity: quantity,
+                available_good_quantity: insufficient_quantity,
+            };
+            assert_eq!(lock_result.unwrap_err(), expected_error);
         }
     }
 
