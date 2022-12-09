@@ -6,15 +6,12 @@ use plotters::{
 use unitn_market_2022::event::notifiable::Notifiable;
 use unitn_market_2022::{good::good_kind::GoodKind, market::Market, wait_one_day};
 
-use crate::lib::{
-    domain::market_meta::MarketMeta,
-    market::{
-        price_strategies::stocastic::{
-            MAX_NOISE_CLAMP, MAX_SEASON_LENGTH, MIN_NOISE_CLAMP, MIN_SEASON_LENGTH,
-            MIN_VARIATION_IN_SEASON,
-        },
-        sol_market::SOLMarket,
+use crate::lib::market::{
+    price_strategies::stocastic::{
+        MAX_NOISE_CLAMP, MAX_SEASON_LENGTH, MIN_NOISE_CLAMP, MIN_SEASON_LENGTH,
+        MIN_VARIATION_IN_SEASON,
     },
+    sol_market::SOLMarket,
 };
 
 //These functions are just to showcase the market, no need for them to be used
@@ -35,8 +32,7 @@ pub(crate) fn test_overall_market_change_percentage() {
 
         for gk in [GoodKind::USD, GoodKind::YEN, GoodKind::YUAN] {
             //Generate data
-            let market_ref =
-                SOLMarket::new_with_quantities_and_meta(sum, sum, sum, sum, MarketMeta::new());
+            let market_ref = SOLMarket::new_with_quantities(sum, sum, sum, sum);
             let mut prices: Vec<f32> = Vec::new();
             let mut min = f32::MAX;
             let mut max = f32::MIN;
@@ -83,8 +79,7 @@ pub(crate) fn cool_graphs() {
 
     for gk in [GoodKind::USD, GoodKind::YEN, GoodKind::YUAN] {
         //Generate data
-        let market_ref =
-            SOLMarket::new_with_quantities_and_meta(sum, sum, sum, sum, MarketMeta::new());
+        let market_ref = SOLMarket::new_with_quantities_and_path(sum, sum, sum, sum, None);
         let mut prices: Vec<f32> = Vec::new();
         let mut min = f32::MAX;
         let mut max = f32::MIN;

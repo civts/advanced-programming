@@ -7,8 +7,13 @@ pub struct GoodLockMeta {
     pub price: f32,
     pub quantity: f32,
     pub created_on: u32, // Number of notify calls since creation
+                         // lock_type: LockType,
 }
 
+// enum LockType {
+//     Sell,
+//     Buy,
+// }
 impl GoodLockMeta {
     pub fn new(kind: GoodKind, price: f32, quantity: f32, created_on: u32) -> Self {
         Self {

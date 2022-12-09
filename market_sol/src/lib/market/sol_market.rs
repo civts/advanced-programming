@@ -25,12 +25,12 @@ pub struct SOLMarket {
 }
 
 impl SOLMarket {
-    pub(crate) fn new_with_quantities_and_meta(
+    pub(crate) fn new_with_quantities_and_path(
         eur: f32,
         yen: f32,
         usd: f32,
         yuan: f32,
-        meta: MarketMeta,
+        optional_path: Option<&str>,
     ) -> Rc<RefCell<SOLMarket>> {
         if eur < 0.0 {
             panic!("Tried to initialize the market with a negative quantity of eur");
@@ -58,10 +58,11 @@ impl SOLMarket {
 
         log(format!("MARKET_INITIALIZATION\nEUR: {eur:+e}\nUSD: {usd:+e}\nYEN: {yen:+e}\nYUAN: {yuan:+e}\nEND_MARKET_INITIALIZATION"));
 
+        let goods_vec = Vec::from_iter(goods.values().cloned());
         Rc::new(RefCell::new(SOLMarket {
             goods,
             subscribers: vec![],
-            meta,
+            meta: MarketMeta::new(goods_vec, optional_path),
         }))
     }
 
@@ -73,10 +74,21 @@ impl SOLMarket {
 
     /// Exchange rate (EUR/goodkind) for this good
     fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
-        self.meta
+        let stocastic_price = self
+            .meta
             .stocastic_price
             .borrow_mut()
-            .get_price(&good_kind, self.meta.current_day)
+            .get_price(&good_kind, self.meta.current_day);
+        let quantity_price = self
+            .meta
+            .quantity_price
+            .get_exchange_rate(&good_kind, Vec::from_iter(self.goods.values().cloned()));
+        let stochastic_weight: f32 = 1.0;
+        let quantity_weight: f32 = 1.0;
+        let total_weight = stochastic_weight + quantity_weight;
+        let weighted_sum =
+            (stocastic_price * stochastic_weight) + (quantity_price * quantity_weight);
+        weighted_sum / total_weight
     }
 
     /// Return the rate applied when the trader wants to BUY the good from this market

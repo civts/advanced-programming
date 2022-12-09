@@ -1,7 +1,7 @@
 use super::sol_market::{SOLMarket, MARKET_NAME};
 use crate::lib::market::sol_market::log;
 use crate::lib::{
-    domain::{good_lock_meta::GoodLockMeta, market_meta::MarketMeta},
+    domain::good_lock_meta::GoodLockMeta,
     market::sol_market::{lock_limit_exceeded, TOKEN_DURATION},
 };
 use rand::{Rng, SeedableRng};
@@ -66,21 +66,40 @@ impl Market for SOLMarket {
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
-        Self::new_with_quantities_and_meta(eur, yen, usd, yuan, MarketMeta::new())
+        Self::new_with_quantities_and_path(eur, yen, usd, yuan, None)
     }
 
-    fn new_file(path: &str) -> Rc<RefCell<dyn Market>>
+    fn new_file(path_str: &str) -> Rc<RefCell<dyn Market>>
     where
         Self: Sized,
     {
-        let path: &Path = Path::new(path);
+        let path: &Path = Path::new(path_str);
         let path_exists = std::path::Path::exists(path);
         if path_exists {
             let quantities = Self::read_quantities_from_file(path);
             return match quantities {
-                Some(q) => {
-                    let meta = MarketMeta::new_with_file(path);
-                    return Self::new_with_quantities_and_meta(q.0, q.1, q.2, q.3, meta);
+                Some(goods) => {
+                    let eur = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::EUR)
+                        .unwrap()
+                        .get_qty();
+                    let usd = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::USD)
+                        .unwrap()
+                        .get_qty();
+                    let yen = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::YEN)
+                        .unwrap()
+                        .get_qty();
+                    let yuan = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::YUAN)
+                        .unwrap()
+                        .get_qty();
+                    return Self::new_with_quantities_and_path(eur, yen, usd, yuan, Some(path_str));
                 }
                 None => Self::new_random(),
             };
@@ -147,8 +166,7 @@ impl Market for SOLMarket {
 
         // Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
 
-        let mut state = self.meta.stocastic_price.borrow_mut();
-        let eur_good_exchange_rate = state.get_price(&kind, self.meta.current_day);
+        let eur_good_exchange_rate = self.get_good_sell_exchange_rate(kind);
         Ok(quantity / eur_good_exchange_rate)
     }
 

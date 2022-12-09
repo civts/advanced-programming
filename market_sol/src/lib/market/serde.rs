@@ -1,7 +1,7 @@
 use super::sol_market::SOLMarket;
-use crate::lib::misc::banner::BANNER;
+use crate::lib::{market::sol_market::ALL_GOOD_KINDS, misc::banner::BANNER};
 use std::{collections::HashMap, fs, path::Path};
-use unitn_market_2022::good::good_kind::GoodKind;
+use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
 
 mod sol_file_prefixes {
     pub const COMMENT_PREFIX: &str = "#";
@@ -82,12 +82,11 @@ impl SOLMarket {
         contents
     }
 
-    /// Reads the file at the provided path and optionally returns a tuple with 4
-    /// f32 numbers representing, respectively, the amount of euros, yens, dollars
-    /// and yuan that the SOL Market represented in that file has.
+    /// Reads the file at the provided path and optionally returns vector with the goods
+    /// that the SOL Market represented in that file has.
     ///
     /// If there is an error reading or parsing the file, None is returned.
-    pub(crate) fn read_quantities_from_file(path: &Path) -> Option<(f32, f32, f32, f32)> {
+    pub(crate) fn read_quantities_from_file(path: &Path) -> Option<Vec<Good>> {
         use sol_file_prefixes::*;
 
         let pts = path.to_str().unwrap_or("invalid path");
@@ -172,7 +171,17 @@ impl SOLMarket {
         if reading_failed {
             None
         } else {
-            Some((eur_qty, yen_qty, usd_qty, yuan_qty))
+            let mut goods_vec = Vec::with_capacity(ALL_GOOD_KINDS.len());
+            for gk in ALL_GOOD_KINDS {
+                let quantity = match gk {
+                    GoodKind::EUR => eur_qty,
+                    GoodKind::YEN => yen_qty,
+                    GoodKind::USD => usd_qty,
+                    GoodKind::YUAN => yuan_qty,
+                };
+                goods_vec.push(Good::new(gk, quantity));
+            }
+            Some(goods_vec)
         }
     }
 }
