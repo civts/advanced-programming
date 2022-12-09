@@ -147,7 +147,7 @@ impl Market for SOLMarket {
 
         // Ok(quantity / good_label.exchange_rate_buy) //as discussed in the group with farouk
 
-        let mut state = self.meta.price_state.borrow_mut();
+        let mut state = self.meta.stocastic_price.borrow_mut();
         let eur_good_exchange_rate = state.get_price(&kind, self.meta.current_day);
         Ok(quantity / eur_good_exchange_rate)
     }

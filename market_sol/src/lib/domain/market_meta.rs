@@ -1,5 +1,5 @@
 use crate::lib::{
-    domain::good_lock_meta::GoodLockMeta, market::price_strategies::stocastic::PriceState,
+    domain::good_lock_meta::GoodLockMeta, market::price_strategies::stocastic::StocasticPrice,
 };
 use std::{cell::RefCell, collections::HashMap, path::Path};
 
@@ -11,7 +11,7 @@ pub(crate) struct MarketMeta {
     pub locked_sells: HashMap<String, GoodLockMeta>,
     pub current_day: u32,
     pub file_path: Option<String>,
-    pub price_state: RefCell<PriceState>,
+    pub stocastic_price: RefCell<StocasticPrice>,
 }
 
 impl MarketMeta {
@@ -21,7 +21,7 @@ impl MarketMeta {
             locked_sells: Default::default(),
             current_day: 1,
             file_path: None,
-            price_state: RefCell::new(PriceState::new()),
+            stocastic_price: RefCell::new(StocasticPrice::new()),
         }
     }
 
@@ -40,7 +40,7 @@ impl MarketMeta {
             locked_sells: Default::default(),
             current_day: 1,
             file_path: Some(String::from(file_str)),
-            price_state: RefCell::new(PriceState::new()),
+            stocastic_price: RefCell::new(StocasticPrice::new()),
         }
     }
 }

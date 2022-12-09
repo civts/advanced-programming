@@ -25,7 +25,7 @@ pub(crate) const MIN_NOISE_CLAMP: f32 = -MAX_NOISE_CLAMP;
 
 ///Holds all the info that we need to determine the price of a good on a given day
 #[derive(Debug)]
-pub(crate) struct PriceState {
+pub(crate) struct StocasticPrice {
     last_price: HashMap<GoodKind, f32>,
     day_price: HashMap<GoodKind, (u32, f32)>,
     pub(crate) seasons: HashMap<GoodKind, Season>,
@@ -120,12 +120,12 @@ impl Season {
     }
 }
 
-impl PriceState {
+impl StocasticPrice {
     pub(crate) fn new() -> Self {
         let mut rng = ChaCha20Rngg::new();
         let max_decrease_per_season = rng.gen_range(MIN_VARIATION_IN_SEASON..0.95);
         let max_increase_in_season = rng.gen_range(MIN_VARIATION_IN_SEASON..5.0);
-        PriceState {
+        StocasticPrice {
             last_price: HashMap::new(),
             seasons: HashMap::new(),
             rand: rng,

@@ -74,7 +74,7 @@ impl SOLMarket {
     /// Exchange rate (EUR/goodkind) for this good
     fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
         self.meta
-            .price_state
+            .stocastic_price
             .borrow_mut()
             .get_price(&good_kind, self.meta.current_day)
     }

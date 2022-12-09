@@ -129,7 +129,7 @@ pub(crate) fn cool_graphs() {
         drawing_context.draw_series(price_points).unwrap();
 
         let meta = &market_ref.borrow().meta;
-        let binding = meta.price_state.borrow();
+        let binding = meta.stocastic_price.borrow();
         let hash_map = &binding.past_seasons;
         let mut past_seasons = hash_map.get(&gk).unwrap().clone();
         if let Some(current_season) = binding.seasons.get(&gk) {
