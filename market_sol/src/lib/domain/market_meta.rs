@@ -1,7 +1,7 @@
-use crate::lib::domain::good_lock_meta::GoodLockMeta;
+use crate::lib::{
+    domain::good_lock_meta::GoodLockMeta, market::price_strategies::stocastic::PriceState,
+};
 use std::{cell::RefCell, collections::HashMap, path::Path};
-
-use super::price_state::PriceState;
 
 #[derive(Debug)]
 pub(crate) struct MarketMeta {
