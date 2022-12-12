@@ -83,11 +83,15 @@ impl SOLMarket {
             .meta
             .quantity_price
             .get_exchange_rate(&good_kind, Vec::from_iter(self.goods.values().cloned()));
+        let other_markets_price = self.meta.other_markets.get_exchange_rate(&good_kind);
+        //Compute the weighted average of the three
         let stochastic_weight: f32 = 1.0;
         let quantity_weight: f32 = 1.0;
-        let total_weight = stochastic_weight + quantity_weight;
-        let weighted_sum =
-            (stocastic_price * stochastic_weight) + (quantity_price * quantity_weight);
+        let others_weight: f32 = 1.0;
+        let total_weight = stochastic_weight + quantity_weight + others_weight;
+        let weighted_sum = (stocastic_price * stochastic_weight)
+            + (quantity_price * quantity_weight)
+            + (other_markets_price * others_weight);
         weighted_sum / total_weight
     }
 

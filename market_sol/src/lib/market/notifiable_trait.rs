@@ -14,24 +14,16 @@ impl Notifiable for SOLMarket {
 
     fn on_event(&mut self, event: Event) {
         match event.kind {
-            EventKind::Bought => {
+            EventKind::Bought | EventKind::Sold => {
+                let exchange_rate = event.price / event.quantity;
+                self.meta
+                    .other_markets
+                    .update(&event.good_kind, exchange_rate);
                 //TODO
                 //Update price after successful buy, slightly decrease the price as qnty increases
                 // self.good_labels.iter_mut().for_each(|gl| {
                 //     if gl.good_kind.eq(&event.good_kind) {
                 //         gl.exchange_rate_sell *= 1.05;
-                //     }
-                // });
-            }
-
-            EventKind::Sold => {
-                //TODO
-                // //Update price after successful sell, slightly increase the price as qnty increases
-                // // i'm just chaniging the price :/
-                // self.good_labels.iter_mut().for_each(|gl| {
-                //     if gl.good_kind.eq(&event.good_kind) {
-                //         gl.exchange_rate_buy *= 0.95;
-                //         // println!("ciaoo {}", gl.exchange_rate_buy);
                 //     }
                 // });
             }

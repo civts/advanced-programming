@@ -2,7 +2,9 @@ use unitn_market_2022::good::good::Good;
 
 use crate::lib::{
     domain::good_lock_meta::GoodLockMeta,
-    market::price_strategies::{quantity::QuantityPrice, stocastic::StocasticPrice},
+    market::price_strategies::{
+        other_markets::OtherMarketsPrice, quantity::QuantityPrice, stocastic::StocasticPrice,
+    },
 };
 use std::{cell::RefCell, collections::HashMap};
 
@@ -16,6 +18,7 @@ pub(crate) struct MarketMeta {
     pub file_path: Option<String>,
     pub stocastic_price: RefCell<StocasticPrice>,
     pub quantity_price: QuantityPrice,
+    pub other_markets: OtherMarketsPrice,
 }
 
 impl MarketMeta {
@@ -27,6 +30,7 @@ impl MarketMeta {
             file_path: path.map(String::from),
             stocastic_price: RefCell::new(StocasticPrice::new()),
             quantity_price: QuantityPrice::new(goods),
+            other_markets: OtherMarketsPrice::new(),
         }
     }
 
