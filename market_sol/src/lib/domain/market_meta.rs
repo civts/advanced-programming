@@ -1,12 +1,10 @@
-use unitn_market_2022::good::good::Good;
-
-use crate::lib::{
-    domain::good_lock_meta::GoodLockMeta,
-    market::price_strategies::{
-        other_markets::OtherMarketsPrice, quantity::QuantityPrice, stocastic::StocasticPrice,
-    },
-};
+use crate::lib::domain::good_lock_meta::GoodLockMeta;
+use crate::lib::market::price_strategies::other_markets::OtherMarketsPrice;
+use crate::lib::market::price_strategies::quantity::QuantityPrice;
+use crate::lib::market::price_strategies::stocastic::StocasticPrice;
+use crate::lib::market::sol_market::TOKEN_DURATION;
 use std::{cell::RefCell, collections::HashMap};
+use unitn_market_2022::good::good::Good;
 
 #[derive(Debug)]
 pub(crate) struct MarketMeta {
@@ -34,11 +32,27 @@ impl MarketMeta {
         }
     }
 
+    /// Return the number of buy locks that are not expired
     pub fn num_of_locked_sells(&self) -> u32 {
-        self.locked_sells.len() as u32
+        let mut not_expired_locks = 0u32;
+        for (_, glm) in self.locked_sells.iter() {
+            let days_since = self.current_day - glm.created_on;
+            if days_since <= TOKEN_DURATION {
+                not_expired_locks += 1
+            }
+        }
+        not_expired_locks
     }
 
+    /// Return the number of buy locks that are not expired
     pub fn num_of_buy_locks(&self) -> u32 {
-        self.locked_buys.len() as u32
+        let mut not_expired_locks = 0u32;
+        for (_, glm) in self.locked_buys.iter() {
+            let days_since = self.current_day - glm.created_on;
+            if days_since <= TOKEN_DURATION {
+                not_expired_locks += 1
+            }
+        }
+        not_expired_locks
     }
 }

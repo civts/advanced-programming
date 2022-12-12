@@ -127,6 +127,7 @@ pub(crate) fn lock_limit_exceeded(num_of_locks: u32) -> bool {
     num_of_locks + 1 > LOCK_LIMIT
 }
 
+/// Append log code to file according to specifications
 pub(crate) fn log(log_code: String) {
     let filename = format!("log_{}.txt", MARKET_NAME);
     let mut file = OpenOptions::new()

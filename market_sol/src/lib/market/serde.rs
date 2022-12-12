@@ -75,7 +75,7 @@ impl SOLMarket {
             contents.push(' ');
             contents.push_str(good.get_qty().to_string().as_str());
             contents.push(' ');
-            let exchange_rate = self.get_good_buy_exchange_rate(good.get_kind());
+            let exchange_rate = self.get_good_sell_exchange_rate(good.get_kind());
             contents.push_str(exchange_rate.to_string().as_str());
             contents.push('\n');
         }

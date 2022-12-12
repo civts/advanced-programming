@@ -41,8 +41,6 @@ impl Notifiable for SOLMarket {
                 // });
             }
         }
-        //progress one day in any case
-        self.meta.current_day += 1;
 
         // Reinstate any good which has an expired token
         for (_, meta) in self.meta.locked_buys.iter() {
@@ -65,6 +63,9 @@ impl Notifiable for SOLMarket {
                 );
             }
         }
+
+        //progress one day in any case
+        self.meta.current_day += 1;
     }
 }
 

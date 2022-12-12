@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod extern_test {
     //import here the market_test module and the Market trait
     use unitn_market_2022::market::market_test;
@@ -56,7 +57,7 @@ mod extern_test {
     }
     #[test]
     fn new_random_should_not_exceeed_starting_capital() {
-        for _ in 0..1000 {
+        for _ in 0..100 {
             market_test::new_random_should_not_exceeed_starting_capital::<MarketType>();
         }
     }
@@ -66,19 +67,19 @@ mod extern_test {
     }
     #[test]
     fn test_sell_err_unrecognized_token() {
-        market_test::test_sell_err_unrecognized_token::<MarketType>();
+        market_test::test_sell_unrecognized_token::<MarketType>();
     }
     #[test]
     fn test_sell_err_expired_token() {
-        market_test::test_sell_err_expired_token::<MarketType>();
+        market_test::test_sell_expired_token::<MarketType>();
     }
     #[test]
     fn test_sell_err_wrong_good_kind() {
-        market_test::test_sell_err_wrong_good_kind::<MarketType>();
+        market_test::test_sell_wrong_good_kind::<MarketType>();
     }
     #[test]
     fn test_sell_err_insufficient_good_quantity() {
-        market_test::test_sell_err_insufficient_good_quantity::<MarketType>();
+        market_test::test_sell_insufficient_good_quantity::<MarketType>();
     }
     #[test]
     fn test_lock_sell_non_positive_offer() {
@@ -86,7 +87,7 @@ mod extern_test {
     }
     #[test]
     fn test_lock_sell_default_good_already_locked() {
-        // Our market allows more than 1 lock per good
+        // We allow multiples Locks so this test does not apply to our Market
         // market_test::test_lock_sell_defaultGoodAlreadyLocked::<MarketType>();
     }
     #[test]
@@ -103,6 +104,18 @@ mod extern_test {
     }
     #[test]
     fn test_working_function_lock_sell_token() {
-        //test_working_function_lock_sell_token::test_lock_sell_offerTooHigh::<MarketType>();
+        market_test::test_working_function_lock_sell_token::<MarketType>();
+    }
+    #[test]
+    fn test_get_budget() {
+        market_test::test_get_budget::<MarketType>();
+    }
+    #[test]
+    fn test_get_goods() {
+        market_test::test_get_goods::<MarketType>();
+    }
+    #[test]
+    fn test_get_name() {
+        market_test::test_get_name::<MarketType>();
     }
 }
