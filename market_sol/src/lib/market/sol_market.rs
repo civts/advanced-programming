@@ -5,6 +5,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::rc::Rc;
 use unitn_market_2022::event::notifiable::Notifiable;
+use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::good_label::GoodLabel;
@@ -98,14 +99,22 @@ impl SOLMarket {
     /// Return the rate applied when the trader wants to BUY the good from this market
     /// The rate is EUR/goodkind
     pub(crate) fn get_good_buy_exchange_rate(&self, good_kind: GoodKind) -> f32 {
-        //we divide, since the rate is eur/kind and not kind/eur
-        self.get_exchange_rate(good_kind) / (1.0 + MARKET_MARGIN)
+        if good_kind == DEFAULT_GOOD_KIND {
+            1.0
+        } else {
+            //we divide, since the rate is eur/kind and not kind/eur
+            self.get_exchange_rate(good_kind) / (1.0 + MARKET_MARGIN)
+        }
     }
 
     /// Return the rate applied when the trader wants to SELL the good to this market
     /// The rate is EUR/goodkind
     pub(crate) fn get_good_sell_exchange_rate(&self, good_kind: GoodKind) -> f32 {
-        self.get_exchange_rate(good_kind)
+        if good_kind == DEFAULT_GOOD_KIND {
+            1.0
+        } else {
+            self.get_exchange_rate(good_kind)
+        }
     }
 
     pub(crate) fn get_good_labels(&self) -> Vec<GoodLabel> {
