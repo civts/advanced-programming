@@ -23,6 +23,8 @@
             pkg-config
             stdenv.cc
             crate2nix
+            cmake
+            fontconfig
           ];
           propagatedBuildInputs = [ stdenv.cc ];
           buildInputs = [

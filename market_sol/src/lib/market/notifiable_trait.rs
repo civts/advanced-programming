@@ -4,7 +4,7 @@ use unitn_market_2022::{
         event::{Event, EventKind},
         notifiable::Notifiable,
     },
-    good::{consts::DEFAULT_GOOD_KIND, good_kind::GoodKind},
+    good::{consts::DEFAULT_GOOD_KIND, good::Good},
 };
 
 impl Notifiable for SOLMarket {
@@ -14,63 +14,53 @@ impl Notifiable for SOLMarket {
 
     fn on_event(&mut self, event: Event) {
         match event.kind {
-            EventKind::Bought => {
+            EventKind::Bought | EventKind::Sold => {
+                let exchange_rate = event.price / event.quantity;
+                self.meta
+                    .other_markets
+                    .update(&event.good_kind, exchange_rate);
+                //TODO
                 //Update price after successful buy, slightly decrease the price as qnty increases
-                self.good_labels.iter_mut().for_each(|gl| {
-                    if gl.good_kind.eq(&event.good_kind) {
-                        gl.exchange_rate_sell *= 1.05;
-                        gl.exchange_rate_buy *= 1.05;
-                    }
-                });
-            }
-
-            EventKind::Sold => {
-                //Update price after successful sell, slightly increase the price as qnty increases
-                // i'm just chaniging the price :/
-                self.good_labels.iter_mut().for_each(|gl| {
-                    if gl.good_kind.eq(&event.good_kind) {
-                        gl.exchange_rate_buy *= 0.95;
-                        gl.exchange_rate_sell *= 0.95;
-                        // println!("ciaoo {}", gl.exchange_rate_buy);
-                    }
-                });
+                // self.good_labels.iter_mut().for_each(|gl| {
+                //     if gl.good_kind.eq(&event.good_kind) {
+                //         gl.exchange_rate_sell *= 1.05;
+                //     }
+                // });
             }
 
             EventKind::LockedBuy => {}
             EventKind::LockedSell => {}
             EventKind::Wait => {
-                // change some exchange rate -> buy_prices - as for now it's enough to decrease the price a bit
-                // as time goes on with goods left unsold you tend to decrease the price
-                self.good_labels.iter_mut().for_each(|gl| {
-                    if gl.good_kind.ne(&GoodKind::EUR) {
-                        gl.exchange_rate_sell *= 1.05;
-                        gl.exchange_rate_buy *= 1.05;
-                    }
-                });
+                //TODO
+                // // change some exchange rate -> buy_prices - as for now it's enough to decrease the price a bit
+                // // as time goes on with goods left unsold you tend to decrease the price
+                // self.good_labels.iter_mut().for_each(|gl| {
+                //     if gl.good_kind.ne(&GoodKind::EUR) {
+                //         gl.exchange_rate_sell *= 1.05;
+                //     }
+                // });
             }
         }
 
         // Reinstate any good which has an expired token
         for (_, meta) in self.meta.locked_buys.iter() {
             let days_since = self.meta.current_day - meta.created_on;
-            if days_since == TOKEN_DURATION + 1 {
-                let good = self
-                    .good_labels
-                    .iter_mut()
-                    .find(|l| l.good_kind.eq(&meta.kind))
-                    .unwrap();
-                good.quantity += meta.quantity;
+            if days_since == TOKEN_DURATION {
+                let good = self.goods.get(&meta.kind).unwrap();
+                let replenished_good_qty = good.get_qty() + meta.quantity;
+                self.goods
+                    .insert(meta.kind, Good::new(meta.kind, replenished_good_qty));
             }
         }
         for (_, meta) in self.meta.locked_sells.iter() {
             let days_since = self.meta.current_day - meta.created_on;
-            if days_since == TOKEN_DURATION + 1 {
-                let default_good = self
-                    .good_labels
-                    .iter_mut()
-                    .find(|l| l.good_kind.eq(&DEFAULT_GOOD_KIND))
-                    .unwrap();
-                default_good.quantity += meta.price;
+            if days_since == TOKEN_DURATION {
+                let default_good = self.goods.get(&DEFAULT_GOOD_KIND).unwrap();
+                let new_def_good_qty = default_good.get_qty() + meta.price;
+                self.goods.insert(
+                    DEFAULT_GOOD_KIND,
+                    Good::new(DEFAULT_GOOD_KIND, new_def_good_qty),
+                );
             }
         }
 

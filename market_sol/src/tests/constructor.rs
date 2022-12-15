@@ -103,7 +103,7 @@ fn should_initialize_with_right_quantity() {
 /// SOL team
 fn new_random_should_not_exceeed_starting_capital() {
     use unitn_market_2022::good::consts::*;
-    use unitn_market_2022::{good::good_kind::GoodKind, market::Market};
+    use unitn_market_2022::market::Market;
 
     //Test 10 times to get better chances of catching bugs
     for _ in 0..10 {
@@ -114,12 +114,7 @@ fn new_random_should_not_exceeed_starting_capital() {
         //Calculate total value of the market with default exchange rate
         let mut total_value = 0.0;
         for good in goods {
-            let default_exchnge_rate = match good.good_kind {
-                GoodKind::EUR => 1.0,
-                GoodKind::YEN => DEFAULT_EUR_YEN_EXCHANGE_RATE,
-                GoodKind::USD => DEFAULT_EUR_USD_EXCHANGE_RATE,
-                GoodKind::YUAN => DEFAULT_EUR_YUAN_EXCHANGE_RATE,
-            };
+            let default_exchnge_rate = good.good_kind.get_default_exchange_rate();
             //The amount of EUR the current good is worth
             let good_market_cap = good.quantity / default_exchnge_rate;
             total_value += good_market_cap;

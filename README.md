@@ -39,3 +39,16 @@ Otherwise, you will need the following:
 1. Note that previously active shells/terminal emulators may not pick up automatically the new environment variable and you may need to restart them.
 
 1. `cd` in a crate and run a `cargo update` to confirm you have access to `kellnr`.
+
+## Price change logic
+
+The market goes in **seasons**. More specifically, each good changes accordingly to its season, independently from the others.
+A season can last from 20 to 365 days.
+At the start of the season, the market decides a target price, which can be 
+
+## Market keeps
+
+Good is standardized and has kind and quantity
+`goods`: a hashmap of the goods it has (stored as association GoodKind->Good
+`locked_goods`: same as `goods`, but keeps as quantity the locked quantity
+-> Need to update `locked_goods` every day!
