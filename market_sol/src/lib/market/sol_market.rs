@@ -75,6 +75,9 @@ impl SOLMarket {
 
     /// Exchange rate (EUR/goodkind) for this good
     fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
+        if good_kind == DEFAULT_GOOD_KIND {
+            return 1.0;
+        }
         let stocastic_price = self
             .meta
             .stocastic_price
@@ -99,22 +102,17 @@ impl SOLMarket {
     /// Return the rate applied when the trader wants to BUY the good from this market
     /// The rate is EUR/goodkind
     pub(crate) fn get_good_buy_exchange_rate(&self, good_kind: GoodKind) -> f32 {
-        if good_kind == DEFAULT_GOOD_KIND {
-            1.0
-        } else {
-            //we divide, since the rate is eur/kind and not kind/eur
-            self.get_exchange_rate(good_kind) / (1.0 + MARKET_MARGIN)
-        }
+        //we divide, since the rate is eur/kind and not kind/eur
+        self.get_exchange_rate(good_kind)
     }
 
     /// Return the rate applied when the trader wants to SELL the good to this market
     /// The rate is EUR/goodkind
     pub(crate) fn get_good_sell_exchange_rate(&self, good_kind: GoodKind) -> f32 {
         if good_kind == DEFAULT_GOOD_KIND {
-            1.0
-        } else {
-            self.get_exchange_rate(good_kind)
+            return 1.0;
         }
+        self.get_exchange_rate(good_kind) / (1.0 + MARKET_MARGIN)
     }
 
     pub(crate) fn get_good_labels(&self) -> Vec<GoodLabel> {

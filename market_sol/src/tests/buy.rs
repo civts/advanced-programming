@@ -83,12 +83,12 @@ mod test_buy {
         let buy_price_result = market.get_buy_price(s.buy_kind, quantity);
         assert!(buy_price_result.is_ok());
         let buy_price = buy_price_result.unwrap();
+        let buy_price_plus_margin = buy_price * (1.0 + MARKET_MARGIN);
         let sell_price_result = market.get_sell_price(s.buy_kind, quantity);
         assert!(sell_price_result.is_ok());
         let sell_price = sell_price_result.unwrap();
-        let sell_plus_margin = sell_price * (1.0 + MARKET_MARGIN);
-        assert!(buy_price > sell_price);
-        let difference = (sell_plus_margin - buy_price).abs();
+        assert!(sell_price > buy_price);
+        let difference = (buy_price_plus_margin - sell_price).abs();
         let epsilon = buy_price / 10000.0;
         assert!(difference < epsilon);
     }
