@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["market_trait","Implementation of generic Market trait with core functionalities for traders."],["notifiable_trait","Implementation of Notifiablr for SOL Market."],["price_strategies","Implementation of price change strategy."],["sol_market","SOL Market implementation specific to only that market and used across different modules."]]};

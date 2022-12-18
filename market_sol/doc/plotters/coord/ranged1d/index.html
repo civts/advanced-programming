@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="The one-dimensional coordinate system abstraction."><meta name="keywords" content="rust, rustlang, rust-lang, ranged1d"><title>plotters::coord::ranged1d - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../plotters/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../../plotters/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module ranged1d</a></h2><div class="sidebar-elems"><section><div class="block"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li></ul></div></section></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../plotters/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
+                        </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../../index.html">plotters</a>::<wbr><a href="../index.html">coord</a>::<wbr><a class="mod" href="#">ranged1d</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../../src/plotters/coord/ranged1d/mod.rs.html#1-243">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The one-dimensional coordinate system abstraction.</p>
+<p>Plotters build complex coordinate system with a combinator pattern and all the coordinate system is
+built from the one dimensional coordinate system. This module defines the fundamental types used by
+the one-dimensional coordinate system.</p>
+<p>The key trait for a one dimensional coordinate is <a href="trait.Ranged.html">Ranged</a>. This trait describes a
+set of values which served as the 1D coordinate system in Plotters. In order to extend the coordinate system,
+the new coordinate spec must implement this trait.</p>
+<p>The following example demonstrate how to make a customized coordinate specification</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">plotters::coord::ranged1d</span>::{<span class="ident">Ranged</span>, <span class="ident">DefaultFormatting</span>, <span class="ident">KeyPointHint</span>};
+<span class="kw">use</span> <span class="ident">std::ops::Range</span>;
+
+<span class="kw">struct</span> <span class="ident">ZeroToOne</span>;
+
+<span class="kw">impl</span> <span class="ident">Ranged</span> <span class="kw">for</span> <span class="ident">ZeroToOne</span> {
+  <span class="kw">type</span> <span class="ident">ValueType</span> <span class="op">=</span> <span class="ident">f64</span>;
+  <span class="kw">type</span> <span class="ident">FormatOption</span> <span class="op">=</span> <span class="ident">DefaultFormatting</span>;
+
+  <span class="kw">fn</span> <span class="ident">map</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">&amp;</span><span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="ident">f64</span>, <span class="ident">pixel_range</span>: (<span class="ident">i32</span>, <span class="ident">i32</span>)) -&gt; <span class="ident">i32</span> {
+     <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">pixel_range</span>.<span class="number">1</span> <span class="op">-</span> <span class="ident">pixel_range</span>.<span class="number">0</span>;
+     <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">min</span>(<span class="number">1.0</span>).<span class="ident">max</span>(<span class="number">0.0</span>);
+     ((<span class="ident">size</span> <span class="kw">as</span> <span class="ident">f64</span>) <span class="op">*</span> <span class="ident">v</span>).<span class="ident">round</span>() <span class="kw">as</span> <span class="ident">i32</span>
+  }
+
+  <span class="kw">fn</span> <span class="ident">key_points</span><span class="op">&lt;</span><span class="ident">Hint</span>:<span class="ident">KeyPointHint</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">hint</span>: <span class="ident">Hint</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">f64</span><span class="op">&gt;</span> {
+      <span class="kw">if</span> <span class="ident">hint</span>.<span class="ident">max_num_points</span>() <span class="op">&lt;</span> <span class="number">3</span> {
+          <span class="macro">vec!</span>[]
+      } <span class="kw">else</span> {
+          <span class="macro">vec!</span>[<span class="number">0.0</span>, <span class="number">0.5</span>, <span class="number">1.0</span>]
+      }
+  }
+
+  <span class="kw">fn</span> <span class="ident">range</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">f64</span><span class="op">&gt;</span> {
+      <span class="number">0.0</span>..<span class="number">1.0</span>
+  }
+}
+
+<span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span> <span class="op">*</span> <span class="number">768</span> <span class="op">*</span> <span class="number">3</span>];
+<span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">BitMapBackend::with_buffer</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buffer</span>, (<span class="number">1024</span>, <span class="number">768</span>)).<span class="ident">into_drawing_area</span>();
+
+<span class="kw">let</span> <span class="ident">chart</span> <span class="op">=</span> <span class="ident">ChartBuilder::on</span>(<span class="kw-2">&amp;</span><span class="ident">root</span>)
+  .<span class="ident">build_cartesian_2d</span>(<span class="ident">ZeroToOne</span>, <span class="ident">ZeroToOne</span>)
+  .<span class="ident">unwrap</span>();
+</code></pre></div>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.BoldPoints.html" title="plotters::coord::ranged1d::BoldPoints struct">BoldPoints</a></div><div class="item-right docblock-short"><p>The key point hint indicates we only need key point for the bold grid lines</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.DefaultFormatting.html" title="plotters::coord::ranged1d::DefaultFormatting struct">DefaultFormatting</a></div><div class="item-right docblock-short"><p>This makes the ranged coord uses the default <code>Debug</code> based formatting</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.LightPoints.html" title="plotters::coord::ranged1d::LightPoints struct">LightPoints</a></div><div class="item-right docblock-short"><p>The key point hint indicates that we are using the key points for the light grid lines</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.NoDefaultFormatting.html" title="plotters::coord::ranged1d::NoDefaultFormatting struct">NoDefaultFormatting</a></div><div class="item-right docblock-short"><p>This markers prevent Plotters to implement the default <code>Debug</code> based formatting</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.SegmentedCoord.html" title="plotters::coord::ranged1d::SegmentedCoord struct">SegmentedCoord</a></div><div class="item-right docblock-short"><p>A <code>SegmentedCoord</code> is a decorator on any discrete coordinate specification.
+This decorator will convert the discrete coordiante in two ways:</p>
+</div></div></div><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.KeyPointWeight.html" title="plotters::coord::ranged1d::KeyPointWeight enum">KeyPointWeight</a></div><div class="item-right docblock-short"><p>Specify the weight of key points.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.SegmentValue.html" title="plotters::coord::ranged1d::SegmentValue enum">SegmentValue</a></div><div class="item-right docblock-short"><p>The value that used by the segmented coordinate.</p>
+</div></div></div><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.AsRangedCoord.html" title="plotters::coord::ranged1d::AsRangedCoord trait">AsRangedCoord</a></div><div class="item-right docblock-short"><p>The trait for the type that can be converted into a ranged coordinate axis</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.DefaultValueFormatOption.html" title="plotters::coord::ranged1d::DefaultValueFormatOption trait">DefaultValueFormatOption</a></div><div class="item-right docblock-short"><p>Since stable Rust doesn’t have specialization, it’s very hard to make our own trait that
+automatically implemented the value formatter. This trait uses as a marker indicates if we
+should automatically implement the default value formater based on it’s <code>Debug</code> trait</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.DiscreteRanged.html" title="plotters::coord::ranged1d::DiscreteRanged trait">DiscreteRanged</a></div><div class="item-right docblock-short"><p>The trait indicates the coordinate is discrete
+This means we can bidirectionally map the range value to 0 to N
+in which N is the number of distinct values of the range.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.IntoSegmentedCoord.html" title="plotters::coord::ranged1d::IntoSegmentedCoord trait">IntoSegmentedCoord</a></div><div class="item-right docblock-short"><p>The trait for types that can decorated by <a href="struct.SegmentedCoord.html">SegmentedCoord</a> decorator.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.KeyPointHint.html" title="plotters::coord::ranged1d::KeyPointHint trait">KeyPointHint</a></div><div class="item-right docblock-short"><p>The trait for a hint provided to the key point algorithm used by the coordinate specs.
+The most important constraint is the <code>max_num_points</code> which means the algorithm could emit no more than specific number of key points
+<code>weight</code> is used to determine if this is used as a bold grid line or light grid line
+<code>bold_points</code> returns the max number of coresponding bold grid lines</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.Ranged.html" title="plotters::coord::ranged1d::Ranged trait">Ranged</a></div><div class="item-right docblock-short"><p>The trait that indicates we have a ordered and ranged value
+Which is used to describe any 1D axis.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.ReversibleRanged.html" title="plotters::coord::ranged1d::ReversibleRanged trait">ReversibleRanged</a></div><div class="item-right docblock-short"><p>The trait indicates the ranged value can be map reversely, which means
+an pixel-based coordinate is given, it’s possible to figure out the underlying
+logic value.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.ValueFormatter.html" title="plotters::coord::ranged1d::ValueFormatter trait">ValueFormatter</a></div><div class="item-right docblock-short"><p>Determine how we can format a value in a coordinate system by default</p>
+</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="plotters" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0 (4b91a6ea7 2022-08-08)" ></div>
+</body></html>

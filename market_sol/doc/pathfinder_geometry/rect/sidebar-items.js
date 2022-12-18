@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["RectF",""],["RectI","NB: The origin is inclusive, while the lower right point is exclusive."]]};

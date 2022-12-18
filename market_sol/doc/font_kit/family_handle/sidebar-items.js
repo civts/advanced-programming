@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["FamilyHandle","Encapsulates the information needed to locate and open the fonts in a family."]]};

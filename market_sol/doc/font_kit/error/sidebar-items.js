@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["FontLoadingError","Reasons why a loader might fail to load a font."],["GlyphLoadingError","Reasons why a font might fail to load a glyph."],["SelectionError","Reasons why a source might fail to look up a font or fonts."]]};

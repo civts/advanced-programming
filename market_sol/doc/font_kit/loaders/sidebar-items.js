@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["core_text","A loader that uses Apple’s Core Text API to load and rasterize fonts."]]};

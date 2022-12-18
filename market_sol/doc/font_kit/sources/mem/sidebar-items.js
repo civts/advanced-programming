@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["MemSource","A source that keeps fonts in memory."]]};

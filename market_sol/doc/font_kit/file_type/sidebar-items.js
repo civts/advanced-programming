@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["FileType","The type of a font file: either a single font or a TrueType/OpenType collection."]]};

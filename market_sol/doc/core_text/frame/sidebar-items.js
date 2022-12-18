@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["CTFrame",""],["__CTFrame",""]],"type":[["CTFrameRef",""]]};
