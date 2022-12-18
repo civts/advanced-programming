@@ -10,15 +10,23 @@ use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::good_label::GoodLabel;
 
+/// The name of the market. #default value = SOL
 pub(crate) const MARKET_NAME: &str = "SOL";
+
+/// The validity period for the token given in days. #default value = 15
 pub(crate) const TOKEN_DURATION: u32 = 15;
+
+/// The maximum amount of locks for buy and sell operations. #default value = 10
 pub(crate) const LOCK_LIMIT: u32 = 10;
-// The margin this market applies on buy orders
+
+/// The margin this market applies on buy orders. #default value = 0.06
 pub(crate) const MARKET_MARGIN: f32 = 0.06;
 
+/// The array of all available goods for the market
 pub(crate) const ALL_GOOD_KINDS: [GoodKind; 4] =
     [GoodKind::EUR, GoodKind::USD, GoodKind::YEN, GoodKind::YUAN];
 
+/// SOL Market struct, represents the market data with it's goods, subscribers and metadata.
 pub struct SOLMarket {
     pub(crate) goods: HashMap<GoodKind, Good>,
     pub(crate) subscribers: Vec<Box<dyn Notifiable>>,
@@ -26,6 +34,7 @@ pub struct SOLMarket {
 }
 
 impl SOLMarket {
+    /// Returns [`SOLMarket`] with given quantites and optional file path to which the market will be serialized.
     pub(crate) fn new_with_quantities_and_path(
         eur: f32,
         yen: f32,
@@ -67,13 +76,13 @@ impl SOLMarket {
         }))
     }
 
-    /// Returns how much of the asked GoodKind is available (not locked)
+    /// Returns how much of the asked [`GoodKind`] is available (not locked)
     pub(crate) fn get_available_quantity(&self, good_kind: GoodKind) -> f32 {
         let good = self.goods.get(&good_kind).expect("Should be initialized");
         good.get_qty()
     }
 
-    /// Exchange rate (EUR/goodkind) for this good
+    /// Exchange rate (EUR/[`GoodKind`]) for a given good_kind
     fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
         if good_kind == DEFAULT_GOOD_KIND {
             return 1.0;
@@ -115,6 +124,7 @@ impl SOLMarket {
         self.get_exchange_rate(good_kind) / (1.0 + MARKET_MARGIN)
     }
 
+    /// Returns vector of [`GoodLabel`] for each [`GoodKind`] availabale on the market
     pub(crate) fn get_good_labels(&self) -> Vec<GoodLabel> {
         let values = self.goods.values();
         let iter = values.map(|g: &Good| -> GoodLabel {
@@ -130,6 +140,7 @@ impl SOLMarket {
     }
 }
 
+/// Verifies if lock limit is still valid (below LOCK_LIMIT const)
 pub(crate) fn lock_limit_exceeded(num_of_locks: u32) -> bool {
     num_of_locks + 1 > LOCK_LIMIT
 }
