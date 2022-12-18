@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["MAX_NOISE_CLAMP",""],["MAX_SEASON_LENGTH","How long a season can be, max"],["MIN_NOISE_CLAMP",""],["MIN_SEASON_LENGTH",""],["MIN_VARIATION_IN_SEASON",""]],"struct":[["ChaCha20Rngg",""],["Season",""],["StocasticPrice","Holds all the info that we need to determine the price of a good on a given day"]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["GoodLabel","Like the label next to items you see at a supermarket: you can see both availability (-> `quantity`) and price (-> `exchange_rate`)"]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["fitting_range","Build a range that fits the data"]],"mod":[["float","Handles the printing of floating-point numbers."]],"struct":[["Quartiles","The quartiles"]]};

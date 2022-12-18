@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Metrics","Various metrics that apply to the entire font."]]};

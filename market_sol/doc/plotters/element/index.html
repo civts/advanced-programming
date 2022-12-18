@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Defines the drawing elements, the high-level drawing unit in Plotters drawing system"><meta name="keywords" content="rust, rustlang, rust-lang, element"><title>plotters::element - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../plotters/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../plotters/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module element</a></h2><div class="sidebar-elems"><section><div class="block"><ul><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div></section></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../plotters/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
+                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
+                        </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../index.html">plotters</a>::<wbr><a class="mod" href="#">element</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../src/plotters/element/mod.rs.html#1-290">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Defines the drawing elements, the high-level drawing unit in Plotters drawing system</p>
+<h3 id="introduction"><a href="#introduction">Introduction</a></h3>
+<p>An element is the drawing unit for Plotter’s high-level drawing API.
+Different from low-level drawing API, an element is a logic unit of component in the image.
+There are few built-in elements, including <code>Circle</code>, <code>Pixel</code>, <code>Rectangle</code>, <code>Path</code>, <code>Text</code>, etc.</p>
+<p>All element can be drawn onto the drawing area using API <code>DrawingArea::draw(...)</code>.
+Plotters use “iterator of elements” as the abstraction of any type of plot.</p>
+<h3 id="implementing-your-own-element"><a href="#implementing-your-own-element">Implementing your own element</a></h3>
+<p>You can also define your own element, <code>CandleStick</code> is a good sample of implementing complex
+element. There are two trait required for an element:</p>
+<ul>
+<li><code>PointCollection</code> - the struct should be able to return an iterator of key-points under guest coordinate</li>
+<li><code>Drawable</code> - the struct is a pending drawing operation on a drawing backend with pixel-based coordinate</li>
+</ul>
+<p>An example of element that draws a red “X” in a red rectangle onto the backend:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">std::iter</span>::{<span class="ident">Once</span>, <span class="ident">once</span>};
+<span class="kw">use</span> <span class="ident">plotters::element</span>::{<span class="ident">PointCollection</span>, <span class="ident">Drawable</span>};
+<span class="kw">use</span> <span class="ident">plotters_backend</span>::{<span class="ident">BackendCoord</span>, <span class="ident">DrawingErrorKind</span>, <span class="ident">BackendStyle</span>};
+<span class="kw">use</span> <span class="ident">plotters::style::IntoTextStyle</span>;
+<span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+
+<span class="comment">// Any example drawing a red X</span>
+<span class="kw">struct</span> <span class="ident">RedBoxedX</span>((<span class="ident">i32</span>, <span class="ident">i32</span>));
+
+<span class="comment">// For any reference to RedX, we can convert it into an iterator of points</span>
+<span class="kw">impl</span> <span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">PointCollection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, (<span class="ident">i32</span>, <span class="ident">i32</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">RedBoxedX</span> {
+    <span class="kw">type</span> <span class="ident">Point</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> (<span class="ident">i32</span>, <span class="ident">i32</span>);
+    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">Once</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> (<span class="ident">i32</span>, <span class="ident">i32</span>)<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">point_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
+        <span class="ident">once</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)
+    }
+}
+
+<span class="comment">// How to actually draw this element</span>
+<span class="kw">impl</span> <span class="op">&lt;</span><span class="ident">DB</span>:<span class="ident">DrawingBackend</span><span class="op">&gt;</span> <span class="ident">Drawable</span><span class="op">&lt;</span><span class="ident">DB</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RedBoxedX</span> {
+    <span class="kw">fn</span> <span class="ident">draw</span><span class="op">&lt;</span><span class="ident">I</span>:<span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">BackendCoord</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="kw-2">mut</span> <span class="ident">pos</span>: <span class="ident">I</span>,
+        <span class="ident">backend</span>: <span class="kw-2">&amp;mut</span> <span class="ident">DB</span>,
+        <span class="kw">_</span>: (<span class="ident">u32</span>, <span class="ident">u32</span>),
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">DrawingErrorKind</span><span class="op">&lt;</span><span class="ident">DB::ErrorType</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">pos</span> <span class="op">=</span> <span class="ident">pos</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>();
+        <span class="ident">backend</span>.<span class="ident">draw_rect</span>(<span class="ident">pos</span>, (<span class="ident">pos</span>.<span class="number">0</span> <span class="op">+</span> <span class="number">10</span>, <span class="ident">pos</span>.<span class="number">1</span> <span class="op">+</span> <span class="number">12</span>), <span class="kw-2">&amp;</span><span class="ident">RED</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">text_style</span> <span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="string">&quot;sans-serif&quot;</span>, <span class="number">20</span>).<span class="ident">into_text_style</span>(<span class="kw-2">&amp;</span><span class="ident">backend</span>.<span class="ident">get_size</span>()).<span class="ident">color</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>);
+        <span class="ident">backend</span>.<span class="ident">draw_text</span>(<span class="string">&quot;X&quot;</span>, <span class="ident">text_style</span>, <span class="ident">pos</span>)
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">BitMapBackend::new</span>(
+        <span class="string">&quot;plotters-doc-data/element-0.png&quot;</span>,
+        (<span class="number">640</span>, <span class="number">480</span>)
+    ).<span class="ident">into_drawing_area</span>();
+    <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">RedBoxedX</span>((<span class="number">200</span>, <span class="number">200</span>)))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p><img src="https://plotters-rs.github.io/plotters-doc-data/element-0.png" alt="" /></p>
+<h3 id="composable-elements"><a href="#composable-elements">Composable Elements</a></h3>
+<p>You also have an convenient way to build an element that isn’t built into the Plotters library by
+combining existing elements into a logic group. To build an composable element, you need to use an
+logic empty element that draws nothing to the backend but denotes the relative zero point of the logical
+group. Any element defined with pixel based offset coordinate can be added into the group later using
+the <code>+</code> operator.</p>
+<p>For example, the red boxed X element can be implemented with Composable element in the following way:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">BitMapBackend::new</span>(
+        <span class="string">&quot;plotters-doc-data/element-1.png&quot;</span>,
+        (<span class="number">640</span>, <span class="number">480</span>)
+    ).<span class="ident">into_drawing_area</span>();
+    <span class="kw">let</span> <span class="ident">font</span>:<span class="ident">FontDesc</span> <span class="op">=</span> (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">20</span>).<span class="ident">into</span>();
+    <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span>(<span class="ident">EmptyElement::at</span>((<span class="number">200</span>, <span class="number">200</span>))
+            <span class="op">+</span> <span class="ident">Text::new</span>(<span class="string">&quot;X&quot;</span>, (<span class="number">0</span>, <span class="number">0</span>), <span class="kw-2">&amp;</span><span class="string">&quot;sans-serif&quot;</span>.<span class="ident">into_font</span>().<span class="ident">resize</span>(<span class="number">20.0</span>).<span class="ident">color</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>))
+            <span class="op">+</span> <span class="ident">Rectangle::new</span>([(<span class="number">0</span>,<span class="number">0</span>), (<span class="number">10</span>, <span class="number">12</span>)], <span class="kw-2">&amp;</span><span class="ident">RED</span>)
+    ))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p><img src="https://plotters-rs.github.io/plotters-doc-data/element-1.png" alt="" /></p>
+<h3 id="dynamic-elements"><a href="#dynamic-elements">Dynamic Elements</a></h3>
+<p>By default, Plotters uses static dispatch for all the elements and series. For example,
+the <code>ChartContext::draw_series</code> method accepts an iterator of <code>T</code> where type <code>T</code> implements
+all the traits a element should implement. Although, we can use the series of composable element
+for complex series drawing. But sometimes, we still want to make the series heterogynous, which means
+the iterator should be able to holds elements in different type.
+For example, a point series with cross and circle. This requires the dynamically dispatched elements.
+In plotters, all the elements can be converted into <code>DynElement</code>, the dynamic dispatch container for
+all elements (include external implemented ones).
+Plotters automatically implements <code>IntoDynElement</code> for all elements, by doing so, any dynamic element should have
+<code>into_dyn</code> function which would wrap the element into a dynamic element wrapper.</p>
+<p>For example, the following code counts the number of factors of integer and mark all prime numbers in cross.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">fn</span> <span class="ident">num_of_factor</span>(<span class="ident">n</span>: <span class="ident">i32</span>) -&gt; <span class="ident">i32</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ret</span> <span class="op">=</span> <span class="number">2</span>;
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">2</span>..<span class="ident">n</span> {
+        <span class="kw">if</span> <span class="ident">i</span> <span class="op">*</span> <span class="ident">i</span> <span class="op">&gt;</span> <span class="ident">n</span> {
+            <span class="kw">break</span>;
+        }
+
+        <span class="kw">if</span> <span class="ident">n</span> <span class="op">%</span> <span class="ident">i</span> <span class="op">==</span> <span class="number">0</span> {
+            <span class="kw">if</span> <span class="ident">i</span> <span class="op">*</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="ident">n</span> {
+                <span class="ident">ret</span> <span class="op">+</span><span class="op">=</span> <span class="number">2</span>;
+            } <span class="kw">else</span> {
+                <span class="ident">ret</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+            }
+        }
+    }
+    <span class="kw">return</span> <span class="ident">ret</span>;
+}
+<span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span>
+        <span class="ident">BitMapBackend::new</span>(<span class="string">&quot;plotters-doc-data/element-3.png&quot;</span>, (<span class="number">640</span>, <span class="number">480</span>))
+        .<span class="ident">into_drawing_area</span>();
+    <span class="ident">root</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chart</span> <span class="op">=</span> <span class="ident">ChartBuilder::on</span>(<span class="kw-2">&amp;</span><span class="ident">root</span>)
+        .<span class="ident">x_label_area_size</span>(<span class="number">40</span>)
+        .<span class="ident">y_label_area_size</span>(<span class="number">40</span>)
+        .<span class="ident">margin</span>(<span class="number">5</span>)
+        .<span class="ident">build_cartesian_2d</span>(<span class="number">0</span>..<span class="number">50</span>, <span class="number">0</span>..<span class="number">10</span>)<span class="question-mark">?</span>;
+
+    <span class="ident">chart</span>
+        .<span class="ident">configure_mesh</span>()
+        .<span class="ident">disable_x_mesh</span>()
+        .<span class="ident">disable_y_mesh</span>()
+        .<span class="ident">draw</span>()<span class="question-mark">?</span>;
+
+    <span class="ident">chart</span>.<span class="ident">draw_series</span>((<span class="number">0</span>..<span class="number">50</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">center</span> <span class="op">=</span> (<span class="ident">x</span>, <span class="ident">num_of_factor</span>(<span class="ident">x</span>));
+        <span class="comment">// Although the arms of if statement has different types,</span>
+        <span class="comment">// but they can be placed into a dynamic element wrapper,</span>
+        <span class="comment">// by doing so, the type is unified.</span>
+        <span class="kw">if</span> <span class="ident">center</span>.<span class="number">1</span> <span class="op">==</span> <span class="number">2</span> {
+            <span class="ident">Cross::new</span>(<span class="ident">center</span>, <span class="number">4</span>, <span class="ident">Into</span>::<span class="op">&lt;</span><span class="ident">ShapeStyle</span><span class="op">&gt;</span><span class="ident">::into</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>).<span class="ident">filled</span>()).<span class="ident">into_dyn</span>()
+        } <span class="kw">else</span> {
+            <span class="ident">Circle::new</span>(<span class="ident">center</span>, <span class="number">4</span>, <span class="ident">Into</span>::<span class="op">&lt;</span><span class="ident">ShapeStyle</span><span class="op">&gt;</span><span class="ident">::into</span>(<span class="kw-2">&amp;</span><span class="ident">GREEN</span>).<span class="ident">filled</span>()).<span class="ident">into_dyn</span>()
+        }
+    }))<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p><img src="https://plotters-rs.github.io/plotters-doc-data/element-3.png" alt="" /></p>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.BackendCoordAndZ.html" title="plotters::element::BackendCoordAndZ struct">BackendCoordAndZ</a></div><div class="item-right docblock-short"><p>Used for 3d coordinate transformations.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.BackendCoordOnly.html" title="plotters::element::BackendCoordOnly struct">BackendCoordOnly</a></div><div class="item-right docblock-short"><p>Used for 2d coordinate transformations.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.BitMapElement.html" title="plotters::element::BitMapElement struct">BitMapElement</a></div><div class="item-right docblock-short"><p>The element that contains a bitmap on it</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Boxplot.html" title="plotters::element::Boxplot struct">Boxplot</a></div><div class="item-right docblock-short"><p>The boxplot element</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.CandleStick.html" title="plotters::element::CandleStick struct">CandleStick</a></div><div class="item-right docblock-short"><p>The candlestick data point element</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Circle.html" title="plotters::element::Circle struct">Circle</a></div><div class="item-right docblock-short"><p>A circle element</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.ComposedElement.html" title="plotters::element::ComposedElement struct">ComposedElement</a></div><div class="item-right docblock-short"><p>A container for two drawable elements, used for composition.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Cross.html" title="plotters::element::Cross struct">Cross</a></div><div class="item-right docblock-short"><p>A cross marker for visualizing data series.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Cubiod.html" title="plotters::element::Cubiod struct">Cubiod</a></div><div class="item-right docblock-short"><p>Represents a cuboid, a six-faced solid.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.DynElement.html" title="plotters::element::DynElement struct">DynElement</a></div><div class="item-right docblock-short"><p>The container for a dynamically dispatched element</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.EmptyElement.html" title="plotters::element::EmptyElement struct">EmptyElement</a></div><div class="item-right docblock-short"><p>An empty composable element. This is the starting point of a composed element.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.ErrorBar.html" title="plotters::element::ErrorBar struct">ErrorBar</a></div><div class="item-right docblock-short"><p>An error bar, which visualizes the minimum, average, and maximum of a dataset.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.ErrorBarOrientH.html" title="plotters::element::ErrorBarOrientH struct">ErrorBarOrientH</a></div><div class="item-right docblock-short"><p>Used for the production of horizontal error bars.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.ErrorBarOrientV.html" title="plotters::element::ErrorBarOrientV struct">ErrorBarOrientV</a></div><div class="item-right docblock-short"><p>Used for the production of vertical error bars.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.MultiLineText.html" title="plotters::element::MultiLineText struct">MultiLineText</a></div><div class="item-right docblock-short"><p>An multi-line text element. The <code>Text</code> element allows only single line text
+and the <code>MultiLineText</code> supports drawing multiple lines</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.PathElement.html" title="plotters::element::PathElement struct">PathElement</a></div><div class="item-right docblock-short"><p>An element of a series of connected lines</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Pie.html" title="plotters::element::Pie struct">Pie</a></div><div class="item-right docblock-short"><p>A Pie Graph</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Pixel.html" title="plotters::element::Pixel struct">Pixel</a></div><div class="item-right docblock-short"><p>An element representing a single pixel.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Polygon.html" title="plotters::element::Polygon struct">Polygon</a></div><div class="item-right docblock-short"><p>An element of a filled polygon</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Rectangle.html" title="plotters::element::Rectangle struct">Rectangle</a></div><div class="item-right docblock-short"><p>A rectangle element</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Text.html" title="plotters::element::Text struct">Text</a></div><div class="item-right docblock-short"><p>A single line text element. This can be owned or borrowed string, dependents on
+<code>String</code> or <code>str</code> moved into.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.TriangleMarker.html" title="plotters::element::TriangleMarker struct">TriangleMarker</a></div><div class="item-right docblock-short"><p>A triangle marker for visualizing data series.</p>
+</div></div></div><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.CoordMapper.html" title="plotters::element::CoordMapper trait">CoordMapper</a></div><div class="item-right docblock-short"><p>Useful to translate from guest coordinates to backend coordinates</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.Drawable.html" title="plotters::element::Drawable trait">Drawable</a></div><div class="item-right docblock-short"><p>The trait indicates we are able to draw it on a drawing area</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.IntoDynElement.html" title="plotters::element::IntoDynElement trait">IntoDynElement</a></div><div class="item-right docblock-short"><p>The trait that makes the conversion from the statically dispatched element
+to the dynamically dispatched element</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.PointCollection.html" title="plotters::element::PointCollection trait">PointCollection</a></div><div class="item-right docblock-short"><p>A type which is logically a collection of points, under any given coordinate system.
+Note: Ideally, a point collection trait should be any type of which coordinate elements can be
+iterated. This is similar to <code>iter</code> method of many collection types in std.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.PointElement.html" title="plotters::element::PointElement trait">PointElement</a></div><div class="item-right docblock-short"><p>A common trait for elements that can be interpreted as points: A cross, a circle, a triangle marker…</p>
+</div></div></div><h2 id="types" class="small-section-header"><a href="#types">Type Definitions</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="type" href="type.Path.html" title="plotters::element::Path type">Path</a><span class="stab deprecated" title="">Deprecated</span></div><div class="item-right docblock-short"><p>This is a deprecated type. Please use new name <a href="struct.PathElement.html" title="PathElement"><code>PathElement</code></a> instead.</p>
+</div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="plotters" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0 (4b91a6ea7 2022-08-08)" ></div>
+</body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["HPos","The horizontal position of the anchor point relative to the text."],["VPos","The vertical position of the anchor point relative to the text."]],"struct":[["Pos","The text anchor position."]]};

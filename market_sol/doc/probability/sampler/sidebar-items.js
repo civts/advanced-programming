@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Independent","A means of drawing a sequence of independent samples."]]};

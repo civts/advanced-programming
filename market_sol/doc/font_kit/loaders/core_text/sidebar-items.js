@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Font","A loader that uses Apple’s Core Text API to load and rasterize fonts."]],"type":[["NativeFont","Core Text’s representation of a font."]]};

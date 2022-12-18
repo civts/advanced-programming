@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["BitMapBackendError","Indicates some error occurs within the bitmap backend"]],"mod":[["bitmap_pixel",""]],"struct":[["BitMapBackend","The backend that drawing a bitmap"]]};

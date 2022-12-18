@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Cartesian3d","A 3D cartesian coordinate system"],["ProjectionMatrix","The projection matrix which is used to project the 3D space to the 2D display panel"],["ProjectionMatrixBuilder","The helper struct to build a projection matrix"]]};
