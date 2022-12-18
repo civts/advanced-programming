@@ -75,25 +75,36 @@ impl SOLMarket {
 
     /// Exchange rate (EUR/goodkind) for this good
     fn get_exchange_rate(&self, good_kind: GoodKind) -> f32 {
-        let stocastic_price = self
-            .meta
-            .stocastic_price
-            .borrow_mut()
-            .get_price(&good_kind, self.meta.current_day);
-        let quantity_price = self
-            .meta
-            .quantity_price
-            .get_exchange_rate(&good_kind, Vec::from_iter(self.goods.values().cloned()));
-        let other_markets_price = self.meta.other_markets.get_exchange_rate(&good_kind);
+        let stocastic_rate = self.get_stocastic_rate(good_kind);
+        let quantity_rate = self.get_quantity_rate(good_kind);
+        let other_markets_rate = self.get_other_rate(good_kind);
         //Compute the weighted average of the three
         let stochastic_weight: f32 = 1.0;
         let quantity_weight: f32 = 1.0;
         let others_weight: f32 = 1.0;
         let total_weight = stochastic_weight + quantity_weight + others_weight;
-        let weighted_sum = (stocastic_price * stochastic_weight)
-            + (quantity_price * quantity_weight)
-            + (other_markets_price * others_weight);
+        assert!(total_weight > 0.0);
+        let weighted_sum = f32::max(0.0, stocastic_rate * stochastic_weight)
+            + f32::max(0.0, quantity_rate * quantity_weight)
+            + f32::max(0.0, other_markets_rate * others_weight);
         weighted_sum / total_weight
+    }
+
+    pub fn get_other_rate(&self, good_kind: GoodKind) -> f32 {
+        self.meta.other_markets.get_exchange_rate(&good_kind)
+    }
+
+    pub fn get_quantity_rate(&self, good_kind: GoodKind) -> f32 {
+        self.meta
+            .quantity_price
+            .get_exchange_rate(&good_kind, Vec::from_iter(self.goods.values().cloned()))
+    }
+
+    pub fn get_stocastic_rate(&self, good_kind: GoodKind) -> f32 {
+        self.meta
+            .stocastic_price
+            .borrow_mut()
+            .get_rate(&good_kind, self.meta.current_day)
     }
 
     /// Return the rate applied when the trader wants to BUY the good from this market

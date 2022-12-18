@@ -32,6 +32,7 @@ impl QuantityPrice {
             .unwrap()
             .get_qty();
         let initial_quantity = self.initial_quantities.get(good_kind).unwrap();
-        rate * f32::max(quantity_now, 0.000001) / f32::max(*initial_quantity, 0.000001)
+        let remaining_percentage = quantity_now.max(0.000001) / initial_quantity.max(0.000001);
+        rate / remaining_percentage.abs().sqrt()
     }
 }

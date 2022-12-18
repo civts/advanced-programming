@@ -1,9 +1,13 @@
 use plotters::{
     prelude::{ChartBuilder, Circle, IntoDrawingArea, LabelAreaPosition, SVGBackend},
     series::LineSeries,
-    style::{Color, IntoFont, BLACK, BLUE, RED, WHITE},
+    style::{Color, IntoFont, RGBColor},
 };
-use unitn_market_2022::event::notifiable::Notifiable;
+use rand::Rng;
+use unitn_market_2022::{
+    event::{event::Event, notifiable::Notifiable},
+    good::{consts::DEFAULT_GOOD_KIND, good::Good},
+};
 use unitn_market_2022::{good::good_kind::GoodKind, market::Market, wait_one_day};
 
 use crate::lib::market::{
@@ -14,7 +18,23 @@ use crate::lib::market::{
     sol_market::SOLMarket,
 };
 
-//These functions are just to showcase the market, no need for them to be used
+const SHOW_STOCHASTIC_PRICE: bool = true;
+const SHOW_SEASON_MARKS: bool = SHOW_STOCHASTIC_PRICE;
+const SHOW_QUANTITY_PRICE: bool = true;
+const SHOW_OTHER_MARKETS_PRICE: bool = true;
+const SHOW_OVERALL_PRICE: bool = true;
+
+const PURPLE: RGBColor = RGBColor(84, 13, 110);
+const TEAL: RGBColor = RGBColor(22, 152, 115);
+const WHITE: RGBColor = RGBColor(246, 247, 235);
+const BLACK: RGBColor = RGBColor(9, 10, 12);
+const RED: RGBColor = RGBColor(246, 22, 52);
+const OCRA: RGBColor = RGBColor(241, 143, 1);
+const BLUE: RGBColor = RGBColor(53, 129, 184);
+// const PINK: RGBColor = RGBColor(238, 66, 102);
+// const ORANGE: RGBColor = RGBColor(205, 106, 19);
+
+// These functions are just to showcase the market, no need for them to be used
 // at all times
 #[allow(dead_code)]
 
@@ -27,7 +47,7 @@ pub(crate) fn test_overall_market_change_percentage() {
     let mut overall = Vec::new();
     for _ in 0..1000 {
         let sum = 10000.0;
-        let days = 3650;
+        let days = 3650 / 4;
         let interval = 1;
 
         for gk in [GoodKind::USD, GoodKind::YEN, GoodKind::YUAN] {
@@ -38,7 +58,8 @@ pub(crate) fn test_overall_market_change_percentage() {
             let mut max = f32::MIN;
             let starting_price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
             for _ in 0..days {
-                let price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
+                let good_eur_rate = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
+                let price = 1.0 / good_eur_rate; //EUR/Good rate
                 prices.push(price);
                 min = f32::min(min, price);
                 max = f32::max(max, price);
@@ -77,17 +98,74 @@ pub(crate) fn cool_graphs() {
     let (yen, _) = t3.split_horizontally(half * 0.98);
     let (_, yuan) = t4.split_horizontally(half * 0.02);
 
+    let qt = 2.0;
     for gk in [GoodKind::USD, GoodKind::YEN, GoodKind::YUAN] {
         //Generate data
         let market_ref = SOLMarket::new_with_quantities_and_path(sum, sum, sum, sum, None);
         let mut prices: Vec<f32> = Vec::new();
+        let mut stocastic_prices: Vec<f32> = Vec::new();
+        let mut quantity_prices: Vec<f32> = Vec::new();
+        let mut other_prices: Vec<f32> = Vec::new();
         let mut min = f32::MAX;
         let mut max = f32::MIN;
         for _ in 0..days {
-            let price = market_ref.borrow().get_sell_price(gk, 1.0).unwrap();
-            prices.push(price);
+            let b_price = market_ref.borrow().get_buy_price(gk, qt).unwrap();
+            // Simulate a buy on another market which aks twice our prices (i.e., wher EUR is worth half)
+            market_ref.borrow_mut().notify_everyone(Event {
+                kind: unitn_market_2022::event::event::EventKind::Bought,
+                good_kind: gk,
+                quantity: qt,
+                price: b_price * 2.0,
+            });
+
+            let good_eur_rate = market_ref.borrow().get_buy_price(gk, qt).unwrap() / qt;
+            let price = 1.0 / good_eur_rate; //EUR/Good rate
             min = f32::min(min, price);
             max = f32::max(max, price);
+            prices.push(price);
+            other_prices.push(market_ref.borrow().get_other_rate(gk));
+            stocastic_prices.push(market_ref.borrow().get_stocastic_rate(gk));
+            quantity_prices.push(market_ref.borrow().get_quantity_rate(gk));
+            min = f32::min(min, *other_prices.last().unwrap());
+            min = f32::min(min, *stocastic_prices.last().unwrap());
+            min = f32::min(min, *quantity_prices.last().unwrap());
+            max = f32::max(max, *other_prices.last().unwrap());
+            max = f32::max(max, *stocastic_prices.last().unwrap());
+            max = f32::max(max, *quantity_prices.last().unwrap());
+
+            // Buy the good
+            let will_buy = rand::thread_rng().gen_bool(0.55);
+            let qt_to_trade = qt * 10.0;
+            if will_buy {
+                let b_price_r = market_ref.borrow().get_buy_price(gk, qt_to_trade);
+                if let Ok(b_price) = b_price_r {
+                    let lock_r = market_ref.borrow_mut().lock_buy(
+                        gk,
+                        qt_to_trade,
+                        b_price,
+                        String::from("abc"),
+                    );
+                    if let Ok(lock) = lock_r {
+                        let mut cash = Good::new(DEFAULT_GOOD_KIND, f32::MAX);
+                        let _ = market_ref.borrow_mut().buy(lock, &mut cash);
+                    }
+                }
+            } else {
+                let s_price_r = market_ref.borrow().get_sell_price(gk, qt_to_trade);
+                if let Ok(s_price) = s_price_r {
+                    let lock_r = market_ref.borrow_mut().lock_sell(
+                        gk,
+                        qt_to_trade,
+                        s_price,
+                        String::from("abc"),
+                    );
+                    if let Ok(lock) = lock_r {
+                        let mut cash = Good::new(gk, f32::MAX);
+                        let _ = market_ref.borrow_mut().sell(lock, &mut cash);
+                    }
+                }
+            }
+
             for _ in 0..interval {
                 wait_one_day!(market_ref);
             }
@@ -111,33 +189,77 @@ pub(crate) fn cool_graphs() {
             .set_label_area_size(LabelAreaPosition::Bottom, dim)
             .set_label_area_size(LabelAreaPosition::Right, dim)
             .set_label_area_size(LabelAreaPosition::Top, dim)
-            .caption(format!("SOL Market, {gk}"), ("sans-serif", dim))
+            .caption(
+                format!("SOL Market, {DEFAULT_GOOD_KIND}/{gk}"),
+                ("sans-serif", dim),
+            )
             .build_cartesian_2d(0.0..(days as f32), min..max)
             .unwrap();
 
         drawing_context.configure_mesh().draw().unwrap();
 
-        let price_points = LineSeries::new(
-            prices.into_iter().enumerate().map(|t| (t.0 as f32, t.1)),
-            &BLUE,
-        );
-        drawing_context.draw_series(price_points).unwrap();
-
-        let meta = &market_ref.borrow().meta;
-        let binding = meta.stocastic_price.borrow();
-        let hash_map = &binding.past_seasons;
-        let mut past_seasons = hash_map.get(&gk).unwrap().clone();
-        if let Some(current_season) = binding.seasons.get(&gk) {
-            past_seasons.push(*current_season);
+        if SHOW_QUANTITY_PRICE {
+            drawing_context
+                .draw_series(LineSeries::new(
+                    quantity_prices
+                        .into_iter()
+                        .enumerate()
+                        .map(|t| (t.0 as f32, t.1)),
+                    &OCRA,
+                ))
+                .unwrap();
         }
-        let season_marks = past_seasons.iter().map(|s| {
-            Circle::new(
-                (s.starting_day as f32, s.starting_price),
-                dim / 10.0,
-                RED.filled(),
-            )
-        });
-        drawing_context.draw_series(season_marks).unwrap();
+
+        if SHOW_STOCHASTIC_PRICE {
+            drawing_context
+                .draw_series(LineSeries::new(
+                    stocastic_prices
+                        .into_iter()
+                        .enumerate()
+                        .map(|t| (t.0 as f32, t.1)),
+                    &TEAL,
+                ))
+                .unwrap();
+        }
+
+        if SHOW_OTHER_MARKETS_PRICE {
+            drawing_context
+                .draw_series(LineSeries::new(
+                    other_prices
+                        .into_iter()
+                        .enumerate()
+                        .map(|t| (t.0 as f32, t.1)),
+                    &PURPLE,
+                ))
+                .unwrap();
+        }
+
+        if SHOW_OVERALL_PRICE {
+            let price_points = LineSeries::new(
+                prices.into_iter().enumerate().map(|t| (t.0 as f32, t.1)),
+                &BLUE,
+            );
+            drawing_context.draw_series(price_points).unwrap();
+        }
+
+        if SHOW_SEASON_MARKS {
+            let meta = &market_ref.borrow().meta;
+            let binding = meta.stocastic_price.borrow();
+            let hash_map = &binding.past_seasons;
+            let mut past_seasons = hash_map.get(&gk).unwrap().clone();
+            if let Some(current_season) = binding.seasons.get(&gk) {
+                past_seasons.push(*current_season);
+            }
+            let season_marks = past_seasons.iter().map(|s| {
+                Circle::new(
+                    // /4 because we have event::bought, lock_buy, buy e wait
+                    (s.starting_day as f32 / 4.0, s.starting_price),
+                    dim / 20.0,
+                    RED.filled(),
+                )
+            });
+            drawing_context.draw_series(season_marks).unwrap();
+        }
     }
 
     let txt = format!(

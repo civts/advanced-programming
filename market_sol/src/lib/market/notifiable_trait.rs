@@ -15,7 +15,7 @@ impl Notifiable for SOLMarket {
     fn on_event(&mut self, event: Event) {
         match event.kind {
             EventKind::Bought | EventKind::Sold => {
-                let exchange_rate = event.price / event.quantity;
+                let exchange_rate = event.quantity / event.price;
                 self.meta
                     .other_markets
                     .update(&event.good_kind, exchange_rate);
