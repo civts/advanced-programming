@@ -3,6 +3,7 @@ use crate::lib::{market::sol_market::ALL_GOOD_KINDS, misc::banner::BANNER};
 use std::{collections::HashMap, fs, path::Path};
 use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
 
+#[doc(hidden)]
 mod sol_file_prefixes {
     pub const COMMENT_PREFIX: &str = "#";
     pub const GOOD_PREFIX: &str = "good ";
