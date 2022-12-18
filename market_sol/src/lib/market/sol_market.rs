@@ -25,6 +25,9 @@ pub struct SOLMarket {
     pub(crate) meta: MarketMeta,
 }
 
+/// Implementation of SOLMarket
+/// 
+/// Provides traders with easy to use methods. Trader can interact with market attributes and read it's information. 
 impl SOLMarket {
     pub(crate) fn new_with_quantities_and_path(
         eur: f32,
