@@ -1,6 +1,7 @@
 mod test_internal_trade {
     use crate::lib::market::sol_market::*;
     use std::collections::HashMap;
+    use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
     use unitn_market_2022::good::good::Good;
     use unitn_market_2022::good::good_kind::GoodKind;
     use unitn_market_2022::market::Market;
@@ -21,7 +22,25 @@ mod test_internal_trade {
             .map(|gl| (gl.good_kind, gl.quantity))
             .collect();
         for (k, q) in quantities_per_kind.iter() {
-            assert!(get_value_good(k, *q) > 0f32);
+            assert!(*q > 0f32);
+        }
+    }
+
+    #[test]
+    fn test_refill_not_exceeding_10_000() {
+        let market = SOLMarket::new_with_quantities(100_000f32, 0f32, 0f32, 0f32);
+        let mut min_eur_qty = 90_000f32;
+        for _ in 0..3 {
+            wait_one_day!(market);
+            let eur_qty = market
+                .borrow()
+                .get_goods()
+                .iter()
+                .find(|gl| gl.good_kind.eq(&DEFAULT_GOOD_KIND))
+                .unwrap()
+                .quantity;
+            assert_eq!(eur_qty, min_eur_qty);
+            min_eur_qty -= 10_000f32;
         }
     }
 
@@ -93,7 +112,7 @@ mod test_internal_trade {
 
         // Now USD & YUAN qty in market should be empty
         // No internal trade should be possible because they were the only 2 exporters
-        // DAY 5 -> 99: Check change in quantities
+        // DAY 5 -> 99: Check change in quantities does not happen
         let yuan_qty = market
             .borrow()
             .get_goods()
@@ -114,8 +133,7 @@ mod test_internal_trade {
             assert_eq!(yuan_qty, 0f32)
         }
 
-        // DAY 100 -> 101: USD & YUAN should become importers, therefore their quantities should increase
-        wait_one_day!(market);
+        // DAY 100 & 101: USD & YUAN should become importers, therefore their quantities should increase
         wait_one_day!(market);
         wait_one_day!(market);
         assert!(

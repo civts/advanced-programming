@@ -168,7 +168,7 @@ impl SOLMarket {
                     let ability = if need.is_sign_negative() {
                         need.abs()
                     } else {
-                        0f32
+                        -need
                     };
                     // Market ability in case the good is locked and need has not been updated yet
                     let market_ability =
