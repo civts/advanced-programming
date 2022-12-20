@@ -1,4 +1,5 @@
 use crate::lib::domain::market_meta::MarketMeta;
+use crate::lib::market::trade_role::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
@@ -23,6 +24,7 @@ pub struct SOLMarket {
     pub(crate) goods: HashMap<GoodKind, Good>,
     pub(crate) subscribers: Vec<Box<dyn Notifiable>>,
     pub(crate) meta: MarketMeta,
+    pub(crate) internal_needs: HashMap<GoodKind, TradeRole>,
 }
 
 impl SOLMarket {
@@ -60,10 +62,30 @@ impl SOLMarket {
         log(format!("MARKET_INITIALIZATION\nEUR: {eur:+e}\nUSD: {usd:+e}\nYEN: {yen:+e}\nYUAN: {yuan:+e}\nEND_MARKET_INITIALIZATION"));
 
         let goods_vec = Vec::from_iter(goods.values().cloned());
+
+        let total_value_market = goods_vec.iter().fold(0f32, |acc, g| {
+            acc + get_value_good(g.get_kind(), g.get_qty())
+        });
+        let ideal_value_per_good = total_value_market / goods_vec.len() as f32;
+
+        let mut internal_needs: HashMap<GoodKind, TradeRole> = HashMap::new();
+        for g in goods_vec.iter() {
+            let need = ideal_value_per_good - get_value_good(g.get_kind(), g.get_qty());
+            // Set goods with needs as importers
+            if need > 0f32 {
+                internal_needs.insert(g.get_kind(), TradeRole::Importer { need });
+            }
+            // Set goods with negative needs (surplus) as Exporters
+            else {
+                internal_needs.insert(g.get_kind(), TradeRole::Exporter { need });
+            }
+        }
+
         Rc::new(RefCell::new(SOLMarket {
             goods,
             subscribers: vec![],
             meta: MarketMeta::new(goods_vec, optional_path),
+            internal_needs,
         }))
     }
 
@@ -141,6 +163,92 @@ impl SOLMarket {
         });
         Vec::from_iter(iter)
     }
+
+    /// Update importers and exporters
+    ///
+    /// Example:
+    ///
+    /// An Importer with a negative need becomes an exporter
+    ///
+    /// An Exporter with a positive need becomes an importer
+    pub(crate) fn update_importers_and_exporters(&mut self) {
+        let mut new_internal_needs: HashMap<GoodKind, TradeRole> = HashMap::new();
+        for (kind, role) in self.internal_needs.iter() {
+            new_internal_needs.insert(kind.clone(), role.switch());
+        }
+        self.internal_needs = new_internal_needs;
+    }
+
+    /// Perform an internal trade if needed
+    ///
+    /// Example: An importer has a positive need and an exporter has a surplus
+    pub(crate) fn internal_trade_if_needed(&mut self) {
+        // Find good that need a refill and the one capable of refilling
+        let mut max_need = 0f32;
+        let mut max_ability = 0f32;
+        let mut kind_need_refill: Option<GoodKind> = None;
+        let mut kind_able_refill: Option<GoodKind> = None;
+        for (kind, role) in self.internal_needs.iter() {
+            match role {
+                TradeRole::Importer { need } => {
+                    let value = *need;
+                    if value > max_need {
+                        max_need = value;
+                        kind_need_refill = Some(kind.clone());
+                    }
+                }
+                TradeRole::Exporter { need } => {
+                    let value = if need.is_sign_negative() {
+                        need.abs()
+                    } else {
+                        0f32
+                    };
+                    let market_quantity = self.goods.get(kind).unwrap().get_qty();
+                    if value > max_ability && market_quantity > max_ability {
+                        max_ability = market_quantity.min(value);
+                        kind_able_refill = Some(kind.clone());
+                    }
+                }
+            }
+        }
+
+        // Refill if possible/needed
+        if kind_able_refill.is_some() && kind_need_refill.is_some() {
+            let max = (max_ability.min(10_000f32)).min(max_need);
+            self.internal_trade(kind_able_refill.unwrap(), kind_need_refill.unwrap(), max);
+        }
+    }
+
+    /// Perform an internal trade
+    fn internal_trade(&mut self, src_kind: GoodKind, dst_kind: GoodKind, value_in_eur: f32) {
+        // Decrease good qty from source
+        let src_qty = value_in_eur * src_kind.get_default_exchange_rate();
+        self.goods
+            .get_mut(&src_kind)
+            .unwrap()
+            .split(src_qty)
+            .unwrap();
+
+        // Increase need to source
+        self.internal_needs
+            .get_mut(&src_kind)
+            .unwrap()
+            .increase_need(value_in_eur);
+
+        // Increase good qty to destination (+25% of default exchange rate)
+        let dst_qty = value_in_eur * dst_kind.get_default_exchange_rate() * 1.25;
+        self.goods
+            .get_mut(&dst_kind)
+            .unwrap()
+            .merge(Good::new(dst_kind, dst_qty))
+            .unwrap();
+
+        // Decrease need to destination
+        self.internal_needs
+            .get_mut(&dst_kind)
+            .unwrap()
+            .decrease_need(value_in_eur);
+    }
 }
 
 pub(crate) fn lock_limit_exceeded(num_of_locks: u32) -> bool {
@@ -163,4 +271,9 @@ pub(crate) fn log(log_code: String) {
     if let Err(e) = writeln!(file, "{}|{}|{}", MARKET_NAME, time, log_code) {
         eprintln!("Error while writing to file {}", e);
     }
+}
+
+/// Return the value in DEFAULT_GOOD_KIND of a good
+pub(crate) fn get_value_good(kind: GoodKind, qty: f32) -> f32 {
+    qty / kind.get_default_exchange_rate()
 }

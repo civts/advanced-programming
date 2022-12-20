@@ -1,5 +1,5 @@
 use super::sol_market::{SOLMarket, MARKET_NAME};
-use crate::lib::market::sol_market::log;
+use crate::lib::market::sol_market::{get_value_good, log};
 use crate::lib::{
     domain::good_lock_meta::GoodLockMeta,
     market::sol_market::{lock_limit_exceeded, TOKEN_DURATION},
@@ -346,6 +346,21 @@ impl Market for SOLMarket {
         // Reset lock
         self.meta.locked_buys.remove(&*token);
 
+        // Increase need for release good
+        self.internal_needs
+            .get_mut(&release_good.get_kind())
+            .unwrap()
+            .increase_need(get_value_good(
+                release_good.get_kind(),
+                release_good.get_qty(),
+            ));
+
+        // Decrease need for cash
+        self.internal_needs
+            .get_mut(&paid_eur.get_kind())
+            .unwrap()
+            .decrease_need(get_value_good(paid_eur.get_kind(), paid_eur.get_qty()));
+
         self.notify_everyone(e);
 
         log(format!("BUY-TOKEN:{token}-OK"));
@@ -503,11 +518,9 @@ impl Market for SOLMarket {
 
         // Get your good now
         let selling_good = good.split(pre_agreed_quantity).unwrap();
-        let selling_kind = selling_good.get_kind();
-        let my_good = self.goods.get(&selling_kind).unwrap();
+        let my_good = self.goods.get(&kind).unwrap();
         let final_quantity = my_good.get_qty() + selling_good.get_qty();
-        self.goods
-            .insert(selling_kind, Good::new(selling_kind, final_quantity));
+        self.goods.insert(kind, Good::new(kind, final_quantity));
 
         let give_money = Good::new(DEFAULT_GOOD_KIND, good_meta.price);
 
@@ -521,6 +534,21 @@ impl Market for SOLMarket {
 
         // Reset lock
         self.meta.locked_sells.remove(&*token);
+
+        // Increase need for cash
+        self.internal_needs
+            .get_mut(&give_money.get_kind())
+            .unwrap()
+            .increase_need(get_value_good(give_money.get_kind(), give_money.get_qty()));
+
+        // Decrease need for selling good
+        self.internal_needs
+            .get_mut(&selling_good.get_kind())
+            .unwrap()
+            .decrease_need(get_value_good(
+                selling_good.get_kind(),
+                selling_good.get_qty(),
+            ));
 
         self.notify_everyone(e);
 

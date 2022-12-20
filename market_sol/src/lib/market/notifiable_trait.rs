@@ -64,6 +64,14 @@ impl Notifiable for SOLMarket {
             }
         }
 
+        // Every 100 days update exporters and importers
+        if self.meta.current_day % 100 == 0 {
+            self.update_importers_and_exporters()
+        }
+
+        // Perform an internal trade if needed
+        self.internal_trade_if_needed();
+
         //progress one day in any case
         self.meta.current_day += 1;
     }

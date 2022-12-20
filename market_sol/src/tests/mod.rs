@@ -5,6 +5,8 @@ mod common_tests;
 #[cfg(test)]
 mod constructor;
 #[cfg(test)]
+mod internal_trade;
+#[cfg(test)]
 mod locks;
 #[cfg(test)]
 mod market;
