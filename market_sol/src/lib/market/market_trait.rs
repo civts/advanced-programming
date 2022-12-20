@@ -1,9 +1,6 @@
 use super::sol_market::{SOLMarket, MARKET_NAME};
 use crate::lib::market::sol_market::{get_value_good, log};
-use crate::lib::{
-    domain::good_lock_meta::GoodLockMeta,
-    market::sol_market::{lock_limit_exceeded, TOKEN_DURATION},
-};
+use crate::lib::{domain::good_lock_meta::GoodLockMeta, market::sol_market::TOKEN_DURATION};
 use std::collections::HashMap;
 use std::{
     cell::RefCell,
@@ -132,7 +129,7 @@ impl Market for SOLMarket {
 
         // Lock limit check
         let num_of_locks = self.meta.num_of_buy_locks();
-        if lock_limit_exceeded(num_of_locks) {
+        if SOLMarket::lock_limit_exceeded(num_of_locks) {
             log(log_error);
             return Err(LockBuyError::MaxAllowedLocksReached);
         }
@@ -339,7 +336,7 @@ impl Market for SOLMarket {
         }
 
         // Lock limit check
-        if lock_limit_exceeded(self.meta.num_of_locked_sells()) {
+        if SOLMarket::lock_limit_exceeded(self.meta.num_of_locked_sells()) {
             log(log_error);
             return Err(LockSellError::MaxAllowedLocksReached);
         }

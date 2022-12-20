@@ -1,5 +1,4 @@
 use super::sol_market::{SOLMarket, TOKEN_DURATION};
-use crate::lib::market::sol_market::set_internal_needs;
 use unitn_market_2022::{
     event::{
         event::{Event, EventKind},
@@ -71,7 +70,7 @@ impl Notifiable for SOLMarket {
             for (_, g) in self.goods.iter() {
                 goods_vec.push(g.clone())
             }
-            self.internal_needs = set_internal_needs(goods_vec);
+            self.internal_needs = SOLMarket::set_internal_needs(goods_vec);
         }
 
         // Perform an internal trade if needed

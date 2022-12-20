@@ -87,7 +87,7 @@ impl Season {
         let change_percentage = intensity.clamp(-max_decrease, max_increase) as f32;
         let change = starting_price * change_percentage;
         let final_price = starting_price + change;
-        let final_price = f32::max(final_price, 0.001);
+        let final_price = f32::max(final_price, 0.0);
         println!(">>>>>>>>>>> New season");
         println!("Today is the {current_day}");
         let d = current_day + duration;

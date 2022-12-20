@@ -21,7 +21,7 @@ mod test_internal_trade {
             .iter()
             .map(|gl| (gl.good_kind, gl.quantity))
             .collect();
-        for (k, q) in quantities_per_kind.iter() {
+        for q in quantities_per_kind.values() {
             assert!(*q > 0f32);
         }
     }
