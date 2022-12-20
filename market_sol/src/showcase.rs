@@ -4,18 +4,22 @@ use plotters::{
     style::{Color, IntoFont, RGBColor},
 };
 use rand::Rng;
+use std::collections::HashMap;
 use unitn_market_2022::{
     event::{event::Event, notifiable::Notifiable},
     good::{consts::DEFAULT_GOOD_KIND, good::Good},
 };
 use unitn_market_2022::{good::good_kind::GoodKind, market::Market, wait_one_day};
 
-use crate::lib::market::{
-    price_strategies::stocastic::{
-        MAX_NOISE_CLAMP, MAX_SEASON_LENGTH, MIN_NOISE_CLAMP, MIN_SEASON_LENGTH,
-        MIN_VARIATION_IN_SEASON,
+use crate::lib::{
+    domain::strategy_name::StrategyName,
+    market::{
+        price_strategies::stocastic::{
+            MAX_NOISE_CLAMP, MAX_SEASON_LENGTH, MIN_NOISE_CLAMP, MIN_SEASON_LENGTH,
+            MIN_VARIATION_IN_SEASON,
+        },
+        sol_market::SOLMarket,
     },
-    sol_market::SOLMarket,
 };
 
 const SHOW_STOCHASTIC_PRICE: bool = true;
@@ -101,7 +105,11 @@ pub(crate) fn cool_graphs() {
     let qt = 2.0;
     for gk in [GoodKind::USD, GoodKind::YEN, GoodKind::YUAN] {
         //Generate data
-        let market_ref = SOLMarket::new_with_quantities_and_path(sum, sum, sum, sum, None);
+        let mut weights = HashMap::new();
+        weights.insert(StrategyName::Stocastic, 1.0);
+        weights.insert(StrategyName::Quantity, 1.0);
+        weights.insert(StrategyName::Others, 1.0);
+        let market_ref = SOLMarket::new_with_quantities_and_path(sum, sum, sum, sum, None, weights);
         let mut prices: Vec<f32> = Vec::new();
         let mut stocastic_prices: Vec<f32> = Vec::new();
         let mut quantity_prices: Vec<f32> = Vec::new();

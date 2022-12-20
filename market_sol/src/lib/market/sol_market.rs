@@ -1,4 +1,5 @@
 use crate::lib::domain::market_meta::MarketMeta;
+use crate::lib::domain::strategy_name::StrategyName;
 use crate::lib::market::trade_role::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -34,6 +35,7 @@ impl SOLMarket {
         usd: f32,
         yuan: f32,
         optional_path: Option<&str>,
+        weights: HashMap<StrategyName, f32>,
     ) -> Rc<RefCell<SOLMarket>> {
         if eur < 0.0 {
             panic!("Tried to initialize the market with a negative quantity of eur");
@@ -66,7 +68,7 @@ impl SOLMarket {
         Rc::new(RefCell::new(SOLMarket {
             goods,
             subscribers: vec![],
-            meta: MarketMeta::new(goods_vec.clone(), optional_path),
+            meta: MarketMeta::new(goods_vec.clone(), optional_path, weights),
             internal_needs: set_internal_needs(goods_vec),
         }))
     }
@@ -83,9 +85,17 @@ impl SOLMarket {
         let quantity_rate = self.get_quantity_rate(good_kind);
         let other_markets_rate = self.get_other_rate(good_kind);
         //Compute the weighted average of the three
-        let stochastic_weight: f32 = 1.0;
-        let quantity_weight: f32 = 1.0;
-        let others_weight: f32 = 1.0;
+        let stochastic_weight: f32 = *self
+            .meta
+            .weights
+            .get(&StrategyName::Stocastic)
+            .unwrap_or(&1.0);
+        let quantity_weight: f32 = *self
+            .meta
+            .weights
+            .get(&StrategyName::Quantity)
+            .unwrap_or(&1.0);
+        let others_weight: f32 = *self.meta.weights.get(&StrategyName::Others).unwrap_or(&1.0);
         let total_weight = stochastic_weight + quantity_weight + others_weight;
         assert!(total_weight > 0.0);
         let weighted_sum = f32::max(0.0, stocastic_rate * stochastic_weight)
@@ -161,7 +171,7 @@ impl SOLMarket {
                     let n = *need;
                     if n > max_need {
                         max_need = n;
-                        kind_need_refill = Some(kind.clone());
+                        kind_need_refill = Some(*kind);
                     }
                 }
                 TradeRole::Exporter { need } => {
@@ -175,16 +185,18 @@ impl SOLMarket {
                         get_value_good(kind, self.goods.get(kind).unwrap().get_qty());
                     if ability > max_ability && market_ability > max_ability {
                         max_ability = market_ability.min(ability);
-                        kind_able_refill = Some(kind.clone());
+                        kind_able_refill = Some(*kind);
                     }
                 }
             }
         }
 
         // Refill if possible/needed
-        if kind_able_refill.is_some() && kind_need_refill.is_some() {
-            let max = (max_ability.min(10_000f32)).min(max_need);
-            self.internal_trade(kind_able_refill.unwrap(), kind_need_refill.unwrap(), max);
+        if let Some(scr_kind) = kind_able_refill {
+            if let Some(dst_kind) = kind_need_refill {
+                let value = (max_ability.min(10_000f32)).min(max_need);
+                self.internal_trade(scr_kind, dst_kind, value);
+            }
         }
     }
 

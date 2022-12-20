@@ -6,6 +6,7 @@ use crate::lib::{
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
+use std::collections::HashMap;
 use std::{
     cell::RefCell,
     collections::hash_map::DefaultHasher,
@@ -66,7 +67,7 @@ impl Market for SOLMarket {
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
-        Self::new_with_quantities_and_path(eur, yen, usd, yuan, None)
+        Self::new_with_quantities_and_path(eur, yen, usd, yuan, None, HashMap::new())
     }
 
     fn new_file(path_str: &str) -> Rc<RefCell<dyn Market>>
@@ -99,7 +100,15 @@ impl Market for SOLMarket {
                         .find(|g| g.get_kind() == GoodKind::YUAN)
                         .unwrap()
                         .get_qty();
-                    return Self::new_with_quantities_and_path(eur, yen, usd, yuan, Some(path_str));
+                    let weights = Self::read_weights_from_file(path);
+                    return Self::new_with_quantities_and_path(
+                        eur,
+                        yen,
+                        usd,
+                        yuan,
+                        Some(path_str),
+                        weights,
+                    );
                 }
                 None => Self::new_random(),
             };
