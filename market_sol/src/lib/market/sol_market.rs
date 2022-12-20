@@ -1,13 +1,16 @@
 use crate::lib::domain::market_meta::MarketMeta;
 use crate::lib::domain::strategy_name::StrategyName;
 use crate::lib::market::trade_role::*;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::Path;
 use std::rc::Rc;
 use unitn_market_2022::event::notifiable::Notifiable;
-use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
+use unitn_market_2022::good::consts::{DEFAULT_GOOD_KIND, STARTING_CAPITAL};
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::good_label::GoodLabel;
@@ -29,6 +32,95 @@ pub struct SOLMarket {
 }
 
 impl SOLMarket {
+    pub(crate) fn new_random_path(path: Option<&str>) -> Rc<RefCell<Self>> {
+        //https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs
+        let mut rng = ChaCha20Rng::from_entropy();
+        //Generate the market cap of each good, randomly
+        let mut remaining_market_cap = STARTING_CAPITAL;
+        let mut eur_quantity = rng.gen_range(1.0..remaining_market_cap);
+        remaining_market_cap -= eur_quantity;
+        let yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        remaining_market_cap -= yen_mkt_cap;
+        let yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
+        remaining_market_cap -= yuan_mkt_cap;
+        let usd_mkt_cap = remaining_market_cap;
+
+        //Calculate the quantity of each good
+        let mut yen_quantity = yen_mkt_cap * GoodKind::YEN.get_default_exchange_rate();
+        let mut yuan_quantity = yuan_mkt_cap * GoodKind::YUAN.get_default_exchange_rate();
+        let mut usd_quantity = usd_mkt_cap * GoodKind::USD.get_default_exchange_rate();
+
+        //Fix floating point operation errors
+        let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
+        let exceeding_capital = (real_market_cap - STARTING_CAPITAL) + 1.0;
+        if (yen_mkt_cap - exceeding_capital).is_sign_positive() {
+            yen_quantity -= exceeding_capital * GoodKind::YEN.get_default_exchange_rate();
+        } else if (yuan_mkt_cap - exceeding_capital).is_sign_positive() {
+            yuan_quantity -= exceeding_capital * GoodKind::YUAN.get_default_exchange_rate();
+        } else if (usd_mkt_cap - exceeding_capital).is_sign_positive() {
+            usd_quantity -= exceeding_capital * GoodKind::USD.get_default_exchange_rate();
+        } else if (eur_quantity - exceeding_capital).is_sign_positive() {
+            eur_quantity -= exceeding_capital;
+        } else {
+            panic!("We are doing something wrong in this initialization");
+        }
+
+        //Get the market
+        Self::new_with_quantities_and_path(
+            eur_quantity,
+            yen_quantity,
+            usd_quantity,
+            yuan_quantity,
+            path,
+            HashMap::new(),
+        )
+    }
+
+    /// Need a constructor that has the SOLMarket type in its signature for our internal tests
+    pub(crate) fn new_file_internal(path_str: &str) -> Rc<RefCell<SOLMarket>> {
+        let path: &Path = Path::new(path_str);
+        let path_exists = std::path::Path::exists(path);
+        if path_exists {
+            let quantities = Self::read_quantities_from_file(path);
+            return match quantities {
+                Some(goods) => {
+                    let eur = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::EUR)
+                        .unwrap()
+                        .get_qty();
+                    let usd = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::USD)
+                        .unwrap()
+                        .get_qty();
+                    let yen = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::YEN)
+                        .unwrap()
+                        .get_qty();
+                    let yuan = goods
+                        .iter()
+                        .find(|g| g.get_kind() == GoodKind::YUAN)
+                        .unwrap()
+                        .get_qty();
+                    let weights = Self::read_weights_from_file(path);
+                    return Self::new_with_quantities_and_path(
+                        eur,
+                        yen,
+                        usd,
+                        yuan,
+                        Some(path_str),
+                        weights,
+                    );
+                }
+                None => Self::new_random_path(Some(path_str)),
+            };
+        } else {
+            Self::new_random_path(Some(path_str))
+        }
+    }
+
     pub(crate) fn new_with_quantities_and_path(
         eur: f32,
         yen: f32,
@@ -96,7 +188,7 @@ impl SOLMarket {
             .get(&StrategyName::Quantity)
             .unwrap_or(&1.0);
         let others_weight: f32 = *self.meta.weights.get(&StrategyName::Others).unwrap_or(&1.0);
-        let total_weight = stochastic_weight + quantity_weight + others_weight;
+        let total_weight = stochastic_weight.abs() + quantity_weight.abs() + others_weight.abs();
         assert!(total_weight > 0.0);
         let weighted_sum = f32::max(0.0, stocastic_rate * stochastic_weight)
             + f32::max(0.0, quantity_rate * quantity_weight)
@@ -264,13 +356,17 @@ pub(crate) fn get_value_good(kind: &GoodKind, qty: f32) -> f32 {
 /// Example:
 ///
 /// Market has:
+///     - 100 EUR  (value: 100€)
+///     - 100 USD  (value: 96.55€)
+///     - 100 YEN  (value: 0.70€)
+///     - 100 YUAN (value: 13.59€)
+///
+/// Total Value: 210.84€
+/// Ideal Value of each goods: (210.84 / 4) = 52.71€
 ///     - 100 EUR  (value: 100€)    -> need: (52.71 - 100)      = -47.29    -> Exporter
 ///     - 100 USD  (value: 96.55€)  -> need: (52.71 - 96.55)    = -43.84    -> Exporter
 ///     - 100 YEN  (value: 0.70€)   -> need: (52.71 - 0.70)     = 52.01     -> Importer
 ///     - 100 YUAN (value: 13.59€)  -> need: (52.71 - 13.59)    = 39.12     -> Importer
-///
-/// Total Value: 210.84€
-/// Ideal Value of each goods: (210.84 / 4) = 52.71€
 pub(crate) fn set_internal_needs(goods_vec: Vec<Good>) -> HashMap<GoodKind, TradeRole> {
     let total_value_market = goods_vec.iter().fold(0f32, |acc, g| {
         acc + get_value_good(&g.get_kind(), g.get_qty())

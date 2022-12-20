@@ -38,8 +38,13 @@ impl SOLMarket {
                             }
                         }
                     }
-                    println!("SOL Market file at {} does not seem to exist", pts);
-                    return;
+                } else {
+                    //The file already exists, let's try to rename it
+                    let mut new_name = String::from(path.to_str().unwrap_or("./sol.sol"));
+                    let date_now = chrono::offset::Local::now();
+                    let last_dot = new_name.rfind('.').unwrap_or(new_name.len() - 1);
+                    new_name.insert_str(last_dot, format!("{}", date_now.timestamp()).as_str());
+                    let _ = fs::rename(path, new_name);
                 }
                 //Get string contents
                 let contents = self.serialize_to_file_string();
@@ -84,11 +89,11 @@ impl SOLMarket {
             contents.push_str(exchange_rate.to_string().as_str());
             contents.push('\n');
         }
+        contents.push('\n');
         for s in ALL_STRATEGY_NAMES {
             let weight_opt = self.meta.weights.get(&s);
             if let Some(weight) = weight_opt {
                 contents.push_str(sol_file_prefixes::WEIGHT_PREFIX);
-                contents.push(' ');
                 contents.push_str(s.to_string().as_str());
                 contents.push(' ');
                 contents.push_str(weight.to_string().as_str());

@@ -4,24 +4,17 @@ use crate::lib::{
     domain::good_lock_meta::GoodLockMeta,
     market::sol_market::{lock_limit_exceeded, TOKEN_DURATION},
 };
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
 use std::collections::HashMap;
 use std::{
     cell::RefCell,
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    path::Path,
     rc::Rc,
 };
 use unitn_market_2022::event::event::Event;
 use unitn_market_2022::{
     event::event::EventKind,
-    good::{
-        consts::{DEFAULT_GOOD_KIND, STARTING_CAPITAL},
-        good::Good,
-        good_kind::GoodKind,
-    },
+    good::{consts::DEFAULT_GOOD_KIND, good::Good, good_kind::GoodKind},
     market::{
         good_label::GoodLabel, BuyError, LockBuyError, LockSellError, Market, MarketGetterError,
         SellError,
@@ -30,40 +23,7 @@ use unitn_market_2022::{
 
 impl Market for SOLMarket {
     fn new_random() -> Rc<RefCell<dyn Market>> {
-        //https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs
-        let mut rng = ChaCha20Rng::from_entropy();
-        //Generate the market cap of each good, randomly
-        let mut remaining_market_cap = STARTING_CAPITAL;
-        let mut eur_quantity = rng.gen_range(1.0..remaining_market_cap);
-        remaining_market_cap -= eur_quantity;
-        let yen_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
-        remaining_market_cap -= yen_mkt_cap;
-        let yuan_mkt_cap = rng.gen_range(0.0..remaining_market_cap);
-        remaining_market_cap -= yuan_mkt_cap;
-        let usd_mkt_cap = remaining_market_cap;
-
-        //Calculate the quantity of each good
-        let mut yen_quantity = yen_mkt_cap * GoodKind::YEN.get_default_exchange_rate();
-        let mut yuan_quantity = yuan_mkt_cap * GoodKind::YUAN.get_default_exchange_rate();
-        let mut usd_quantity = usd_mkt_cap * GoodKind::USD.get_default_exchange_rate();
-
-        //Fix floating point operation errors
-        let real_market_cap = eur_quantity + yen_mkt_cap + yuan_mkt_cap + usd_mkt_cap;
-        let exceeding_capital = (real_market_cap - STARTING_CAPITAL) + 1.0;
-        if (yen_mkt_cap - exceeding_capital).is_sign_positive() {
-            yen_quantity -= exceeding_capital * GoodKind::YEN.get_default_exchange_rate();
-        } else if (yuan_mkt_cap - exceeding_capital).is_sign_positive() {
-            yuan_quantity -= exceeding_capital * GoodKind::YUAN.get_default_exchange_rate();
-        } else if (usd_mkt_cap - exceeding_capital).is_sign_positive() {
-            usd_quantity -= exceeding_capital * GoodKind::USD.get_default_exchange_rate();
-        } else if (eur_quantity - exceeding_capital).is_sign_positive() {
-            eur_quantity -= exceeding_capital;
-        } else {
-            panic!("We are doing something wrong in this initialization");
-        }
-
-        //Get the market
-        Self::new_with_quantities(eur_quantity, yen_quantity, usd_quantity, yuan_quantity)
+        Self::new_random_path(None)
     }
 
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
@@ -74,47 +34,7 @@ impl Market for SOLMarket {
     where
         Self: Sized,
     {
-        let path: &Path = Path::new(path_str);
-        let path_exists = std::path::Path::exists(path);
-        if path_exists {
-            let quantities = Self::read_quantities_from_file(path);
-            return match quantities {
-                Some(goods) => {
-                    let eur = goods
-                        .iter()
-                        .find(|g| g.get_kind() == GoodKind::EUR)
-                        .unwrap()
-                        .get_qty();
-                    let usd = goods
-                        .iter()
-                        .find(|g| g.get_kind() == GoodKind::USD)
-                        .unwrap()
-                        .get_qty();
-                    let yen = goods
-                        .iter()
-                        .find(|g| g.get_kind() == GoodKind::YEN)
-                        .unwrap()
-                        .get_qty();
-                    let yuan = goods
-                        .iter()
-                        .find(|g| g.get_kind() == GoodKind::YUAN)
-                        .unwrap()
-                        .get_qty();
-                    let weights = Self::read_weights_from_file(path);
-                    return Self::new_with_quantities_and_path(
-                        eur,
-                        yen,
-                        usd,
-                        yuan,
-                        Some(path_str),
-                        weights,
-                    );
-                }
-                None => Self::new_random(),
-            };
-        } else {
-            Self::new_random()
-        }
+        Self::new_file_internal(path_str)
     }
 
     fn get_name(&self) -> &'static str {
