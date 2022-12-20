@@ -28,17 +28,17 @@ impl SOLMarket {
         weighted_sum / total_weight
     }
 
-    pub fn get_other_rate(&self, good_kind: GoodKind) -> f32 {
+    pub(crate) fn get_other_rate(&self, good_kind: GoodKind) -> f32 {
         self.meta.other_markets.get_exchange_rate(&good_kind)
     }
 
-    pub fn get_quantity_rate(&self, good_kind: GoodKind) -> f32 {
+    pub(crate) fn get_quantity_rate(&self, good_kind: GoodKind) -> f32 {
         self.meta
             .quantity_price
             .get_exchange_rate(&good_kind, Vec::from_iter(self.goods.values().cloned()))
     }
 
-    pub fn get_stocastic_rate(&self, good_kind: GoodKind) -> f32 {
+    pub(crate) fn get_stocastic_rate(&self, good_kind: GoodKind) -> f32 {
         self.meta
             .stocastic_price
             .borrow_mut()

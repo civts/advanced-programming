@@ -138,7 +138,7 @@ impl StocasticPrice {
     }
 
     ///Returns the price of (a unit of) the given goodkind on the given day
-    pub fn get_rate(&mut self, good_kind: &GoodKind, day: u32) -> f32 {
+    pub(crate) fn get_rate(&mut self, good_kind: &GoodKind, day: u32) -> f32 {
         //If we talk about the default good, its price is one.
         if *good_kind == DEFAULT_GOOD_KIND {
             1.0
