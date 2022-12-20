@@ -1,9 +1,8 @@
+use crate::sol_market::{SOLMarket, LOCK_LIMIT};
 use unitn_market_2022::{
     good::good_kind::GoodKind,
     market::{LockBuyError, LockSellError, Market},
 };
-
-use crate::lib::market::sol_market::{SOLMarket, LOCK_LIMIT};
 
 const TRADER_NAME: &str = "foobar";
 

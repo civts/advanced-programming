@@ -1,5 +1,5 @@
 use super::trade_role::TradeRole;
-use crate::lib::market::sol_market::{get_value_good, SOLMarket};
+use crate::sol_market::{get_value_good, SOLMarket};
 use std::collections::HashMap;
 use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
 

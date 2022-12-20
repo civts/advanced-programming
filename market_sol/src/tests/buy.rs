@@ -1,5 +1,6 @@
 mod test_buy {
-    use crate::lib::market::sol_market::{SOLMarket, MARKET_MARGIN};
+
+    use crate::sol_market::{SOLMarket, MARKET_MARGIN};
     use std::cell::RefCell;
     use std::rc::Rc;
     use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;

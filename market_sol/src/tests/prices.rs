@@ -1,10 +1,9 @@
+use crate::sol_market::SOLMarket;
 use unitn_market_2022::{
     good::{consts::DEFAULT_GOOD_KIND, good::Good, good_kind::GoodKind},
     market::Market,
     wait_one_day,
 };
-
-use crate::lib::market::sol_market::SOLMarket;
 
 // This one is untrue with the current price strategy. TODO: add this to the
 // tests of the strategy that accounts for other markets

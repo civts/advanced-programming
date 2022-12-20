@@ -1,8 +1,9 @@
-use super::sol_market::SOLMarket;
-use crate::lib::{
-    domain::strategy_name::{StrategyName, ALL_STRATEGY_NAMES},
-    market::sol_market::ALL_GOOD_KINDS,
-    misc::banner::BANNER,
+use crate::sol_market::{
+    SOLMarket, ALL_GOOD_KINDS,
+    {
+        domain::strategy_name::{StrategyName, ALL_STRATEGY_NAMES},
+        misc::banner::BANNER,
+    },
 };
 use std::{collections::HashMap, fs, path::Path};
 use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
@@ -13,7 +14,7 @@ mod sol_file_prefixes {
     pub const WEIGHT_PREFIX: &str = "weight ";
 }
 
-///This block contains the logic to serialize/deserialize the market to and from a file
+/// This block contains the logic to serialize/deserialize the market to and from a file
 impl SOLMarket {
     /// If the market knows about a file, it means it read the state from there.
     /// This function updates such file with the current state of the market.

@@ -39,34 +39,3 @@ Otherwise, you will need the following:
 1. Note that previously active shells/terminal emulators may not pick up automatically the new environment variable and you may need to restart them.
 
 1. `cd` in a crate and run a `cargo update` to confirm you have access to `kellnr`.
-
-## Price change logic
-
-The market goes in **seasons**. More specifically, each good changes accordingly to its season, independently from the others.
-A season can last from 20 to 365 days.
-At the start of the season, the market decides a target price, which can be 
-
-## Quantity change
-
-The market will try to reach a "perfect" distribution of the goods. 
-By perfect distribution we mean: `Total value of the market in EUR` / `Number of goods`.
-
-Some information:
-- **Every 100 days** the market : 
-  - Set some role such as `Importer` or `Exporter` with some `needs`
-    - If a good has a `positive need` (its value in EUR is lower than the perfect distribution)
-      - The good will be set as an `Importer` with `needs` equal to the amount of goods in EUR to reach the perfect distribution
-    - If a good has a `negative need` (its value in EUR is higher than the perfect distribution)
-      - The good will be set as an `Exporter` with `needs` equal to the amount of goods in EUR to reach the perfect distribution
-- If every Exporter have no more supply at a moment, then internal trades won't be possible until
-  - A trader refill the supply by selling to the market or, 
-  - The market reset the roles
-- The `Exporter` with the lowest negative needs (maximum surplus) get rid of some of its goods to fill the needs of the `Importer` with the highest positive needs
-- Everytime a trader buy/sell a good from the market, we increase/decrease their need
-
-## Market keeps
-
-Good is standardized and has kind and quantity
-`goods`: a hashmap of the goods it has (stored as association GoodKind->Good
-`locked_goods`: same as `goods`, but keeps as quantity the locked quantity
--> Need to update `locked_goods` every day!

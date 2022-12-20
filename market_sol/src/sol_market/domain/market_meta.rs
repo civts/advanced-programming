@@ -1,9 +1,13 @@
-use super::strategy_name::{StrategyName, ALL_STRATEGY_NAMES};
-use crate::lib::domain::good_lock_meta::GoodLockMeta;
-use crate::lib::market::price_strategies::other_markets::OtherMarketsPrice;
-use crate::lib::market::price_strategies::quantity::QuantityPrice;
-use crate::lib::market::price_strategies::stocastic::StocasticPrice;
-use crate::lib::market::sol_market::TOKEN_DURATION;
+use super::{
+    good_lock_meta::GoodLockMeta,
+    strategy_name::{StrategyName, ALL_STRATEGY_NAMES},
+};
+use crate::sol_market::{
+    market::price_strategies::{
+        other_markets::OtherMarketsPrice, quantity::QuantityPrice, stocastic::StocasticPrice,
+    },
+    TOKEN_DURATION,
+};
 use rand::Rng;
 use std::{cell::RefCell, collections::HashMap};
 use unitn_market_2022::good::good::Good;

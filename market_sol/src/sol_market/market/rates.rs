@@ -1,5 +1,4 @@
-use super::sol_market::{SOLMarket, MARKET_MARGIN};
-use crate::lib::domain::strategy_name::StrategyName;
+use crate::sol_market::{domain::strategy_name::StrategyName, SOLMarket, MARKET_MARGIN};
 use unitn_market_2022::good::{consts::DEFAULT_GOOD_KIND, good_kind::GoodKind};
 
 impl SOLMarket {

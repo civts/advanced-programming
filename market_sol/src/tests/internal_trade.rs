@@ -1,5 +1,5 @@
 mod test_internal_trade {
-    use crate::lib::market::sol_market::*;
+    use crate::sol_market::SOLMarket;
     use std::collections::HashMap;
     use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
     use unitn_market_2022::good::good::Good;
@@ -136,25 +136,21 @@ mod test_internal_trade {
         // DAY 100 & 101: USD & YUAN should become importers, therefore their quantities should increase
         wait_one_day!(market);
         wait_one_day!(market);
-        assert!(
-            yuan_qty
-                < market
-                    .borrow()
-                    .get_goods()
-                    .iter()
-                    .find(|gl| gl.good_kind.eq(&YUAN))
-                    .unwrap()
-                    .quantity
-        );
-        assert!(
-            usd_qty
-                < market
-                    .borrow()
-                    .get_goods()
-                    .iter()
-                    .find(|gl| gl.good_kind.eq(&USD))
-                    .unwrap()
-                    .quantity
-        );
+        let yuan_quantity_101 = market
+            .borrow()
+            .get_goods()
+            .iter()
+            .find(|gl| gl.good_kind.eq(&YUAN))
+            .unwrap()
+            .quantity;
+        let usd_quantity_101 = market
+            .borrow()
+            .get_goods()
+            .iter()
+            .find(|gl| gl.good_kind.eq(&USD))
+            .unwrap()
+            .quantity;
+        assert!(yuan_qty <= yuan_quantity_101);
+        assert!(usd_qty <= usd_quantity_101);
     }
 }

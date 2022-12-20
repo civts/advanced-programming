@@ -1,6 +1,6 @@
-use super::sol_market::{log, SOLMarket, ALL_GOOD_KINDS};
-use crate::lib::domain::market_meta::MarketMeta;
-use crate::lib::domain::strategy_name::StrategyName;
+use crate::sol_market::domain::market_meta::MarketMeta;
+use crate::sol_market::domain::strategy_name::StrategyName;
+use crate::sol_market::{log, SOLMarket, ALL_GOOD_KINDS};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use std::cell::RefCell;

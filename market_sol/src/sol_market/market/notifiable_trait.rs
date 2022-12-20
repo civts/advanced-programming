@@ -1,4 +1,4 @@
-use super::sol_market::{SOLMarket, TOKEN_DURATION};
+use crate::sol_market::{SOLMarket, TOKEN_DURATION};
 use unitn_market_2022::{
     event::{
         event::{Event, EventKind},

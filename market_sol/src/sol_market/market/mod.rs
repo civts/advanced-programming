@@ -6,4 +6,3 @@ pub(crate) mod notifiable_trait;
 pub(crate) mod price_strategies;
 pub(crate) mod rates;
 pub(crate) mod serde;
-pub(crate) mod sol_market;

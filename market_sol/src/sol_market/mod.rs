@@ -1,5 +1,5 @@
-use super::internal_trading::trade_role::TradeRole;
-use crate::lib::domain::market_meta::MarketMeta;
+use self::domain::market_meta::MarketMeta;
+use self::market::internal_trading::trade_role::TradeRole;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -7,6 +7,10 @@ use unitn_market_2022::event::notifiable::Notifiable;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::market::good_label::GoodLabel;
+
+mod domain;
+mod market;
+mod misc;
 
 pub(crate) const MARKET_NAME: &str = "SOL";
 pub(crate) const TOKEN_DURATION: u32 = 15;

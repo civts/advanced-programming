@@ -1,10 +1,9 @@
+use crate::sol_market::{SOLMarket, TOKEN_DURATION};
 use unitn_market_2022::{
     good::{consts::DEFAULT_GOOD_KIND, good::Good, good_kind::GoodKind},
     market::{BuyError, Market, SellError},
     wait_one_day,
 };
-
-use crate::lib::market::sol_market::{SOLMarket, TOKEN_DURATION};
 
 const TRADER_NAME: &str = "foobar";
 

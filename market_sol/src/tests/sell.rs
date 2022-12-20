@@ -1,5 +1,5 @@
 mod test_sell {
-    use crate::lib::market::sol_market::SOLMarket;
+    use crate::sol_market::SOLMarket;
     use unitn_market_2022::{
         good::{consts::DEFAULT_GOOD_KIND, good::Good, good_kind::GoodKind},
         market::{Market, MarketGetterError, SellError},
@@ -51,7 +51,7 @@ mod test_sell {
             market::{LockSellError, Market},
         };
 
-        use crate::{lib::market::sol_market::SOLMarket, tests::sell::test_sell::TRADER_NAME};
+        use crate::{sol_market::SOLMarket, tests::sell::test_sell::TRADER_NAME};
 
         #[test]
         fn should_fail_on_negative_quantity() {

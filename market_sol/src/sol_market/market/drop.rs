@@ -1,5 +1,4 @@
-use super::sol_market::SOLMarket;
-use crate::lib::market::sol_market::MARKET_NAME;
+use crate::sol_market::{SOLMarket, MARKET_NAME};
 
 impl Drop for SOLMarket {
     fn drop(&mut self) {

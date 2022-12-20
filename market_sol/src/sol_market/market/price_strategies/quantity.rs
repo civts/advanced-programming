@@ -1,8 +1,6 @@
+use crate::sol_market::ALL_GOOD_KINDS;
 use std::{collections::HashMap, fmt::Debug};
-
 use unitn_market_2022::good::{good::Good, good_kind::GoodKind};
-
-use crate::lib::market::sol_market::ALL_GOOD_KINDS;
 
 #[derive(Debug)]
 pub(crate) struct QuantityPrice {

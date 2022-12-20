@@ -11,7 +11,7 @@ use unitn_market_2022::{
 };
 use unitn_market_2022::{good::good_kind::GoodKind, market::Market, wait_one_day};
 
-use crate::lib::{
+use crate::sol_market::{
     domain::strategy_name::StrategyName,
     market::{
         price_strategies::stocastic::{

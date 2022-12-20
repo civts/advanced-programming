@@ -1,6 +1,5 @@
-use super::sol_market::{SOLMarket, MARKET_NAME};
-use crate::lib::market::sol_market::{get_value_good, log};
-use crate::lib::{domain::good_lock_meta::GoodLockMeta, market::sol_market::TOKEN_DURATION};
+use crate::sol_market::domain::good_lock_meta::GoodLockMeta;
+use crate::sol_market::{get_value_good, log, SOLMarket, MARKET_NAME, TOKEN_DURATION};
 use std::collections::HashMap;
 use std::{
     cell::RefCell,

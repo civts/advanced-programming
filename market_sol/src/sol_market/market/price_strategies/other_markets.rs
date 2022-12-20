@@ -1,5 +1,4 @@
 use std::{collections::HashMap, fmt::Debug};
-
 use unitn_market_2022::good::good_kind::GoodKind;
 
 /// This strategy returns the latest price used by other markets.
