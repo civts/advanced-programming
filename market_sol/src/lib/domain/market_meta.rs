@@ -46,26 +46,28 @@ impl MarketMeta {
     }
 
     /// Return the number of buy locks that are not expired
-    pub fn num_of_locked_sells(&self) -> u32 {
-        let mut not_expired_locks = 0u32;
-        for (_, glm) in self.locked_sells.iter() {
-            let days_since = self.current_day - glm.created_on;
-            if days_since <= TOKEN_DURATION {
-                not_expired_locks += 1
-            }
-        }
-        not_expired_locks
+    pub fn num_of_locked_sells(&self, trader_name: &str) -> u32 {
+        let locks_of_this_trader = self
+            .locked_sells
+            .values()
+            .filter(|lock| lock.trader_name == trader_name);
+        let not_expired_locks = locks_of_this_trader.filter(|lock| {
+            let days_since = self.current_day - lock.created_on;
+            days_since <= TOKEN_DURATION
+        });
+        not_expired_locks.count().try_into().unwrap()
     }
 
     /// Return the number of buy locks that are not expired
-    pub fn num_of_buy_locks(&self) -> u32 {
-        let mut not_expired_locks = 0u32;
-        for (_, glm) in self.locked_buys.iter() {
-            let days_since = self.current_day - glm.created_on;
-            if days_since <= TOKEN_DURATION {
-                not_expired_locks += 1
-            }
-        }
-        not_expired_locks
+    pub fn num_of_buy_locks(&self, trader_name: &str) -> u32 {
+        let locks_of_this_trader = self
+            .locked_buys
+            .values()
+            .filter(|lock| lock.trader_name == trader_name);
+        let not_expired_locks = locks_of_this_trader.filter(|lock| {
+            let days_since = self.current_day - lock.created_on;
+            days_since <= TOKEN_DURATION
+        });
+        not_expired_locks.count().try_into().unwrap()
     }
 }

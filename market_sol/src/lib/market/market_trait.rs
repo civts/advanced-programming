@@ -128,7 +128,7 @@ impl Market for SOLMarket {
         }
 
         // Lock limit check
-        let num_of_locks = self.meta.num_of_buy_locks();
+        let num_of_locks = self.meta.num_of_buy_locks(&trader_name);
         if SOLMarket::lock_limit_exceeded(num_of_locks) {
             log(log_error);
             return Err(LockBuyError::MaxAllowedLocksReached);
@@ -187,6 +187,7 @@ impl Market for SOLMarket {
             bid,
             good_quantity_to_lock,
             self.meta.current_day,
+            trader_name.clone(),
         );
 
         self.meta.locked_buys.insert(token.clone(), good_meta);
@@ -336,7 +337,7 @@ impl Market for SOLMarket {
         }
 
         // Lock limit check
-        if SOLMarket::lock_limit_exceeded(self.meta.num_of_locked_sells()) {
+        if SOLMarket::lock_limit_exceeded(self.meta.num_of_locked_sells(&trader_name)) {
             log(log_error);
             return Err(LockSellError::MaxAllowedLocksReached);
         }
@@ -376,8 +377,13 @@ impl Market for SOLMarket {
         );
 
         // Update meta
-        let good_meta =
-            GoodLockMeta::new(kind_to_sell, offer, quantity_to_sell, self.meta.current_day);
+        let good_meta = GoodLockMeta::new(
+            kind_to_sell,
+            offer,
+            quantity_to_sell,
+            self.meta.current_day,
+            trader_name.clone(),
+        );
 
         self.meta.locked_sells.insert(token.clone(), good_meta);
 
