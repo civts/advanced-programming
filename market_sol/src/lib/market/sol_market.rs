@@ -63,29 +63,11 @@ impl SOLMarket {
 
         let goods_vec = Vec::from_iter(goods.values().cloned());
 
-        let total_value_market = goods_vec.iter().fold(0f32, |acc, g| {
-            acc + get_value_good(g.get_kind(), g.get_qty())
-        });
-        let ideal_value_per_good = total_value_market / goods_vec.len() as f32;
-
-        let mut internal_needs: HashMap<GoodKind, TradeRole> = HashMap::new();
-        for g in goods_vec.iter() {
-            let need = ideal_value_per_good - get_value_good(g.get_kind(), g.get_qty());
-            // Set goods with needs as importers
-            if need > 0f32 {
-                internal_needs.insert(g.get_kind(), TradeRole::Importer { need });
-            }
-            // Set goods with negative needs (surplus) as Exporters
-            else {
-                internal_needs.insert(g.get_kind(), TradeRole::Exporter { need });
-            }
-        }
-
         Rc::new(RefCell::new(SOLMarket {
             goods,
             subscribers: vec![],
-            meta: MarketMeta::new(goods_vec, optional_path),
-            internal_needs,
+            meta: MarketMeta::new(goods_vec.clone(), optional_path),
+            internal_needs: set_internal_needs(goods_vec),
         }))
     }
 
@@ -164,21 +146,6 @@ impl SOLMarket {
         Vec::from_iter(iter)
     }
 
-    /// Update importers and exporters
-    ///
-    /// Example:
-    ///
-    /// An Importer with a negative need becomes an exporter
-    ///
-    /// An Exporter with a positive need becomes an importer
-    pub(crate) fn update_importers_and_exporters(&mut self) {
-        let mut new_internal_needs: HashMap<GoodKind, TradeRole> = HashMap::new();
-        for (kind, role) in self.internal_needs.iter() {
-            new_internal_needs.insert(kind.clone(), role.switch());
-        }
-        self.internal_needs = new_internal_needs;
-    }
-
     /// Perform an internal trade if needed
     ///
     /// Example: An importer has a positive need and an exporter has a surplus
@@ -191,21 +158,23 @@ impl SOLMarket {
         for (kind, role) in self.internal_needs.iter() {
             match role {
                 TradeRole::Importer { need } => {
-                    let value = *need;
-                    if value > max_need {
-                        max_need = value;
+                    let n = *need;
+                    if n > max_need {
+                        max_need = n;
                         kind_need_refill = Some(kind.clone());
                     }
                 }
                 TradeRole::Exporter { need } => {
-                    let value = if need.is_sign_negative() {
+                    let ability = if need.is_sign_negative() {
                         need.abs()
                     } else {
                         0f32
                     };
-                    let market_quantity = self.goods.get(kind).unwrap().get_qty();
-                    if value > max_ability && market_quantity > max_ability {
-                        max_ability = market_quantity.min(value);
+                    // Market ability in case the good is locked and need has not been updated yet
+                    let market_ability =
+                        get_value_good(kind, self.goods.get(kind).unwrap().get_qty());
+                    if ability > max_ability && market_ability > max_ability {
+                        max_ability = market_ability.min(ability);
                         kind_able_refill = Some(kind.clone());
                     }
                 }
@@ -274,6 +243,39 @@ pub(crate) fn log(log_code: String) {
 }
 
 /// Return the value in DEFAULT_GOOD_KIND of a good
-pub(crate) fn get_value_good(kind: GoodKind, qty: f32) -> f32 {
+pub(crate) fn get_value_good(kind: &GoodKind, qty: f32) -> f32 {
     qty / kind.get_default_exchange_rate()
+}
+
+/// Set internal needs according to the EUR value of a certain good and the total value of the market (in EUR)
+///
+/// Example:
+///
+/// Market has:
+///     - 100 EUR  (value: 100€)    -> need: (52.71 - 100)      = -47.29    -> Exporter
+///     - 100 USD  (value: 96.55€)  -> need: (52.71 - 96.55)    = -43.84    -> Exporter
+///     - 100 YEN  (value: 0.70€)   -> need: (52.71 - 0.70)     = 52.01     -> Importer
+///     - 100 YUAN (value: 13.59€)  -> need: (52.71 - 13.59)    = 39.12     -> Importer
+///
+/// Total Value: 210.84€
+/// Ideal Value of each goods: (210.84 / 4) = 52.71€
+pub(crate) fn set_internal_needs(goods_vec: Vec<Good>) -> HashMap<GoodKind, TradeRole> {
+    let total_value_market = goods_vec.iter().fold(0f32, |acc, g| {
+        acc + get_value_good(&g.get_kind(), g.get_qty())
+    });
+    let ideal_value_per_good = total_value_market / goods_vec.len() as f32;
+
+    let mut internal_needs: HashMap<GoodKind, TradeRole> = HashMap::new();
+    for g in goods_vec.iter() {
+        let need = ideal_value_per_good - get_value_good(&g.get_kind(), g.get_qty());
+        // Set goods with needs as importers
+        if need > 0f32 {
+            internal_needs.insert(g.get_kind(), TradeRole::Importer { need });
+        }
+        // Set goods with negative needs (surplus) as Exporters
+        else {
+            internal_needs.insert(g.get_kind(), TradeRole::Exporter { need });
+        }
+    }
+    internal_needs
 }

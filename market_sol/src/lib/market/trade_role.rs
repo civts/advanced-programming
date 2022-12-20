@@ -29,19 +29,4 @@ impl TradeRole {
             TradeRole::Exporter { need, .. } => *need -= n,
         }
     }
-
-    /// Switch to another role if the need does not match its role anymore
-    ///
-    /// Example:
-    ///
-    /// Importer with need < 0 -> Exporter
-    ///
-    /// Exporter with need > 0 -> Importer
-    pub(crate) fn switch(&self) -> Self {
-        match self {
-            TradeRole::Importer { need } if need < &0f32 => TradeRole::Exporter { need: *need },
-            TradeRole::Exporter { need } if need > &0f32 => TradeRole::Importer { need: *need },
-            _ => self.clone(),
-        }
-    }
 }

@@ -1,4 +1,5 @@
 use super::sol_market::{SOLMarket, TOKEN_DURATION};
+use crate::lib::market::sol_market::set_internal_needs;
 use unitn_market_2022::{
     event::{
         event::{Event, EventKind},
@@ -66,7 +67,11 @@ impl Notifiable for SOLMarket {
 
         // Every 100 days update exporters and importers
         if self.meta.current_day % 100 == 0 {
-            self.update_importers_and_exporters()
+            let mut goods_vec = Vec::new();
+            for (_, g) in self.goods.iter() {
+                goods_vec.push(g.clone())
+            }
+            self.internal_needs = set_internal_needs(goods_vec);
         }
 
         // Perform an internal trade if needed

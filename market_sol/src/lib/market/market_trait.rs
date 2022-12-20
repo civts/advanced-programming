@@ -351,7 +351,7 @@ impl Market for SOLMarket {
             .get_mut(&release_good.get_kind())
             .unwrap()
             .increase_need(get_value_good(
-                release_good.get_kind(),
+                &release_good.get_kind(),
                 release_good.get_qty(),
             ));
 
@@ -359,7 +359,7 @@ impl Market for SOLMarket {
         self.internal_needs
             .get_mut(&paid_eur.get_kind())
             .unwrap()
-            .decrease_need(get_value_good(paid_eur.get_kind(), paid_eur.get_qty()));
+            .decrease_need(get_value_good(&paid_eur.get_kind(), paid_eur.get_qty()));
 
         self.notify_everyone(e);
 
@@ -539,14 +539,14 @@ impl Market for SOLMarket {
         self.internal_needs
             .get_mut(&give_money.get_kind())
             .unwrap()
-            .increase_need(get_value_good(give_money.get_kind(), give_money.get_qty()));
+            .increase_need(get_value_good(&give_money.get_kind(), give_money.get_qty()));
 
         // Decrease need for selling good
         self.internal_needs
             .get_mut(&selling_good.get_kind())
             .unwrap()
             .decrease_need(get_value_good(
-                selling_good.get_kind(),
+                &selling_good.get_kind(),
                 selling_good.get_qty(),
             ));
 
