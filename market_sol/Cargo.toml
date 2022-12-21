@@ -2,8 +2,16 @@
 name = "market_sol"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = [
+  "Farouk Akhoun <farouk.akhoun@studenti.unitn.it>",
+  "Adam Kaźmierczak <adam.kazmierczak@studenti.unitn.it>",
+  "Gianluca Sassetti <gianlucasax@hotmail.it>",
+  "Giacomo Zanolli <giacomo.zanolli@studenti.unitn.it>"
+]
+repository = "https://github.com/civts/advanced-programming"
+license = "MIT"
+description = "The SOL market, part of the project for the advance programming course"
+publish = ["kellnr"]
 
 [dependencies]
 rand = "0.8.5"
