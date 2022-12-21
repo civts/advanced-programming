@@ -19,27 +19,11 @@ impl Notifiable for SOLMarket {
                 self.meta
                     .other_markets
                     .update(&event.good_kind, exchange_rate);
-                //TODO
-                //Update price after successful buy, slightly decrease the price as qnty increases
-                // self.good_labels.iter_mut().for_each(|gl| {
-                //     if gl.good_kind.eq(&event.good_kind) {
-                //         gl.exchange_rate_sell *= 1.05;
-                //     }
-                // });
             }
 
             EventKind::LockedBuy => {}
             EventKind::LockedSell => {}
-            EventKind::Wait => {
-                //TODO
-                // // change some exchange rate -> buy_prices - as for now it's enough to decrease the price a bit
-                // // as time goes on with goods left unsold you tend to decrease the price
-                // self.good_labels.iter_mut().for_each(|gl| {
-                //     if gl.good_kind.ne(&GoodKind::EUR) {
-                //         gl.exchange_rate_sell *= 1.05;
-                //     }
-                // });
-            }
+            EventKind::Wait => {}
         }
 
         // Reinstate any good which has an expired token
