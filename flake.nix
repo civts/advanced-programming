@@ -41,6 +41,7 @@
                 matklad.rust-analyzer
                 vadimcn.vscode-lldb
                 bungcip.better-toml
+                esbenp.prettier-vscode
               ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
                 {
                   name = "codegeex";
