@@ -32,7 +32,7 @@ and the price based on the other markets with $p_o$.
 The price that the trader sees is given by their weighted average -with $w_s$,
 $w_q$, and $w_o$ being the weights-.
 
-![$$price=\frac {(p_s*w_s)+(p_q*w_q)+(p_o*w_o)} {w_s+w_q+w_o}$$](../../../docs/assets/price_equation.svg)
+![$$price=\frac {(p_s*w_s)+(p_q*w_q)+(p_o*w_o)} {w_s+w_q+w_o}$$](https://raw.githubusercontent.com/civts/advanced-programming/main/market_sol/docs/assets/price_equation.svg)
 
 The value of the weights is initialized randomly every time an instance of
 `SOLMarket` is created. Each weight will be between 0 and 1, and the sampling
