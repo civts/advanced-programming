@@ -5,7 +5,7 @@ edition = "2021"
 authors = [
   "Farouk Akhoun <farouk.akhoun@studenti.unitn.it>",
   "Adam Kaźmierczak <adam.kazmierczak@studenti.unitn.it>",
-  "Gianluca Sassetti <gianlucasax@hotmail.it>",
+  "Gianluca Sassetti <gianluca.sassetti@studenti.unitn.it>",
   "Giacomo Zanolli <giacomo.zanolli@studenti.unitn.it>"
 ]
 repository = "https://github.com/civts/advanced-programming"
