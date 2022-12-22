@@ -1,6 +1,6 @@
 [package]
 name = "market_sol"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = [
   "Farouk Akhoun <farouk.akhoun@studenti.unitn.it>",
@@ -10,7 +10,7 @@ authors = [
 ]
 repository = "https://github.com/civts/advanced-programming"
 license = "MIT"
-description = "The SOL market, part of the project for the advance programming course"
+description = "The SOL market, first part of the project for the advanced programming course 2022"
 publish = ["kellnr"]
 
 [dependencies]
