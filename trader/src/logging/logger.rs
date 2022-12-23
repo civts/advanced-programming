@@ -50,9 +50,7 @@ impl LoggingStrategy for TxtStrategy {
             .format("%y:%m:%d:%H:%M:%S:%3f")
             .to_string();
 
-        
-
-        if let Err(e) = writeln!(file, "LOG LOCK_{operation_type}: token: {token}, goodKind: {good_kind}, quantity: {quant}, amount: {amount}") {
+        if let Err(e) = writeln!(file, "LOG INFO - LOCK_{operation_type} token: {token}, goodKind: {good_kind}, quantity: {quant}, amount: {amount}") {
             eprintln!("Error while writing to file {}", e);
         }
     }
