@@ -38,7 +38,8 @@ jobs:
     steps:
       - name: Download the repo
         uses: actions/checkout@v3
-      - uses: ./.github/workflows/market_ci.yml
+      - name: Run market CI
+        uses: ./.github/workflows/market_ci.yml
 
   # Step 2: Publish Github release and crate
 
