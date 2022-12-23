@@ -88,14 +88,6 @@ impl Season {
         let change = starting_price * change_percentage;
         let final_price = starting_price + change;
         let final_price = f32::max(final_price, 0.0);
-        println!(">>>>>>>>>>> New season");
-        println!("Today is the {current_day}");
-        let d = current_day + duration;
-        println!("End: {d}");
-        println!("Starting price: {starting_price}");
-        println!("Target price: {final_price}");
-        let cp = change_percentage * 100.0;
-        println!("Change %: {cp}");
         Season {
             starting_day: current_day,
             duration,
