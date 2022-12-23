@@ -25,7 +25,7 @@ jobs:
       - name: Connect to VPN
         id: connect_to_vpn
         uses: ./.github/workflows/setup_vpn
-        inputs:
+        with:
           unitn_username: ${{secrets.UNITN_USERNAME}}
           unitn_password: ${{secrets.PANCAKES}}
           kellnr_token: ${{secrets.kellnr_token}}
