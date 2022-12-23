@@ -18,14 +18,21 @@ use unitn_market_2022::{
 };
 
 impl Market for SOLMarket {
+    
+    /// Returns [`SOLMarket`] instance with randomly generated market cap for each good. It facilitates secure psuedo random number generator: 
+    /// `<https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs>`
     fn new_random() -> Rc<RefCell<dyn Market>> {
         Self::new_random_path(None)
     }
+    
 
+    /// Returns a SOL Market instance with given quantites.
     fn new_with_quantities(eur: f32, yen: f32, usd: f32, yuan: f32) -> Rc<RefCell<dyn Market>> {
         Self::new_with_quantities_and_path(eur, yen, usd, yuan, None, HashMap::new())
     }
-
+    
+    /// Returns a market based on file.
+    /// 
     fn new_file(path_str: &str) -> Rc<RefCell<dyn Market>>
     where
         Self: Sized,
@@ -33,15 +40,17 @@ impl Market for SOLMarket {
         Self::new_file_internal(path_str)
     }
 
+    /// Returns [`MARKET_NAME`]
     fn get_name(&self) -> &'static str {
         MARKET_NAME
     }
 
-    // [from the specs] returns the quantity of good EUR of the market
+    /// Returns the quantity of good EUR for the market.
     fn get_budget(&self) -> f32 {
         self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty()
     }
-
+    
+    /// Returns the price in [`DEFAULT_GOOD_KIND`] that market offers in exchange for the `kind` and `quantity` given
     fn get_buy_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
         if quantity.is_sign_negative() {
             return Err(MarketGetterError::NonPositiveQuantityAsked);
@@ -77,7 +86,7 @@ impl Market for SOLMarket {
         Ok(price)
     }
 
-    //Returns how many of the default good we want to receive for quantity of the given good
+    /// Returns the price in [`DEFAULT_GOOD_KIND`] that market pays in exchange for the `kind` and `quantity` given
     fn get_sell_price(&self, kind: GoodKind, quantity: f32) -> Result<f32, MarketGetterError> {
         if quantity.is_sign_negative() {
             return Err(MarketGetterError::NonPositiveQuantityAsked);
@@ -94,11 +103,33 @@ impl Market for SOLMarket {
         let eur_good_exchange_rate = self.get_good_sell_exchange_rate(kind);
         Ok(quantity / eur_good_exchange_rate)
     }
-
+    
+    /// Returns a vector of [`GoodLabel`] for each good kind that market sells.
     fn get_goods(&self) -> Vec<GoodLabel> {
         self.get_good_labels()
     }
-
+     
+    /// Locks the given good kind for a trader for buying.
+    /// > **Parameters**
+    /// > - `kind_to_buy` : [`GoodKind`] to be locked for buying
+    /// > - `quantity_to_buy` : the quantity of good to be locked for buying
+    /// > - `bid` : the amount of [`DEFAULT_GOOD_KIND`] the trader is willing to pay
+    /// > - `trader_name` : the name of the trader
+    /// 
+    /// # Return value
+    /// 
+    /// In case of success:
+    /// > A string token which identifies the lock and allows to perform the buy method later.
+    ///
+    /// In case of failure:
+    /// > 1. [`LockBuyError::NonPositiveQuantityToBuy`]
+    /// > 2. [`LockBuyError::NonPositiveBid`]
+    /// > 3. [`LockBuyError::GoodAlreadyLocked`] 
+    /// > 4. [`LockBuyError::MaxAllowedLocksReached`]
+    /// > 5. [`LockBuyError::InsufficientGoodQuantityAvailable`]
+    /// > 6. [`LockBuyError::BidTooLow`]
+    
+    /// 
     fn lock_buy(
         &mut self,
         // What we want to buy (e.g., YEN)
@@ -205,7 +236,25 @@ impl Market for SOLMarket {
 
         Ok(token)
     }
+    
 
+    /// Buying method for traders
+    /// 
+    /// > **Parameters**
+    /// > - `good` : [`Good`] to be sold by trader
+    /// > - `token` : the token retrieved after calling `lock_buy`
+    /// 
+    /// # Return value
+    /// In case of success:
+    /// > A [`Good`] bought
+    ///
+    /// In case of failure:
+    /// 1. [`BuyError::UnrecognizedToken`]
+    /// 2. [`BuyError::ExpiredToken`]
+    /// 3. [`BuyError::GoodKindNotDefault`] 
+    /// 4. [`BuyError::InsufficientGoodQuantity`] 
+    /// 
+    ///
     fn buy(&mut self, token: String, cash: &mut Good) -> Result<Good, BuyError> {
         // Set error log
         let log_error = format!("BUY-TOKEN:{token}-ERROR");
@@ -294,7 +343,24 @@ impl Market for SOLMarket {
         Ok(release_good)
     }
 
-    ///Allow the trader to get a lock to SELL a good to this market
+    /// Locks the given good kind for a trader for selling.
+    /// > **Parameters**
+    /// > - `kind_to_sell` : [`GoodKind`] to be locked for selling
+    /// > - `quantity_to_sell` : the quantity of good to be locked for selling
+    /// > - `offer` : the amount of [`DEFAULT_GOOD_KIND`] the trader is wants in exchange
+    /// > - `trader_name` : the name of the trader
+    /// 
+    /// # Return value
+    /// In case of success:
+    /// > A string token which identifies the lock and allows to perform the sell method later.
+    ///
+    /// In case of failure:
+    /// > 1. [`LockSellError::NonPositiveQuantityToSell`]
+    /// > 2. [`LockSellError::NonPositiveOffer`]
+    /// > 3. [`LockSellError::GoodAlreadyLocked`] 
+    /// > 4. [`LockSellError::MaxAllowedLocksReached`]
+    /// > 5. [`LockSellError::InsufficientDefaultGoodQuantityAvailable`]
+    /// > 6. [`LockSellError::OfferTooHigh`]
     fn lock_sell(
         &mut self,
         kind_to_sell: GoodKind,
@@ -401,6 +467,23 @@ impl Market for SOLMarket {
         Ok(token)
     }
 
+    /// Selling method for traders
+    /// 
+    /// > **Parameters**
+    /// > - `good` : [`Good`] to be sold by trader
+    /// > - `token` : the token retrieved after calling `lock_sell()`
+    /// 
+    /// # Return value
+    /// In case of success:
+    /// > A [`Good`] sold
+    ///
+    /// In case of failure:
+    /// 1. [`SellError::UnrecognizedToken`]
+    /// 2. [`SellError::ExpiredToken`]
+    /// 3. [`SellError::WrongGoodKind`] 
+    /// 4. [`SellError::InsufficientGoodQuantity`] 
+    /// 
+    ///
     fn sell(&mut self, token: String, good: &mut Good) -> Result<Good, SellError> {
         // Set error log
         let log_error = format!("SELL-TOKEN:{token}-ERROR");
