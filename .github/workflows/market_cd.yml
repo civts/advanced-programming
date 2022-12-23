@@ -1,0 +1,104 @@
+name: Create release on new version tag
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  # Step 1: Check everyting is ok
+
+  check_release_correct:
+    name: Check that tag matches Cargo.toml version
+    runs-on: ubuntu-22.04
+    outputs:
+      version_number: ${{ steps.vcode.outputs.VERSION_NUMBER }}
+    steps:
+      - name: Download the repo
+        uses: actions/checkout@v3
+      - name: Ensure we were triggered by a new tag
+        run: |
+          [[ "${GITHUB_REF_TYPE}" -eq "tag" ]]
+      - name: Get version number in source code
+        id: vcode
+        run: |
+          cd market_sol
+          VERSION_NUMBER=$(cat Cargo.toml | grep "^version = " | head -1 |  awk  '{print $3}' | sed 's/"//g')
+          echo -n "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+      - name: Check release name matches
+        env:
+          VERSION_NUMBER: ${{ steps.vcode.outputs.VERSION_NUMBER }}
+        run: |
+          echo "Checking that the version number in cargo.toml (${VERSION_NUMBER}) matches the release tag (${GITHUB_REF_NAME})"
+          [[ "v${VERSION_NUMBER}" == "${GITHUB_REF_NAME}" ]]
+
+  run_tests:
+    name: Test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download the repo
+        uses: actions/checkout@v3
+      - uses: ./.github/workflows/market_ci.yml
+
+  # Step 2: Publish Github release and crate
+
+  create_gh_release:
+    name: Create Github release
+    runs-on: ubuntu-22.04
+    needs:
+      - check_release_correct
+      - run_tests
+    steps:
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          skipIfReleaseExists: true
+
+  publish_on_kellnr:
+    name: Publish crate and docs on kellnr
+    runs-on: ubuntu-22.04
+    needs:
+      - check_release_correct
+      - run_tests
+    steps:
+      - name: Download the repo
+        uses: actions/checkout@v3
+      - name: Connect to VPN
+        id: connect_to_vpn
+        uses: ./.github/workflows/setup_vpn
+        with:
+          unitn_username: ${{secrets.UNITN_USERNAME}}
+          unitn_password: ${{secrets.PANCAKES}}
+          kellnr_token: ${{secrets.kellnr_token}}
+      - name: Publish crate on kellnr
+        run: |
+          cd market_sol
+          cargo publish --token ${{secrets.kellnr_token}}
+      - name: Update the docs on kellnr
+        run: |
+          ./update_docs ${{secrets.kellnr_token}}
+          cd ..
+      - name: Stop VPN
+        run: |
+          kill -15 ${{ steps.connect_to_vpn.outputs.vpn_pid }}
+          rm ./unitn_vpn_script.sh
+          rm ./unitn_hireport.sh
+
+  # Step 3: Notify us on Telegram
+
+  notify_telegram:
+    name: Notify on telegram
+    runs-on: ubuntu-22.04
+    needs:
+      - publish_on_kellnr
+      - check_release_correct
+    steps:
+      - name: Notify us on Telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            Give a warm welcome to v${{needs.check_release_correct.outputs.version_number}} 🍸
+
+            Created by ${{ github.actor }}
