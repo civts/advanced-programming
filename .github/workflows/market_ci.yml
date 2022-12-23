@@ -1,0 +1,50 @@
+name: SOL Market CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Download the repo
+        uses: actions/checkout@v3
+      - name: Setup rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "sol-market-rust"
+          workspaces: "market_sol -> target"
+      - name: Connect to VPN
+        id: connect_to_vpn
+        uses: ./.github/workflows/setup_vpn
+        inputs:
+          unitn_username: ${{secrets.UNITN_USERNAME}}
+          unitn_password: ${{secrets.PANCAKES}}
+          kellnr_token: ${{secrets.kellnr_token}}
+      - name: Get dependencies
+        run: |
+          cd market_sol
+          # GET DEPENDENCIES
+          cargo check || true
+          cd ..
+      - name: Stop VPN
+        run: |
+          kill -15 ${{ steps.connect_to_vpn.outputs.vpn_pid }}
+          rm ./unitn_vpn_script.sh
+          rm ./unitn_hireport.sh
+      - name: Build
+        run: |
+          cd market_sol
+          cargo build --verbose
+      - name: Run tests
+        run: |
+          cd market_sol
+          cargo test --verbose

@@ -1,0 +1,51 @@
+name: Connect to VPN
+description: Connects to UNITN's VPN
+inputs:
+  unitn_username:
+    description: Email address of the university of Trento account
+    required: true
+  unitn_password:
+    description: Password of the university of Trento account
+    required: true
+  kellnr_token:
+    description: Token to use to authenticate on kellnr
+    required: true
+outputs:
+  vpn_pid:
+    description: Process ID of the VPN instance
+    value: ${{ steps.connect_to_vpn.outputs.VPN_PROC_ID }}
+runs:
+  using: composite
+  steps:
+    - name: Install openconnect client
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -qy openconnect
+    - name: Connect to VPN
+      id: connect_to_vpn
+      shell: bash
+      env:
+        CARGO_REGISTRIES_KELLNR_TOKEN: ${{inputs.kellnr_token}}
+      run: |
+        # CREATE VPN SCRIPT
+        curl -o ./unitn_hireport.sh https://raw.githubusercontent.com/openconnect/openconnect/ca7bc36520e53561eda2c44186dd2a2e20f69d20/trojans/hipreport.sh
+        echo "3e1cdd282bf7eb0046f1f8ed18d4978755b07691ed1e4a0bc809833b0ff076be unitn_hireport.sh" > checksums
+        sha256sum -c checksums
+        CHECKSUM_EXIT_CODE=$?
+        if [ $CHECKSUM_EXIT_CODE != 0 ]; then
+          echo "The checksum for the script does not match"
+          exit 1
+        fi
+        rm checksums
+        chmod +x ./unitn_hireport.sh
+        echo "echo -n ${{inputs.unitn_password}} | sudo openconnect --protocol=gp --user=${{inputs.unitn_username}} https://vpn.icts.unitn.it --csd-wrapper=./unitn_hireport.sh --verbose --passwd-on-stdin" > unitn_vpn_script.sh
+        chmod +x unitn_vpn_script.sh
+        # CONNECT TO VPN
+        ./unitn_vpn_script.sh &
+        VPN_PROC_ID=$!
+        # GIVE IT A LITTLE TIME TO CONNECT
+        sleep 10
+        # CHECK THAT WE ARE CONNECTED TO UNITN's VPN
+        ping -c 1 advancedprogramming.disi.unitn.it
+        echo -n "VPN_PROC_ID=${VPN_PROC_ID}" >> $GITHUB_OUTPUT
