@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["FallbackFont","A single font record for a fallback query result."],["FallbackResult","The result of a fallback query."]],"trait":[["Loader","Provides a common interface to the platform-specific API that loads, parses, and rasterizes fonts."]]};

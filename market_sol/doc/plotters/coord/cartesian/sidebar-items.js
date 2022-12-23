@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":[["MeshLine","Represent a coordinate mesh for the two ranged value coordinate system"]],"struct":[["Cartesian2d","A 2D Cartesian coordinate system described by two 1D ranged coordinate specs."],["Cartesian3d","A 3D cartesian coordinate system"]]};

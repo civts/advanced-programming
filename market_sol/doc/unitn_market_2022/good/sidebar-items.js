@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["consts",""],["good",""],["good_error",""],["good_kind",""]]};

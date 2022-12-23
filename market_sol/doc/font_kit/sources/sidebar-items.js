@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["core_text","A source that contains the installed fonts on macOS."],["fs","A source that loads fonts from a directory or directories on disk."],["mem","A source that keeps fonts in memory."],["multi","A source that encapsulates multiple sources and allows them to be queried as a group."]]};

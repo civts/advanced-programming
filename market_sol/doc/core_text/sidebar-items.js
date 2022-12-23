@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["font",""],["font_collection",""],["font_descriptor",""],["font_manager",""],["frame",""],["framesetter",""],["line",""],["run",""],["string_attributes",""]]};

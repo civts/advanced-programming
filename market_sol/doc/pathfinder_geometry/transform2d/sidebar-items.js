@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["Matrix2x2F","A 2x2 matrix, optimized with SIMD, in column-major order."],["Transform2F","An affine transform, optimized with SIMD."]]};

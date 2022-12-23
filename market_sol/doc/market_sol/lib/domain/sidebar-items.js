@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["good_lock_meta",""],["market_meta",""]]};

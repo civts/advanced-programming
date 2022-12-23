@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["CoreTextSource","A source that contains the installed fonts on macOS."]]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["CTRun",""],["__CTRun",""]],"type":[["CTRunRef",""]]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["MultiIter","An iterator over the sources in a [`MultiSource`]."],["MultiIterMut","An iterator over the mutable sources in a [`MultiSource`]."],["MultiSource","A source that encapsulates multiple sources and allows them to be queried as a group."]]};

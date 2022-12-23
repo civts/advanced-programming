@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["print_version",""]],"macro":[["subscribe_each_other",""],["wait_one_day",""]],"mod":[["event",""],["good",""],["market",""]]};

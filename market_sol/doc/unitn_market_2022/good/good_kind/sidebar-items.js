@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":[["GoodKind","documentation: https://github.com/WG-AdvancedProgramming/market-protocol-specifications/blob/main/market-protocol-specifications.md#goodkind-description"]]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":[["CGEventSourceStateID","Possible source states of an event source."]],"struct":[["CGEventSource",""],["CGEventSourceRef",""]]};

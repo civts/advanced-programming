@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["cool_graphs","Simulates the market plotting the price changes to an svg named test_{current date}.svg"],["test_overall_market_change_percentage","This function allows us to test how is the overall trend of our market, for any good. Ideally, we want this to be a slightly positive percentage."]]};

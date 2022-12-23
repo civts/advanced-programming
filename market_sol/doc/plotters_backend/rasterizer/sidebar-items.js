@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["draw_circle",""],["draw_line",""],["draw_rect",""],["fill_polygon",""],["polygonize","Covert a path with >1px stroke width into polygon."]]};

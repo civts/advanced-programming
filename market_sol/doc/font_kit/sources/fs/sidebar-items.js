@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["FsSource","A source that loads fonts from a directory or directories on disk."]]};

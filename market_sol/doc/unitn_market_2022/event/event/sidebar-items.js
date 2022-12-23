@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":[["EventKind",""]],"struct":[["Event","documentation: https://github.com/WG-AdvancedProgramming/market-protocol-specifications/blob/main/market-protocol-specifications.md#the-event-struct"]]};
