@@ -3,11 +3,11 @@ name: SOL Market CI
 on:
   push:
     branches: ["main"]
+    paths:
+      - market_sol/**
+      - .github/**
   pull_request:
     branches: ["main"]
-  paths:
-    - market_sol/**
-    - .github/**
 
 env:
   CARGO_TERM_COLOR: always
