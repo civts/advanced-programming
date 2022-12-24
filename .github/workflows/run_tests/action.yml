@@ -30,13 +30,11 @@ runs:
   using: composite
   steps:
     - name: Setup rust cache
-      shell: bash
       uses: Swatinem/rust-cache@v2
       with:
         prefix-key: "sol-market-rust"
         workspaces: "market_sol -> target"
     - name: Connect to VPN
-      shell: bash
       id: connect_to_vpn
       uses: ./.github/workflows/setup_vpn
       with:
