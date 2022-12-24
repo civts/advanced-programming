@@ -1,0 +1,19 @@
+# Why does this file exist? See this link
+# https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+
+name: SOL Market CI
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - market_sol/**
+      - .github/**
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "No testing required since market did not change"
