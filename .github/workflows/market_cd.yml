@@ -82,8 +82,8 @@ jobs:
           cargo publish --token ${{secrets.kellnr_token}}
       - name: Update the docs on kellnr
         run: |
+          cd market_sol
           ./update_docs.sh ${{secrets.kellnr_token}}
-          cd ..
       - name: Stop VPN
         run: |
           kill -15 ${{ steps.connect_to_vpn.outputs.vpn_pid }}
