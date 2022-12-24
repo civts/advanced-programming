@@ -79,12 +79,11 @@ jobs:
       - name: Publish crate on kellnr
         run: |
           cd market_sol
-          echo "Now we sould publish on Kellnr, but for now I'll stay cautious"
-          # cargo publish --token ${{secrets.kellnr_token}}
+          cargo publish --token ${{secrets.kellnr_token}}
       - name: Update the docs on kellnr
         run: |
           echo "Now we sould publish on Kellnr, but for now I'll stay cautious"
-          # ./update_docs ${{secrets.kellnr_token}}
+          ./update_docs ${{secrets.kellnr_token}}
           cd ..
       - name: Stop VPN
         run: |
@@ -99,12 +98,13 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - publish_on_kellnr
+      - create_gh_release
       - check_release_correct
     steps:
       - name: Notify us on Telegram
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID_DEV }}
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
             Give a warm welcome to v${{needs.check_release_correct.outputs.version_number}} 🍸
