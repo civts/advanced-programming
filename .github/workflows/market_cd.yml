@@ -33,13 +33,18 @@ jobs:
           [[ "v${VERSION_NUMBER}" == "${GITHUB_REF_NAME}" ]]
 
   run_tests:
-    name: Test
+    name: Run the tests
     runs-on: ubuntu-22.04
     steps:
       - name: Download the repo
         uses: actions/checkout@v3
-      - name: Run market CI
-        uses: ./.github/workflows/market_ci.yml
+      - name: Test
+        uses: ./.github/workflows/run_tests
+        with:
+          unitn_username: ${{secrets.UNITN_USERNAME}}
+          unitn_password: ${{secrets.PANCAKES}}
+          kellnr_token: ${{secrets.KELLNR_TOKEN}}
+          # See comment in that file on why that code is not here
 
   # Step 2: Publish Github release and crate
 
@@ -74,10 +79,12 @@ jobs:
       - name: Publish crate on kellnr
         run: |
           cd market_sol
-          cargo publish --token ${{secrets.kellnr_token}}
+          echo "Now we sould publish on Kellnr, but for now I'll stay cautious"
+          # cargo publish --token ${{secrets.kellnr_token}}
       - name: Update the docs on kellnr
         run: |
-          ./update_docs ${{secrets.kellnr_token}}
+          echo "Now we sould publish on Kellnr, but for now I'll stay cautious"
+          # ./update_docs ${{secrets.kellnr_token}}
           cd ..
       - name: Stop VPN
         run: |
@@ -97,7 +104,7 @@ jobs:
       - name: Notify us on Telegram
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          to: ${{ secrets.TELEGRAM_CHAT_ID_DEV }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
             Give a warm welcome to v${{needs.check_release_correct.outputs.version_number}} 🍸
