@@ -1,0 +1,68 @@
+name: Test
+description: |
+  connects to UNITN's VPN,
+  performs the tests, and
+  closes the VPN connection
+
+#
+# I would rather have put this code in `.github/workflows/market_ci.yml`, but
+# I wanted to do the test both in the market_ci and as a step of market_cd.
+# Github makes it difficult to trigger a workflow from a workflow
+# (see https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow).
+# Another solution may have been https://github.com/marketplace/actions/trigger-workflow-and-wait
+# but that involves creating a new access token and a new secret.
+#
+# I assume you have already did git checkout and are in the root of the project.
+#
+
+inputs:
+  unitn_username:
+    description: Email address of the university of Trento account
+    required: true
+  unitn_password:
+    description: Password of the university of Trento account
+    required: true
+  kellnr_token:
+    description: Token to use to authenticate on kellnr
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup rust cache
+      shell: bash
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: "sol-market-rust"
+        workspaces: "market_sol -> target"
+    - name: Connect to VPN
+      shell: bash
+      id: connect_to_vpn
+      uses: ./.github/workflows/setup_vpn
+      with:
+        unitn_username: ${{inputs.unitn_username}}
+        unitn_password: ${{inputs.unitn_password}}
+        kellnr_token: ${{inputs.kellnr_token}}
+    - name: Get dependencies
+      shell: bash
+      run: |
+        cd market_sol
+        # GET DEPENDENCIES
+        cargo check || true
+        cd ..
+    - name: Stop VPN
+      shell: bash
+      run: |
+        kill -15 ${{ steps.connect_to_vpn.outputs.vpn_pid }}
+        rm ./unitn_vpn_script.sh
+        rm ./unitn_hireport.sh
+    - name: Build
+      shell: bash
+      run: |
+        cd market_sol
+        cargo build --verbose
+    - name: Run tests
+      shell: bash
+      run: |
+        cd market_sol
+        cargo test --verbose
