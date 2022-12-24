@@ -21,7 +21,7 @@ jobs:
       - name: Download the repo
         uses: actions/checkout@v3
       - name: Test
-        uses: ./github/workflows/run_tests
+        uses: ./.github/workflows/run_tests
         with:
           unitn_username: ${{secrets.UNITN_USERNAME}}
           unitn_password: ${{secrets.PANCAKES}}
