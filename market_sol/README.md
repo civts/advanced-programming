@@ -27,12 +27,18 @@ overwriting it.
 We have three separate strategies that determine the price. We called them
 "stocastic", "quantity" and "others".
 
-Let us denote the stocastic price with $p_s$, the quantity price with $p_q$,
-and the price based on the other markets with $p_o$.
-The price that the trader sees is given by their weighted average -with $w_s$,
-$w_q$, and $w_o$ being the weights-.
+Let us denote the stocastic price with <i style="font-family: serif;">p<sub>s</sub></i>,
+the quantity price with <i style="font-family: serif;">p<sub>q</sub></i>,
+and the price based on the other markets with
+<i style="font-family: serif;">p<sub>o</sub></i>.
+The price that the trader sees is given by their weighted average -with
+<i style="font-family: serif;">w<sub>s</sub></i>,
+<i style="font-family: serif;">w<sub>q</sub></i>, and <i style="font-family: serif;">w<sub>o</sub></i> being the weights-.
 
-![$$price=\frac {(p_s*w_s)+(p_q*w_q)+(p_o*w_o)} {w_s+w_q+w_o}$$](https://raw.githubusercontent.com/civts/advanced-programming/main/market_sol/docs/assets/price_equation.svg)
+<!-- src="https://i.imgur.com/uKqBa2o.png" -->
+
+<img src="https://i.imgur.com/HGU0Q6m.png"
+alt="The formula could not display correctly. Paste this in a markdown viewer (tested on vscode and github, they both work) $$price=\frac {(p_s*w_s)+(p_q*w_q)+(p_o*w_o)} {w_s+w_q+w_o}$$">
 
 The value of the weights is initialized randomly every time an instance of
 `SOLMarket` is created. Each weight will be between 0 and 1, and the sampling
