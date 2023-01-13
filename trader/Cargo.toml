@@ -8,3 +8,8 @@ edition = "2021"
 [dependencies]
 termion = "*"
 chrono = "*"
+rand = "0.8.5"
+bfb = {version = "0.1.1", registry = "kellnr"}
+doge = {version = "1.0.0", registry = "kellnr"}
+Pizza-Stock-Exchange-Market = {version = "1.1.0", registry = "kellnr"}
+unitn_market_2022 = {version = "1.0.10", registry = "kellnr"}
