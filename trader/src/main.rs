@@ -38,17 +38,45 @@ pub fn main() {
 
         // thread::sleep(time::Duration::from_secs(5))
     }
+    for _ in 0..3 {
+        make_sell(&trader);
+
+        show_delta();
+
+        history_buy.push(trader.get_all_current_buy_rates());
+        history_sell.push(trader.get_all_current_sell_rates());
+
+        let d = get_delta_last_day(history_buy.clone()).unwrap();
+        println!("\n{:?}", d);
+
+        // thread::sleep(time::Duration::from_secs(5))
+    }
 }
 
 //here we can implement the stategy of the trader
 pub fn make_trade(trader: &SOLTrader) {
     //select next trade partner
-
+    let name = "DogeMarket";
     //select next good
-
+    let kind = GoodKind::USD;
     //select next quantity
-
+    let qty = 1.0;
     //trade!
+    trader.buy_from_market(name.to_owned(), kind, qty)
+}
+
+pub fn make_sell(trader: &SOLTrader) {
+    //select next trade partner
+    let name = "DogeMarket";
+    //select next good
+    let kind = GoodKind::USD;
+    //select next quantity
+    let qty = 1.0;
+    //trade!
+    trader.sell_to_market(name.to_owned(), kind, qty)
+}
+
+pub fn fake_trade(trader: &SOLTrader){
     trader.all_wait_one_day();
 }
 
