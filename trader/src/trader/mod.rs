@@ -1,8 +1,10 @@
 use bfb::bfb_market::Bfb;
+use core::borrow;
 use dogemarket::dogemarket::DogeMarket;
 use rand::Rng;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::ops::Range;
 use std::rc::Rc;
 use std::string::ToString;
@@ -10,6 +12,7 @@ use unitn_market_2022::event::wrapper::NotifiableMarketWrapper;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::{GoodKind, GoodKind::*};
 use unitn_market_2022::market::Market;
+use unitn_market_2022::wait_one_day;
 use Pizza_Stock_Exchange_Market::PSE_Market;
 
 const KINDS: [GoodKind; 4] = [EUR, USD, YEN, YUAN];
@@ -80,54 +83,47 @@ impl SOLTrader {
         });
     }
 
-    pub fn show_all_market_quantities(&self){
-        for mrk_bind in self.markets.iter(){
-            print!("\n\n{}",mrk_bind.borrow().get_name());
-            for gl in mrk_bind.borrow().get_goods().iter(){
-                print!("\n{}: {}",gl.good_kind,gl.quantity);
+    pub fn show_all_market_quantities(&self) {
+        for mrk_bind in self.markets.iter() {
+            print!("\n\n{}", mrk_bind.borrow().get_name());
+            for gl in mrk_bind.borrow().get_goods().iter() {
+                print!("\n{}: {}", gl.good_kind, gl.quantity);
             }
         }
     }
 
-    pub fn show_all_market_info(&self){
-        for mrk_bind in self.markets.iter(){
-            print!("\n\n{}",mrk_bind.borrow().get_name());
-            for gl in mrk_bind.borrow().get_goods().iter(){
-                print!("\n{}: {} buy: {} sell:{}",gl.good_kind,gl.quantity,gl.exchange_rate_buy, gl.exchange_rate_sell);
+    pub fn show_all_market_info(&self) {
+        for mrk_bind in self.markets.iter() {
+            print!("\n\n{}", mrk_bind.borrow().get_name());
+            for gl in mrk_bind.borrow().get_goods().iter() {
+                print!(
+                    "\n{}: {} buy: {} sell:{}",
+                    gl.good_kind, gl.quantity, gl.exchange_rate_buy, gl.exchange_rate_sell
+                );
             }
         }
         print!("\n");
     }
 
-    
+    pub fn show_all_buy_prices(&self) {}
 
-    pub fn show_all_buy_prices(&self){
+    pub fn show_all_sell_prices(&self) {}
 
-    }
-
-    pub fn show_all_sell_prices(&self){
-
-    }
-
-    pub fn show_all_self_quantities(&self){
+    pub fn show_all_self_quantities(&self) {
         println!("Trader stocks");
-        for (_,  qty) in self.goods.iter(){
-            print!("{} ",qty);
+        for (_, qty) in self.goods.iter() {
+            print!("{} ", qty);
         }
         println!("\n");
     }
 
     //don't use this to modify the markets later on!
     //this reference is non mutable
-    pub fn get_market_by_name(&self, name: String) -> Option<&Rc<RefCell<dyn Market>>>{
+    pub fn get_market_by_name(&self, name: String) -> Option<&Rc<RefCell<dyn Market>>> {
         let mut res: Option<&Rc<RefCell<dyn Market>>> = None;
 
-        // Some(&self.markets[0])
-
-        for mrk_bind in self.markets.iter(){
-            print!("\n\n{}",mrk_bind.borrow().get_name());
-            // let andauic = mrk_bind.borrow().get_name();
-            if mrk_bind.borrow().get_name().eq(&name){
+        for mrk_bind in self.markets.iter() {
+            if mrk_bind.borrow().get_name().eq(&name) {
                 res = Some(mrk_bind);
             }
         }
@@ -135,7 +131,55 @@ impl SOLTrader {
         res
     }
 
-    pub fn get_market_sell_rates(&self, name: String){}
+    pub fn get_market_buy_rates(&self, name: String) -> HashMap<GoodKind, f32> {
+        let mut ret: HashMap<GoodKind, f32> = HashMap::new();
+
+        if let Some(mrk_bind) = self.get_market_by_name(name.clone()) {
+            for gl in mrk_bind.borrow().get_goods().iter() {
+                ret.insert(gl.good_kind, gl.exchange_rate_buy);
+            }
+        }
+        ret
+    }
+
+    pub fn get_market_sell_rates(&self, name: String) -> HashMap<GoodKind, f32> {
+        let mut ret: HashMap<GoodKind, f32> = HashMap::new();
+
+        if let Some(mrk_bind) = self.get_market_by_name(name.clone()) {
+            for gl in mrk_bind.borrow().get_goods().iter() {
+                ret.insert(gl.good_kind, gl.exchange_rate_sell);
+            }
+        }
+        ret
+    }
+
+    pub fn get_all_current_buy_rates(&self) -> HashMap<String, HashMap<GoodKind, f32>> {
+        let mut ret: HashMap<String, HashMap<GoodKind, f32>> = HashMap::new();
+
+        for m in self.markets.iter() {
+            let cur_name = m.borrow().get_name().to_owned();
+            ret.insert(cur_name.clone(), self.get_market_buy_rates(cur_name));
+        }
+
+        ret
+    }
+
+    pub fn get_all_current_sell_rates(&self) -> HashMap<String, HashMap<GoodKind, f32>> {
+        let mut ret: HashMap<String, HashMap<GoodKind, f32>> = HashMap::new();
+
+        for m in self.markets.iter() {
+            let cur_name = m.borrow().get_name().to_owned();
+            ret.insert(cur_name.clone(), self.get_market_sell_rates(cur_name));
+        }
+
+        ret
+    }
+
+    pub fn all_wait_one_day(&self) {
+        //wait one day was done on the mrkt binds -> Rc<Refcell<dyn market>>
+        wait_one_day!(&self.markets[0], &self.markets[1]);
+        //don't use wait one day on pizza stocck market
+    }
 }
 
 #[cfg(test)]
@@ -144,9 +188,9 @@ mod trader_tests {
     use std::rc::Rc;
 
     #[test]
-    fn test_get_market_by_name(){
+    fn test_get_market_by_name() {
         let trader = SOLTrader::new();
-        
+
         let my_m = "DogeMarket";
         let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
         assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
