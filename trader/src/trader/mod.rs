@@ -1,4 +1,5 @@
 use bfb::bfb_market::Bfb;
+use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use core::borrow;
 use dogemarket::dogemarket::DogeMarket;
 use rand::Rng;
@@ -14,6 +15,7 @@ use unitn_market_2022::good::good_kind::{GoodKind, GoodKind::*};
 use unitn_market_2022::market::Market;
 use unitn_market_2022::wait_one_day;
 use Pizza_Stock_Exchange_Market::PSE_Market;
+use market_sol::SOLMarket;
 
 const KINDS: [GoodKind; 4] = [EUR, USD, YEN, YUAN];
 const TRADER_NAME: &str = "SOLTrader";
@@ -62,7 +64,7 @@ impl SOLTrader {
         let markets = [
             DogeMarket::new_random(),
             Bfb::new_random(),
-            PSE_Market::new_random(),
+            SOLMarket::new_random(),
         ]
         .to_vec();
         Self {
@@ -117,8 +119,7 @@ impl SOLTrader {
         println!("\n");
     }
 
-    //don't use this to modify the markets later on!
-    //this reference is non mutable
+    //you can still borrow_mut the returned market!
     pub fn get_market_by_name(&self, name: String) -> Option<&Rc<RefCell<dyn Market>>> {
         let mut res: Option<&Rc<RefCell<dyn Market>>> = None;
 
@@ -179,6 +180,45 @@ impl SOLTrader {
         //wait one day was done on the mrkt binds -> Rc<Refcell<dyn market>>
         wait_one_day!(&self.markets[0], &self.markets[1]);
         //don't use wait one day on pizza stocck market
+        
+    }
+
+    pub fn buy_from_market(&self, name:String, kind: GoodKind, qty: f32){
+        let mrk_bind = self.get_market_by_name(name.clone()).unwrap();
+
+        let bid = mrk_bind
+            .borrow()
+            .get_buy_price(kind, qty)
+            .ok()
+            .unwrap();
+        let token = mrk_bind
+            .borrow_mut()
+            .lock_buy(kind, qty, bid, String::from("SOLTrader"))
+            .unwrap();
+
+        //split the cash!
+        let mut cash = Good::new(DEFAULT_GOOD_KIND, bid);
+        let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
+
+        //add the good locally
+    }
+
+    pub fn sell_to_market(&self, name:String, kind: GoodKind, qty: f32){
+        let mrk_bind = self.get_market_by_name(name.clone()).unwrap();
+
+        //sell the good
+        let offer = mrk_bind
+            .borrow()
+            .get_sell_price(kind, qty)
+            .ok()
+            .unwrap();
+        let token = mrk_bind
+            .borrow_mut()
+            .lock_sell(kind, qty, offer, String::from("SOLTrader"))
+            .unwrap();
+        let mut good_to_sell = Good::new(kind, qty);
+        let sell_result = mrk_bind.borrow_mut().sell(token, &mut good_to_sell);
+        assert!(sell_result.is_ok());
     }
 }
 
@@ -199,7 +239,11 @@ mod trader_tests {
         let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
         assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
 
-        let my_m = "PSE_Market";
+        // let my_m = "PSE_Market";
+        // let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
+        // assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
+
+        let my_m = "SOL";
         let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
         assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
     }
