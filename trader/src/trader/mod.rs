@@ -196,12 +196,23 @@ impl SOLTrader {
             .unwrap();
 
         //split the cash!
-        let mut cash = self.goods.get_mut(&DEFAULT_GOOD_KIND).unwrap().split(bid).unwrap();
+        let mut cash = self
+            .goods
+            .get_mut(&DEFAULT_GOOD_KIND)
+            .unwrap()
+            .split(bid)
+            .unwrap();
 
         let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
 
         //add the good locally
-        let mut cash = self.goods.get_mut(&kind).unwrap().merge(buy_result.unwrap());
+        let mut cash = self
+            .goods
+            .get_mut(&kind)
+            .unwrap()
+            .merge(buy_result.unwrap());
+
+        println!("\n Bought from {} {} of {}", name, qty, kind);
     }
 
     pub fn sell_to_market(&mut self, name: String, kind: GoodKind, qty: f32) {
@@ -220,9 +231,13 @@ impl SOLTrader {
         let sell_result = mrk_bind.borrow_mut().sell(token, &mut good_to_sell);
 
         //get the cash
-        let mut cash = self.goods.get_mut(&DEFAULT_GOOD_KIND).unwrap().merge(sell_result.unwrap());
+        let mut cash = self
+            .goods
+            .get_mut(&DEFAULT_GOOD_KIND)
+            .unwrap()
+            .merge(sell_result.unwrap());
 
-
+        println!("\n Sold to {} {} of {}", name, qty, kind);
     }
 }
 
