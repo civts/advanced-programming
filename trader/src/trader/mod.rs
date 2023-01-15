@@ -1,7 +1,7 @@
 use bfb::bfb_market::Bfb;
-use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use core::borrow;
 use dogemarket::dogemarket::DogeMarket;
+use market_sol::SOLMarket;
 use rand::Rng;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -10,12 +10,12 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::string::ToString;
 use unitn_market_2022::event::wrapper::NotifiableMarketWrapper;
+use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::{GoodKind, GoodKind::*};
 use unitn_market_2022::market::Market;
 use unitn_market_2022::wait_one_day;
 use Pizza_Stock_Exchange_Market::PSE_Market;
-use market_sol::SOLMarket;
 
 const KINDS: [GoodKind; 4] = [EUR, USD, YEN, YUAN];
 const TRADER_NAME: &str = "SOLTrader";
@@ -29,7 +29,7 @@ pub struct SOLTrader {
 
 impl SOLTrader {
     pub fn new() -> Self {
-        let goods: HashMap<GoodKind, Good> = KINDS
+        let mut goods: HashMap<GoodKind, Good> = KINDS
             .iter()
             .map(|k| {
                 (
@@ -38,7 +38,7 @@ impl SOLTrader {
                 )
             })
             .collect();
-        let markets = [
+        let mut markets = [
             DogeMarket::new_random(),
             Bfb::new_random(),
             PSE_Market::new_random(),
@@ -52,7 +52,7 @@ impl SOLTrader {
     }
 
     pub fn new_with_quantities(eur: f32, usd: f32, yen: f32, yuan: f32) -> Self {
-        let goods: HashMap<GoodKind, Good> = KINDS
+        let mut goods: HashMap<GoodKind, Good> = KINDS
             .iter()
             .map(|k| match k {
                 EUR => (*k, Good::new(*k, eur)),
@@ -61,7 +61,7 @@ impl SOLTrader {
                 YUAN => (*k, Good::new(*k, yuan)),
             })
             .collect();
-        let markets = [
+        let mut markets = [
             DogeMarket::new_random(),
             Bfb::new_random(),
             SOLMarket::new_random(),
@@ -180,45 +180,49 @@ impl SOLTrader {
         //wait one day was done on the mrkt binds -> Rc<Refcell<dyn market>>
         wait_one_day!(&self.markets[0], &self.markets[1]);
         //don't use wait one day on pizza stocck market
-        
     }
 
-    pub fn buy_from_market(&self, name:String, kind: GoodKind, qty: f32){
-        let mrk_bind = self.get_market_by_name(name.clone()).unwrap();
+    //i'm still assuming that i have enough cash
+    // TODO:
+    // ADD ERRORS!
+    //
+    pub fn buy_from_market(&mut self, name: String, kind: GoodKind, qty: f32) {
+        let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
 
-        let bid = mrk_bind
-            .borrow()
-            .get_buy_price(kind, qty)
-            .ok()
-            .unwrap();
+        let bid = mrk_bind.borrow().get_buy_price(kind, qty).ok().unwrap();
         let token = mrk_bind
             .borrow_mut()
             .lock_buy(kind, qty, bid, String::from("SOLTrader"))
             .unwrap();
 
         //split the cash!
-        let mut cash = Good::new(DEFAULT_GOOD_KIND, bid);
+        let mut cash = self.goods.get_mut(&DEFAULT_GOOD_KIND).unwrap().split(bid).unwrap();
+
         let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
 
         //add the good locally
+        let mut cash = self.goods.get_mut(&kind).unwrap().merge(buy_result.unwrap());
     }
 
-    pub fn sell_to_market(&self, name:String, kind: GoodKind, qty: f32){
-        let mrk_bind = self.get_market_by_name(name.clone()).unwrap();
+    pub fn sell_to_market(&mut self, name: String, kind: GoodKind, qty: f32) {
+        let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
 
         //sell the good
-        let offer = mrk_bind
-            .borrow()
-            .get_sell_price(kind, qty)
-            .ok()
-            .unwrap();
+        let offer = mrk_bind.borrow().get_sell_price(kind, qty).ok().unwrap();
         let token = mrk_bind
             .borrow_mut()
             .lock_sell(kind, qty, offer, String::from("SOLTrader"))
             .unwrap();
-        let mut good_to_sell = Good::new(kind, qty);
+
+        //split the good
+        let mut good_to_sell = self.goods.get_mut(&kind).unwrap().split(qty).unwrap();
+
         let sell_result = mrk_bind.borrow_mut().sell(token, &mut good_to_sell);
-        assert!(sell_result.is_ok());
+
+        //get the cash
+        let mut cash = self.goods.get_mut(&DEFAULT_GOOD_KIND).unwrap().merge(sell_result.unwrap());
+
+
     }
 }
 

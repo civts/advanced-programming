@@ -9,6 +9,10 @@ use std::{thread, time};
 use trader::trader::SOLTrader;
 use unitn_market_2022::{good::good_kind::GoodKind, wait_one_day};
 
+//NOTES
+// TRADER OBJECT manages trader quantities (default or other init) and the markets (methods to read the markets, trade with the markets)
+// MAIN manages history of prices, history display, next choices (can puut into separate objects later)
+
 pub fn main() {
     let mut history_buy: Vec<HashMap<String, HashMap<GoodKind, f32>>> = Vec::new();
     let mut history_sell: Vec<HashMap<String, HashMap<GoodKind, f32>>> = Vec::new();
@@ -26,7 +30,7 @@ pub fn main() {
 
     //trader main loop, each loop a different trade
     for _ in 0..3 {
-        make_trade(&trader);
+        make_trade(&mut trader);
 
         show_delta();
 
@@ -37,9 +41,11 @@ pub fn main() {
         println!("\n{:?}", d);
 
         // thread::sleep(time::Duration::from_secs(5))
+        trader.show_all_self_quantities();
+
     }
     for _ in 0..3 {
-        make_sell(&trader);
+        make_sell(&mut trader);
 
         show_delta();
 
@@ -49,12 +55,14 @@ pub fn main() {
         let d = get_delta_last_day(history_buy.clone()).unwrap();
         println!("\n{:?}", d);
 
+        // trader.show_all_self_quantities();
+        // trader.show_all_market_info();
         // thread::sleep(time::Duration::from_secs(5))
     }
 }
 
 //here we can implement the stategy of the trader
-pub fn make_trade(trader: &SOLTrader) {
+pub fn make_trade(trader: &mut SOLTrader) {
     //select next trade partner
     let name = "DogeMarket";
     //select next good
@@ -65,7 +73,7 @@ pub fn make_trade(trader: &SOLTrader) {
     trader.buy_from_market(name.to_owned(), kind, qty)
 }
 
-pub fn make_sell(trader: &SOLTrader) {
+pub fn make_sell(trader: &mut SOLTrader) {
     //select next trade partner
     let name = "DogeMarket";
     //select next good
@@ -76,7 +84,7 @@ pub fn make_sell(trader: &SOLTrader) {
     trader.sell_to_market(name.to_owned(), kind, qty)
 }
 
-pub fn fake_trade(trader: &SOLTrader){
+pub fn fake_trade(trader: &SOLTrader) {
     trader.all_wait_one_day();
 }
 
@@ -95,7 +103,6 @@ fn get_delta_last_day(
             let mut tmp: HashMap<GoodKind, f32> = HashMap::new();
 
             for (good, rate) in abc {
-                // let acbabca = rate-yesterday[&name][&good];
                 tmp.insert(good.clone(), rate - yesterday[&name][&good]);
             }
 
