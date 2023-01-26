@@ -21,7 +21,6 @@ impl SOLMarket {
     pub(crate) fn write_to_file(&self) {
         match &self.meta.file_path {
             Some(pts) => {
-                println!("Writing market info to file 📝");
                 let path = Path::new(pts);
                 let exists = Path::exists(path);
                 //If needed, create target file
@@ -58,9 +57,7 @@ impl SOLMarket {
                     }
                 }
             }
-            None => {
-                println!("Not writing the market info to file");
-            }
+            None => {}
         }
     }
 
