@@ -74,7 +74,7 @@ pub fn make_trade_all_random(trader: &mut SOLTrader) {
     use rand::Rng;
     let mut rng = rand::thread_rng();
 
-    let market_names = ["DogeMarket", "SOL", "Baku stock exchange"];
+    let market_names = ["DogeMarket", "Pizza Stock Exchange", "Baku stock exchange"];
     //select next trade partner
     let name = market_names[rng.gen_range(0..market_names.len())];
 
