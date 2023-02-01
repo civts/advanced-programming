@@ -204,7 +204,7 @@ impl SOLTrader {
             .unwrap();
 
         let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
-
+        
         //add the good locally
         let mut cash = self
             .goods
