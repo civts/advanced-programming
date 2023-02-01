@@ -9,13 +9,13 @@ impl Logger {
     pub fn log_lock(
         &self,
         token: String,
-        goodKind: String,
+        good_kind: String,
         quant: f32,
         amount: f32,
-        operationType: String,
+        operation_type: String,
     ) {
         self.strategy
-            .log_lock(token, goodKind, quant, amount, operationType)
+            .log_lock(token, good_kind, quant, amount, operation_type)
     }
 
     pub fn log_trade(
