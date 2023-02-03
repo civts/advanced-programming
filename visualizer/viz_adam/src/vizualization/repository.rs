@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use thiserror::Error;
 
-const DB_PATH: &str = "./data/trade.json";
-const LOCK_PATH: &str = "./data/lock.json";
+const DB_PATH: &str = "../../data/trade.json";
+const LOCK_PATH: &str = "../../data/lock.json";
 
 
 #[derive(Error, Debug)]

@@ -3,14 +3,11 @@
 //take the markets out of the trader into a separate playground object?
 //maybe too complicated
 
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use trader::trader::SOLTrader;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::{good::good_kind::GoodKind};
-use vizualization::viz;
-
-mod vizualization;
 
 //NOTES
 // TRADER OBJECT manages trader quantities (default or other init) and the markets (methods to read the markets, trade with the markets)
@@ -38,7 +35,6 @@ pub fn main() {
     // do_nothing_strategy(&mut trader, 6);
     // do_nothing_strategy(&mut trader, 6);
     basic_best_trade_strategy(&mut trader, 6);
-    let _r = viz();
 }
 
 fn basic_all_random_strategy(trader: &mut SOLTrader, iterations: u32) {
