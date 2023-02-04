@@ -107,10 +107,6 @@ impl SOLTrader {
         print!("\n");
     }
 
-    pub fn show_all_buy_prices(&self) {}
-
-    pub fn show_all_sell_prices(&self) {}
-
     pub fn show_all_self_quantities(&self) {
         println!("Trader stocks");
         for (_, qty) in self.goods.iter() {
@@ -386,13 +382,13 @@ mod trader_tests {
         let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
         assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
 
-        // let my_m = "PSE_Market";
-        // let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
-        // assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
-
-        let my_m = "SOL";
+        let my_m = "PSE_Market";
         let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
         assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
+
+        // let my_m = "SOL";
+        // let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
+        // assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
     }
 
     #[test]

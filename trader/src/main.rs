@@ -9,6 +9,7 @@ use trader::trader::SOLTrader;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::{good::good_kind::GoodKind};
 
+
 //NOTES
 // TRADER OBJECT manages trader quantities (default or other init) and the markets (methods to read the markets, trade with the markets)
 // MAIN manages history of prices, history display, next choices (can puut into separate objects later)
@@ -29,6 +30,7 @@ pub fn main() {
     trader.show_all_self_quantities();
 
     trader.show_all_market_info();
+
 
     //trader main loop, each loop a different trade
     // basic_all_random_strategy(&mut trader, 6);
@@ -74,7 +76,7 @@ pub fn make_trade_all_random(trader: &mut SOLTrader) {
     use rand::Rng;
     let mut rng = rand::thread_rng();
 
-    let market_names = ["DogeMarket", "Pizza Stock Exchange", "Baku stock exchange"];
+    let market_names = ["DogeMarket", "PSE_Market", "Baku stock exchange"];
     //select next trade partner
     let name = market_names[rng.gen_range(0..market_names.len())];
 
@@ -122,16 +124,22 @@ fn basic_best_trade_strategy(trader: &mut SOLTrader, iterations: u32) {
         buy_deltas.push(get_delta_last_day(history_buy.clone()).unwrap());
         sell_deltas.push(get_delta_last_day(history_sell.clone()).unwrap());
 
-        println!("\nBUY DELTAS\n{:?}", buy_deltas[buy_deltas.len() - 1]);
-        println!("\nSELL DELTAS\n{:?}", sell_deltas[sell_deltas.len() - 1]);
+        // println!("\nBUY DELTAS\n{:?}", buy_deltas[buy_deltas.len() - 1]);
+        // println!("\nSELL DELTAS\n{:?}", sell_deltas[sell_deltas.len() - 1]);
 
-        let (a, b) = get_best_buy_delta(&buy_deltas);
-        println!("\n today's best BUY delta is {} {}", a, b);
-        let (a, b) = get_best_sell_delta(&sell_deltas);
-        println!("\n today's best SELL delta is {} {}", a, b);
+        // let (a, b) = get_best_buy_delta(&buy_deltas);
+        // println!("\n today's best BUY delta is {} {}", a, b);
+        // let (a, b) = get_best_sell_delta(&sell_deltas);
+        // println!("\n today's best SELL delta is {} {}", a, b);
 
         // thread::sleep(time::Duration::from_secs(5))
         trader.show_all_self_quantities();
+
+        // println!("history\n{:?}",history_buy);
+        // println!("average");
+        // println!("{:?}", get_historical_average(&history_buy));
+        // println!("delta from history avg");
+        // println!("{:?}", get_delta_from_historical_avg(&history_buy));
     }
 }
 
@@ -204,6 +212,52 @@ fn get_delta_last_day(
             }
 
             delta.insert(name.clone(), tmp);
+        }
+
+        return Some(delta);
+    }
+    None
+}
+
+
+fn get_historical_average(h: &History) -> Option<HashMap<String, HashMap<GoodKind, f32>>>{
+    if h.len() >= 2 {
+        let mut avg: HashMap<String, HashMap<GoodKind, f32>> = h[0].clone();
+        let days = h.len() as f32;
+
+        for day in h[1..].iter(){
+            for (market, rates) in day{
+                for (good, single_rate) in rates{
+                    let tmp = avg.get_mut(&market[..]).unwrap().get_mut(good).unwrap();
+                    *tmp += *single_rate;
+                }
+            }
+        }
+
+        for (market, rates) in avg.clone(){
+            for (good, sum) in rates{
+                let tmp = avg.get_mut(&market[..]).unwrap().get_mut(&good).unwrap();
+                *tmp /= days;
+            }
+        }
+
+        return Some(avg)
+    }
+    None
+}
+
+
+fn get_delta_from_historical_avg(h: &History) -> Option<HashMap<String, HashMap<GoodKind, f32>>>{
+    if h.len() >= 2 {
+        let mut delta = h[h.len()-1].clone(); //assign last day
+        let mut avg = get_historical_average(h).unwrap();
+
+        for (market, rates) in avg.clone(){
+            for (good, sum) in rates{
+                let tmp = delta.get_mut(&market[..]).unwrap().get_mut(&good).unwrap();
+                let tmp2 = avg.get_mut(&market[..]).unwrap().get_mut(&good).unwrap();
+                *tmp = tmp.abs() - tmp2.abs();
+            }
         }
 
         return Some(delta);
