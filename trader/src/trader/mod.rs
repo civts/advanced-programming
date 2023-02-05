@@ -172,6 +172,22 @@ impl SOLTrader {
         ret
     }
 
+    pub fn get_cur_good_qty(&self, g: &GoodKind) -> f32 {
+        self.goods[g].get_qty()
+    }
+
+    pub fn get_cur_good_qty_from_market(&self, g: &GoodKind, m: String) -> f32 {
+        let markt_bind = self.get_market_by_name(m).unwrap();
+        let goods = markt_bind.borrow().get_goods();
+        let mut ret = 0.0;
+        for i in 0..goods.len() {
+            if goods[i].good_kind == *g {
+                ret = goods[i].quantity;
+            }
+        }
+        ret
+    }
+
     pub fn all_wait_one_day(&self) {
         //wait one day was done on the mrkt binds -> Rc<Refcell<dyn market>>
         wait_one_day!(&self.markets[0], &self.markets[1]);

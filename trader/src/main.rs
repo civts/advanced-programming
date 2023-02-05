@@ -238,7 +238,7 @@ fn make_best_historical_trade(
     let (kind_sell, name_sell, s_delta) = get_best_sell_delta_from_historical_avg(h_sell);
 
     //select next quantity
-    let qty = 500.0;
+    let std_qty = 10.0;
     let threshold = 1.05;
 
     //new condition: if the delta is too small, don't make any trade
@@ -250,9 +250,44 @@ fn make_best_historical_trade(
 
         if b_delta.abs() > s_delta {
             println!("buy {} {} {}", b_delta, name_buy, kind_buy);
+
+            let mut qty = {
+                if b_delta > 5.0 {
+                    std_qty * b_delta
+                } else if b_delta > 1.0 {
+                    std_qty * b_delta.powi(2).round()
+                } else {
+                    std_qty
+                }
+            };
+
+            let upperbound = trader.get_cur_good_qty_from_market(&kind_buy, name_buy.clone()) / 2.0; //upperbound for buy is the market qty
+            if qty > upperbound {
+                qty = upperbound;
+            }
+
+            println!("qty {}", qty);
             trader.buy_from_market(name_buy.to_owned(), kind_buy, qty);
         } else {
             println!("sell {} {} {}", s_delta, name_sell, kind_sell);
+
+            let mut qty = {
+                if s_delta > 5.0 {
+                    std_qty * s_delta
+                } else if s_delta > 1.0 {
+                    std_qty * s_delta.powi(2).round()
+                } else {
+                    std_qty
+                }
+            };
+            //upperbound for sell is my own qty
+            let upperbound = trader.get_cur_good_qty(&kind_sell) / 2.0;
+            if qty > upperbound {
+                qty = upperbound;
+            }
+
+            println!("qty {}", qty);
+
             trader.sell_to_market(name_sell.to_owned(), kind_sell, qty);
         }
     } else {
