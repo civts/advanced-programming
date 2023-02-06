@@ -26,3 +26,4 @@ Cargo.lock
 #Log file
 log_*.txt
 *.log
+*.pdf
