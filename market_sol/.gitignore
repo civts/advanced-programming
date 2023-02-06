@@ -1,0 +1,5 @@
+# Test log files
+*.sol
+
+# Include Cargo.lock, this is a library crate
+!Cargo.lock
