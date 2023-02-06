@@ -84,7 +84,7 @@ impl Season {
     ) -> Self {
         let duration = rng.gen_range(MIN_SEASON_LENGTH..=MAX_SEASON_LENGTH);
         let intensity = gauss.sample(rng) as f32;
-        let change_percentage = intensity.clamp(-max_decrease, max_increase) as f32;
+        let change_percentage = intensity.clamp(-max_decrease, max_increase);
         let change = starting_price * change_percentage;
         let final_price = starting_price + change;
         let final_price = f32::max(final_price, 0.0);
