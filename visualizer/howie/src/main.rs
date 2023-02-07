@@ -3,81 +3,34 @@
    1. Get a raw terminal with crosseterm ✅
    1. Let the user quit with q ✅
    1. Let the user quit with ctrl+c ✅
-   1. Loop displaying the data as it comes
+   1. Loop displaying the data as it comes ✅
+   1. Display the data as it comes in a stream
+   1. Make statistics over past data to view trends
    1. Add a graphical help menu
-   1. Let the user change views
+   1. Let the user change "views"
 */
 
-use crate::{
-    cleanup::CleanUp,
-    constants::{MARGIN_HORIZONTAL, MARGIN_VERTICAL, REFRESH_RATE_MILLISECONDS},
-};
-use crossterm::{
-    cursor,
-    event::{self, Event, KeyCode, KeyEvent},
-    terminal::{self, ClearType},
-    QueueableCommand,
-};
-use ipc_utils::IpcUtils;
-use std::{io::stdout, time::Duration};
+use cleanup::CleanUp;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use howie::App;
+use std::io;
+use tui::{backend::CrosstermBackend, Terminal};
 
 mod cleanup;
 mod constants;
+mod howie;
+mod sample;
 
 fn main() {
+    enable_raw_mode().expect("Can enable raw mode");
     let _clean_up = CleanUp;
-    terminal::enable_raw_mode().expect("Can turn on Raw mode");
-    let mut stdout = stdout();
 
-    let mut rows: u16 = 40;
-    let mut columns: u16 = 80;
+    let stdout = io::stdout();
+    let backend = CrosstermBackend::new(stdout);
+    let terminal = Terminal::new(backend).expect("Can get a terminal");
 
-    loop {
-        update_terminal_size(&mut rows, &mut columns);
+    let mut app = App::new();
+    app.run(terminal);
 
-        // Check for events in the terminal
-        let is_a_new_event_available =
-            event::poll(Duration::from_millis(REFRESH_RATE_MILLISECONDS))
-                .expect("Can poll for input");
-        if is_a_new_event_available {
-            match event::read().expect("Can get next event") {
-                Event::Key(KeyEvent {
-                    code: KeyCode::Char('q'),
-                    modifiers: event::KeyModifiers::NONE,
-                    ..
-                })
-                | Event::Key(KeyEvent {
-                    code: KeyCode::Char('c'),
-                    modifiers: event::KeyModifiers::CONTROL,
-                    ..
-                }) => {
-                    println!("Farewell 👋\r");
-                    break;
-                }
-                _ => {}
-            }
-        }
-
-        // Place the cursor on the last saved position
-        // stdout
-        //     .queue(cursor::RestorePosition)
-        //     .expect("Should have been able to restore the cursor position");
-        // Place the cursor back on the top left
-        stdout
-            .queue(cursor::MoveTo(0, 0))
-            .expect("Can put the cursor on the upper left");
-        stdout
-            .queue(terminal::Clear(ClearType::All))
-            .expect("Can queue clear command");
-        let event = IpcUtils::receive();
-        println!("Got a new event: {:?}\r", event);
-        println!("Terminal is {:?} by {:?}\r", rows, columns);
-    }
-}
-
-// Would have used crossterm::event::Event::Resize, but that did not work
-fn update_terminal_size(rows: &mut u16, columns: &mut u16) {
-    let (new_columns, new_rows) = terminal::size().expect("Can get the terminal size");
-    *rows = new_rows - MARGIN_HORIZONTAL;
-    *columns = new_columns - MARGIN_VERTICAL;
+    disable_raw_mode().expect("Can disable raw mode");
 }
