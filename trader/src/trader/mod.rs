@@ -1,6 +1,6 @@
 mod arbitrage;
+pub mod arbitrages;
 
-use crate::trader::arbitrage::Arbitrage;
 use bfb::bfb_market::Bfb;
 use dogemarket::dogemarket::DogeMarket;
 use rand::Rng;
@@ -255,209 +255,40 @@ impl SOLTrader {
     /// Get the maximum amount of a good the trader can buy from a market according to
     ///     - The amount of cash the trader has
     ///     - The amount of good the market has
-    fn maximum_buy(&self, kind: &GoodKind, market_name: &String) -> Result<f32, MarketGetterError> {
+    fn max_buy(&self, kind: &GoodKind, market_name: &String) -> Result<f32, MarketGetterError> {
         let cash_qty = self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty();
         let market = self.get_market_by_name(market_name.clone()).unwrap();
         // Get rate by using get_buy_price because some market give the prices in EUR -> GOOD and others in GOOD -> EUR
-        let rate = market.borrow().get_buy_price(kind.clone(), 1f32)? * 1.05; // Overestimate the rate by 5%
-        let market_good_qty = market
-            .borrow()
-            .get_goods()
-            .iter()
-            .find(|&g| g.good_kind.eq(&kind))
-            .unwrap()
-            .quantity;
+        let market_good_qty = self.get_cur_good_qty_from_market(&kind, market_name.clone());
+        let rate = market.borrow().get_buy_price(kind.clone(), 1f32)?;
         let trader_max = cash_qty / rate;
-        Ok(market_good_qty.min(trader_max))
+        Ok(market_good_qty.min(trader_max) * 0.95)
     }
 
     /// Get the maximum amount of a good the trader can sell to a market according to
     ///     - The amount of good the trader has
     ///     - The amount of cash the market has
-    fn maximum_sell(
-        &self,
-        kind: &GoodKind,
-        market_name: &String,
-    ) -> Result<f32, MarketGetterError> {
+    fn max_sell(&self, kind: &GoodKind, market_name: &String) -> Result<f32, MarketGetterError> {
         let good_qty = self.goods.get(&kind).unwrap().get_qty();
         let market = self.get_market_by_name(market_name.clone()).unwrap();
         // Get rate by using get_sell_price because some market give the prices in EUR -> GOOD and others in GOOD -> EUR
-        let rate = market.borrow().get_sell_price(kind.clone(), 1f32)? * 1.05; // Overestimate the rate by 5%
-        let market_cash_qty = market
-            .borrow()
-            .get_goods()
-            .iter()
-            .find(|&g| g.good_kind.eq(&DEFAULT_GOOD_KIND))
-            .unwrap()
-            .quantity;
+        let rate = market.borrow().get_sell_price(kind.clone(), 1f32)?;
+        let market_cash_qty = self.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, market_name.clone());
         let market_max = market_cash_qty / rate;
-        Ok(market_max.min(good_qty))
+        Ok(market_max.min(good_qty) * 0.95)
     }
 
-    /// Find arbitrage opportunities from every markets
-    /// Return a list of arbitrages opportunities
-    fn find_arbitrages(&self) -> Vec<Arbitrage> {
-        let mut arbitrages: Vec<Arbitrage> = Vec::new();
-        for (i1, buy_market) in self.markets.iter().enumerate() {
-            for (i2, sell_market) in self.markets.iter().enumerate() {
-                if i1 == i2 {
-                    // If same market, pass
-                    continue;
-                }
-                let buy_market_name = buy_market.borrow().get_name().to_string();
-                let sell_market_name = sell_market.borrow().get_name().to_string();
-                for kind in &KINDS {
-                    if kind.eq(&DEFAULT_GOOD_KIND) {
-                        continue;
-                    }
-
-                    // Get the maximum qty the trader and markets can trade
-                    let max_buy_qty = self.maximum_buy(&kind, &buy_market_name).unwrap_or(0f32);
-                    let max_sell_qty = self.maximum_sell(&kind, &sell_market_name).unwrap_or(0f32);
-                    let max_qty = max_buy_qty.min(max_sell_qty) * 0.9; // 90% just in case the market wants to keep a reserve
-
-                    // Get the Buy and Sell prices
-                    // If an error occurs, we set the buy price at the max and the sell price at the min possible
-                    let buy_price = buy_market
-                        .borrow()
-                        .get_buy_price(kind.clone(), max_qty)
-                        .unwrap_or(f32::MAX);
-                    let sell_price = sell_market
-                        .borrow()
-                        .get_sell_price(kind.clone(), max_qty)
-                        .unwrap_or(f32::MIN_POSITIVE);
-
-                    let benefits = sell_price - buy_price;
-                    let margin = benefits / buy_price;
-
-                    // Check if we have an arbitrage
-                    if sell_price > buy_price && buy_price > 0f32 && sell_price > 0f32 {
-                        arbitrages.push(Arbitrage::new(
-                            buy_market_name.clone(),
-                            sell_market_name.clone(),
-                            kind.clone(),
-                            benefits,
-                            margin,
-                            max_qty,
-                        ));
-                    }
-                }
-            }
-        }
-        arbitrages
-    }
-
-    /// This method exploit a weakness of the PSE market to find an arbitrage opportunity
-    ///
-    /// Weakness of PSE market:
-    ///     When lock buying a null quantity of goods on the market the prices starts to fluctuate a lot after some time,
-    ///     giving us the opportunity to make some benefits with an arbitrage method.
-    pub(crate) fn exploit_pse_market(&mut self) {
-        let pse = self
-            .markets
-            .iter()
-            .find(|&m| m.borrow().get_name().eq(&"PSE_Market".to_string()))
-            .unwrap();
-        for d in 0..=1500 {
-            // TODO: Determine how many days we want to trade
-            // Make the price fluctuate by lock buying a null quantity
-            for k in &KINDS {
-                if k.eq(&EUR) {
-                    continue;
-                }
-                pse.borrow_mut()
-                    .lock_buy(k.clone(), 0f32, f32::MAX, self.name.clone())
-                    .unwrap();
-            }
-
-            // Get all the arbitrages opportunities and take the worthiest one
-            let mut arbitrages = self.find_arbitrages();
-            arbitrages.sort_by(|a1, a2| a1.benefits.total_cmp(&a2.benefits));
-            let highest_benefits_arbitrage = arbitrages.pop();
-
-            if let Some(arbitrage) = highest_benefits_arbitrage {
-                // We are not playing for peanuts
-                if arbitrage.benefits < 10_000f32 || arbitrage.margin < 0.1 {
-                    continue;
-                }
-
-                println!("{d}\tFound a worthy arbitrage {:?}", arbitrage);
-
-                let buy_market_name = arbitrage.buying_market_name;
-                let sell_market_name = arbitrage.selling_market_name;
-                let kind = arbitrage.good_kind;
-                let qty = arbitrage.max_qty;
-
-                let buy_market = self
-                    .markets
-                    .iter()
-                    .find(|&m| m.borrow().get_name().eq(&buy_market_name.clone()))
-                    .unwrap();
-                let sell_market = self
-                    .markets
-                    .iter()
-                    .find(|&m| m.borrow().get_name().eq(&sell_market_name.clone()))
-                    .unwrap();
-
-                // Get bid & offer (-/+5% Because some markets does not integrate their margin in these methods)
-                let bid = buy_market
-                    .borrow()
-                    .get_buy_price(kind.clone(), qty)
-                    .unwrap()
-                    * 1.05;
-                let offer = sell_market
-                    .borrow()
-                    .get_sell_price(kind.clone(), qty)
-                    .unwrap()
-                    * 0.95;
-
-                println!(
-                    "BUY \t{} {}\tfrom {:<20}\tat {}",
-                    qty, kind, buy_market_name, bid
-                );
-                println!(
-                    "SELL\t{} {}\tto   {:<20}\tat {}\n",
-                    qty, kind, sell_market_name, offer
-                );
-
-                let buy_token = buy_market
-                    .borrow_mut()
-                    .lock_buy(kind, qty, bid, self.name.clone())
-                    .unwrap();
-                let sell_token = sell_market
-                    .borrow_mut()
-                    .lock_sell(kind, qty, offer, self.name.clone())
-                    .unwrap();
-
-                let recv_good = buy_market
-                    .borrow_mut()
-                    .buy(buy_token, self.goods.get_mut(&DEFAULT_GOOD_KIND).unwrap())
-                    .unwrap();
-                let recv_cash = sell_market
-                    .borrow_mut()
-                    .sell(
-                        sell_token,
-                        self.goods.get_mut(&arbitrage.good_kind).unwrap(),
-                    )
-                    .unwrap();
-
-                self.goods
-                    .get_mut(&DEFAULT_GOOD_KIND)
-                    .unwrap()
-                    .merge(recv_cash)
-                    .unwrap();
-                self.goods
-                    .get_mut(&arbitrage.good_kind)
-                    .unwrap()
-                    .merge(recv_good)
-                    .unwrap();
-            }
-        }
+    /// Retrieve the current worth of the trader in DEFAULT_GOOD (EUR)
+    pub fn get_current_worth(&self) -> f32 {
+        self.goods.iter().fold(0f32, |acc, (_, good)| {
+            acc + (good.get_qty() / good.get_kind().get_default_exchange_rate())
+        })
     }
 }
 
 #[cfg(test)]
 mod trader_tests {
+    use crate::trader::arbitrages::Arbitrages;
     use crate::trader::SOLTrader;
     use std::rc::Rc;
 
@@ -484,18 +315,19 @@ mod trader_tests {
 
     #[test]
     fn exploit_pse() {
-        let mut trader = SOLTrader::new();
+        let mut trader: SOLTrader = SOLTrader::new();
+
         trader.subscribe_markets_to_one_another();
-        let value_before = trader.goods.iter().fold(0f32, |acc, (_, good)| {
-            acc + (good.get_qty() / good.get_kind().get_default_exchange_rate())
-        });
-        trader.exploit_pse_market();
-        let value_after = trader.goods.iter().fold(0f32, |acc, (_, good)| {
-            acc + (good.get_qty() / good.get_kind().get_default_exchange_rate())
-        });
+        let value_before = trader.get_current_worth();
+        for _ in 0..366 {
+            let mut arbitrages = Arbitrages::find_arbitrages(&trader);
+            //println!("DAY {d:02}");
+            arbitrages.exploit_pse_market(&mut trader);
+        }
+        let value_after = trader.get_current_worth();
         let profit = value_after - value_before;
         let margin_percentage = (profit / value_before) * 100f32;
-        assert!(value_after > value_before);
+        assert!(value_after > value_before, "Trader is not profitable");
         println!("VALUE BEFORE: {value_before}\nVALUE AFTER: {value_after}\nPROFIT: {margin_percentage}%");
     }
 

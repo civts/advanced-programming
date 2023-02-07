@@ -4,10 +4,10 @@
 //maybe too complicated
 
 use std::collections::HashMap;
-
 use trader::trader::SOLTrader;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good_kind::GoodKind;
+use trader::trader::arbitrages::Arbitrages;
 
 //NOTES
 // TRADER OBJECT manages trader quantities (default or other init) and the markets (methods to read the markets, trade with the markets)
@@ -36,6 +36,19 @@ pub fn main() {
     // do_nothing_strategy(&mut trader, 6);
     // basic_best_trade_strategy(&mut trader, 6);
     gianluca_strategy(&mut trader, 20);
+    farouk_strategy(&mut trader, 91);
+}
+
+fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
+    let worth_before = trader.get_current_worth();
+    for _ in 0..iterations {
+        let mut arbitrages = Arbitrages::find_arbitrages(trader);
+        arbitrages.exploit_pse_market(trader);
+    }
+    let worth_after = trader.get_current_worth();
+    let profit = worth_after - worth_before;
+    let margin_percentage = (profit / worth_before) * 100f32;
+    println!("Trader's worth before: {worth_before}\nAfter: {worth_after}\nProfit: {margin_percentage}%");
 }
 
 fn basic_all_random_strategy(trader: &mut SOLTrader, iterations: u32) {
