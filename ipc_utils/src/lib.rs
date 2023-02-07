@@ -1,12 +1,11 @@
 use nix::{sys::stat, unistd};
 use std::{fs, path::PathBuf};
-use trading_event::TradingEvent;
 
-pub mod trader_state;
-pub mod trading_event;
-pub mod trading_event_details;
+pub mod domain;
+pub mod receive;
+pub mod send;
 
-pub(crate) const PIPE_PATH: &str = "/tmp/fifo";
+pub(crate) const PIPE_PATH: &str = "/tmp/sol_fifo_pipe";
 
 /// Allows to send and receive info amongst processes.
 /// As of now, the operations are **blocking**, meaning that the sender thread
@@ -39,21 +38,10 @@ impl IpcUtils {
             .expect("Should have been able to create the pipe.");
         IpcUtils { pipe_path: pb }
     }
+}
 
-    /// Send a message to the other process
-    pub fn send(&self, event: TradingEvent) {
-        let message =
-            serde_json::to_string(&event).expect("Should have been able to serialize the message");
-        fs::write(&self.pipe_path, message).expect("Should have been able to write to the pipe");
-    }
-
-    /// Receive a message, returned as a String
-    pub fn receive() -> TradingEvent {
-        let read_bytes = fs::read(PathBuf::from(PIPE_PATH))
-            .expect("Should have been able to read from the pipe");
-        let message =
-            String::from_utf8(read_bytes).expect("Should have gotten a valid UTF8 character");
-        serde_json::from_str(message.as_str())
-            .expect("Message is a valid serialization of a TradingEvent")
+impl Default for IpcUtils {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,4 +1,4 @@
-use crate::{trader_state::TraderState, trading_event_details::TradingEventDetails};
+use super::{trader_state::TraderState, trading_event_details::TradingEventDetails};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
