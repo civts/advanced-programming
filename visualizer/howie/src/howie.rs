@@ -1,5 +1,5 @@
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
-use ipc_utils::IpcUtils;
+use ipc_utils::Receiver;
 use std::time::Duration;
 use tui::{
     backend::Backend,
@@ -11,11 +11,15 @@ use tui::{
 
 use crate::constants::REFRESH_RATE_MILLISECONDS;
 
-pub(crate) struct App {}
+pub(crate) struct App {
+    receiver: Receiver,
+}
 
 impl App {
     pub(crate) fn new() -> Self {
-        App {}
+        App {
+            receiver: Receiver::new(),
+        }
     }
 
     pub(crate) fn run<B: Backend>(&mut self, mut terminal: Terminal<B>) {
@@ -58,7 +62,7 @@ impl App {
                 }
             }
 
-            let trader_event_res = IpcUtils::receive();
+            let trader_event_res = self.receiver.receive();
 
             match trader_event_res {
                 Ok(Some(trader_event)) => {
