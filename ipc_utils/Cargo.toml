@@ -1,0 +1,12 @@
+[package]
+name = "ipc_utils"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nix = "0.26.2"
+serde = "1.0.152"
+serde_json = "1.0.92"
+unitn_market_2022 = { version = "1.0.10", registry = "kellnr" }
