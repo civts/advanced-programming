@@ -2,6 +2,7 @@ pub mod domain;
 pub mod ipc_receiver;
 pub mod ipc_sender;
 
+pub use self::domain::*;
 pub use self::ipc_receiver::IPCReceiver;
 pub use self::ipc_sender::IPCSender;
 
