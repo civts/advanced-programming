@@ -10,16 +10,17 @@
    1. Let the user change "views"
 */
 
+use app::App;
 use cleanup::CleanUp;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
-use howie::App;
 use std::io;
 use tui::{backend::CrosstermBackend, Terminal};
 
+mod app;
 mod cleanup;
 mod constants;
-mod howie;
-mod sample;
+mod domain;
+mod views;
 
 fn main() {
     enable_raw_mode().expect("Can enable raw mode");
