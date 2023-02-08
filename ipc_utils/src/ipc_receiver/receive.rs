@@ -58,7 +58,10 @@ impl IPCReceiver {
 
             match thread_result {
                 ThreadResult::TimedOut(_) => Ok(None),
-                ThreadResult::Completed(result) => result,
+                ThreadResult::Completed(result) => {
+                    self.read_handle_opt = None;
+                    result
+                }
             }
         }
     }
