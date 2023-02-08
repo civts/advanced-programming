@@ -1,5 +1,5 @@
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
-use ipc_utils::Receiver;
+use ipc_utils::IPCReceiver;
 use std::time::Duration;
 use tui::{
     backend::Backend,
@@ -12,7 +12,7 @@ use tui::{
 use crate::constants::REFRESH_RATE_MILLISECONDS;
 
 pub(crate) struct App {
-    receiver: Receiver,
+    receiver: IPCReceiver,
 }
 
 // enum AppState {
@@ -25,7 +25,7 @@ pub(crate) struct App {
 impl App {
     pub(crate) fn new() -> Self {
         App {
-            receiver: Receiver::new(Duration::from_millis(REFRESH_RATE_MILLISECONDS)),
+            receiver: IPCReceiver::new(Duration::from_millis(REFRESH_RATE_MILLISECONDS)),
         }
     }
 
