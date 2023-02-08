@@ -15,10 +15,17 @@ pub(crate) struct App {
     receiver: Receiver,
 }
 
+// enum AppState {
+//     WaitingForFirstTrade,
+//     MainTradingView,
+//     HelpMenu,
+//     FarewellScreen,
+// }
+
 impl App {
     pub(crate) fn new() -> Self {
         App {
-            receiver: Receiver::new(),
+            receiver: Receiver::new(Duration::from_millis(REFRESH_RATE_MILLISECONDS)),
         }
     }
 
@@ -29,7 +36,7 @@ impl App {
                 f.render_widget(
                     Paragraph::new(
                         "Waiting for the first event ⏳\r\n\n \
-                               Start a trader",
+                               Start a trader, then press the 'R' key",
                     )
                     .alignment(Alignment::Center),
                     f.size(),
@@ -38,22 +45,28 @@ impl App {
             .expect("Can draw first frame");
 
         let mut should_clear = true;
-        let mut received_messages: i64 = 0;
+        let mut received_messages: u64 = 0;
+        let mut should_run_again = false;
         loop {
             // Check for events in the terminal
             if Self::is_a_new_event_available() {
                 // If a key was pressed
                 if let Event::Key(key) = Self::get_event() {
                     match key.modifiers {
-                        KeyModifiers::NONE => {
-                            if let KeyCode::Char('q') = key.code {
-                                Self::prepare_for_exit(terminal);
+                        KeyModifiers::NONE => match key.code {
+                            KeyCode::Char('q') => {
                                 break;
                             }
-                        }
+                            KeyCode::Char('r') => {
+                                if received_messages == 0 {
+                                    should_run_again = true;
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        },
                         KeyModifiers::CONTROL => {
                             if let KeyCode::Char('c') = key.code {
-                                Self::prepare_for_exit(terminal);
                                 break;
                             }
                         }
@@ -133,6 +146,12 @@ impl App {
                     }
                 }
             }
+        }
+        if should_run_again {
+            self.receiver.restart();
+            self.run(terminal)
+        } else {
+            Self::prepare_for_exit(terminal)
         }
     }
 

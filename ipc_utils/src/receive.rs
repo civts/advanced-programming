@@ -2,9 +2,9 @@ use crate::{domain::trading_event::TradingEvent, Receiver};
 use std::{
     fs::File,
     io::{Error, Read, Result},
+    ops::Div,
     path::PathBuf,
     thread,
-    time::Duration,
 };
 
 pub(crate) enum ThreadResult {
@@ -71,12 +71,14 @@ impl Receiver {
             Ok(None)
         })
     }
+
     fn spawn_timer(&mut self) -> u64 {
         let current_timer_number = self.timer_number;
         self.timer_number += 1;
+        let timer_duration = self.refresh_duration.div(2);
         let sender = self.sender.clone();
         thread::spawn(move || {
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(timer_duration);
             let _ = sender.send(ThreadResult::TimedOut(current_timer_number));
         });
         current_timer_number
