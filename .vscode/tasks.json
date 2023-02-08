@@ -3,11 +3,21 @@
   "tasks": [
     {
       "label": "Build and run current crate",
-      "command": "workspace=$(pwd); A=$(echo -n ${relativeFileDirname} |  awk '{sub(\"/src\",\"\", $0); print}'); cd \"${A}\"; cargo build; cd $workspace; ln \"${A}/target/debug/${A}\" tmp/program",
+      "command": "CRATE_DIR=$(echo ${relativeFileDirname} | sed 's/src.*//'); CRATE_NAME=$( cat $CRATE_DIR/Cargo.toml | grep 'name\\s*=\\s*\"' | head -n 1 | sed 's/.*=\\s*\\\"//' | sed 's/\\\"//');cd $CRATE_DIR; cargo build; ln \"${workspaceFolder}/${CRATE_DIR}target/debug/$CRATE_NAME\" ${workspaceFolder}/tmp/program",
       "type": "shell",
       "args": [],
       "presentation": {
         "reveal": "silent"
+      },
+      "linux": {
+        "options": {
+          "shell": {
+            "executable": "bash",
+            "args": [
+              "-c"
+            ]
+          }
+        }
       },
       "group": "build",
       "dependsOn": [
