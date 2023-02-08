@@ -1,7 +1,10 @@
-use crate::{domain::trading_event::TradingEvent, Sender};
 use std::{fs, io::Error};
 
-impl Sender {
+use crate::domain::trading_event::TradingEvent;
+
+use super::IPCSender;
+
+impl IPCSender {
     /// Send a message to the other process
     pub fn send(&self, event: TradingEvent) -> Result<(), Error> {
         let message = serde_json::to_string(&event)?;
