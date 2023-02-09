@@ -1,10 +1,6 @@
-use tui::{
-    backend::Backend,
-    layout::Rect,
-    style::{Color, Style},
-    widgets::Paragraph,
-    Frame,
-};
+use tui::{backend::Backend, layout::Rect, widgets::Paragraph, Frame};
+
+use crate::constants::default_style;
 
 pub(crate) fn render_stats_widget<B: Backend>(
     frame: &mut Frame<B>,
@@ -12,8 +8,7 @@ pub(crate) fn render_stats_widget<B: Backend>(
     area: Rect,
 ) {
     frame.render_widget(
-        Paragraph::new(last_event.trader_state.cash.len().to_string())
-            .style(Style::default().bg(Color::Blue)),
+        Paragraph::new(last_event.trader_state.cash.len().to_string()).style(default_style()),
         area,
     );
 }

@@ -2,9 +2,8 @@ use crate::{
     domain::app_state::AppState,
     views::{
         main_view::widgets::{
-            capital::render_capital_widget, last_event::build_latest_event_widget,
-            markets::render_market_chart, stats::render_stats_widget,
-            trader_name::render_trader_name_widget,
+            capital::render_capital_widget, markets::render_market_chart,
+            stats::render_stats_widget, trader_name::render_trader_name_widget,
         },
         utils::draw_background,
     },
@@ -15,6 +14,8 @@ use tui::{
     Frame, Terminal,
 };
 
+use self::widgets::profit_chart;
+
 mod widgets;
 pub(crate) struct MainView {}
 
@@ -24,7 +25,7 @@ impl MainView {
             .draw(|f| {
                 draw_background(f);
 
-                let last_event = build_latest_event_widget(state);
+                // let last_event = build_latest_event_widget(state);
 
                 let cell_sizes = Layout::default()
                     .direction(Direction::Horizontal)
@@ -36,26 +37,27 @@ impl MainView {
 
                 render_column_widget(state, left, f);
 
-                f.render_widget(last_event, right);
+                profit_chart::chart(f, &state.events, right);
             })
             .expect("Can draw on the terminal");
     }
 }
 
 fn render_column_widget<B: Backend>(state: &AppState, area: Rect, frame: &mut Frame<B>) {
-    let a = (area.height - 1) / 3;
+    let trader_name_height = 2;
+    let a = (area.height - trader_name_height) / 3;
     let cell_sizes = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Length(1),
-                Constraint::Min(a),
-                Constraint::Min(a),
-                Constraint::Min(a),
+                Constraint::Length(trader_name_height),
+                Constraint::Length(a),
+                Constraint::Length(a),
+                Constraint::Length(a),
             ]
             .as_ref(),
         )
-        .margin(1)
+        .horizontal_margin(1)
         .split(area);
 
     let last_event = state.events.last().expect("There is at least one event");

@@ -31,7 +31,7 @@ pub(crate) fn render_capital_widget<B: Backend>(
         .split(av);
 
     frame.render_widget(
-        Paragraph::new("Capital").style(Style::default().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Portfolio").style(Style::default().add_modifier(Modifier::BOLD)),
         a,
     );
 
