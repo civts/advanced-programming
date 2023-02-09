@@ -5,6 +5,7 @@ use crate::{
 use std::{
     fs::File,
     io::{Error, Read, Result},
+    ops::Shl,
     path::PathBuf,
     thread,
 };
@@ -59,16 +60,16 @@ fn get_next_message(mut pipefd: File, len: usize) -> Result<String> {
     Ok(message)
 }
 
-fn get_next_message_length(pipefd: &mut File) -> u8 {
-    let mut len_buf: [u8; 1] = [0; 1];
+fn get_next_message_length(pipefd: &mut File) -> u16 {
+    let mut len_buf = [0u8; 2];
     let read_bytes = pipefd.read(&mut len_buf).expect("Can read the pipe");
 
     if read_bytes == 0 {
         0
     } else {
-        let len = *len_buf
-            .first()
-            .expect("The programmer can create a non-empty buffer 👾");
-        len
+        let high_byte: u16 = len_buf[0].into();
+        let low_byte = len_buf[1];
+
+        high_byte.shl(8) + low_byte as u16
     }
 }
