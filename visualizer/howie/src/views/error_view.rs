@@ -8,7 +8,7 @@ use tui::{
     Terminal,
 };
 
-pub(crate) fn draw<B: Backend>(terminal: &mut Terminal<B>, error: io::Error) {
+pub(crate) fn draw<B: Backend>(terminal: &mut Terminal<B>, error: &io::Error) {
     let message: String;
     if let std::io::ErrorKind::NotFound = error.kind() {
         message = "Did not find the pipe 🤔\r\nMake sure you started a trader".to_string();

@@ -2,7 +2,7 @@ use crate::{
     constants::REFRESH_RATE_MILLISECONDS,
     domain::app_state::AppState,
     domain::app_view::AppView,
-    views::{error_view, wait_view},
+    views::{error_view, main_view::MainView, wait_view},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ipc_utils::IPCReceiver;
@@ -27,7 +27,6 @@ impl App {
     pub(crate) fn run<B: Backend>(&mut self, mut terminal: Terminal<B>) {
         // Wether on this iteration the terminal should repaint completely
         let mut should_clear: bool;
-        let mut received_messages: u64 = 0;
         let mut should_run_again = false;
         self.state.current_view = AppView::WaitingForFirstTrade;
 
@@ -43,27 +42,19 @@ impl App {
                 terminal.clear().expect("Can clear the terminal");
             }
 
-            match self.state.current_view {
-                AppView::WaitingForFirstTrade => {
-                    wait_view::draw(&mut terminal);
-                }
-                AppView::MainTradingView => {
-                    let trader_event_res = self.receiver.receive();
+            let trader_event_res = self.receiver.receive();
 
-                    match trader_event_res {
-                        Ok(Some(trader_event)) => {
-                            received_messages += 1;
+            match &trader_event_res {
+                Ok(event_opt) => match event_opt {
+                    Some(trader_event) => {
+                        self.state.received_messages += 1;
+                        self.state.events.push(trader_event.to_owned());
 
-                            todo!("Update state");
-                            //MainView::draw(&mut terminal, &self.state);
-                        }
-                        Ok(None) => {}
-                        Err(error) => {
-                            error_view::draw(&mut terminal, error);
-                        }
+                        MainView::draw(&mut terminal, &self.state);
                     }
-                }
-                _ => todo!(),
+                    None => wait_view::draw(&mut terminal),
+                },
+                Err(error) => error_view::draw(&mut terminal, error),
             }
 
             // Check for events in the terminal (User input)
@@ -94,7 +85,8 @@ impl App {
                     }
                 }
             }
-        }
+        } // loop end
+
         if should_run_again {
             self.receiver.restart();
             self.run(terminal)
