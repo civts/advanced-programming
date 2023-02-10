@@ -4,7 +4,7 @@ use bfb::bfb_market::Bfb;
 use dogemarket::dogemarket::DogeMarket;
 use ipc_utils::trader_state::TraderState;
 use ipc_utils::trading_event::TradingEvent;
-use ipc_utils::trading_event_details::{TradeType, TradingEventDetails};
+use ipc_utils::trading_event_details::{TradeOperation, TradeType, TradingEventDetails};
 use ipc_utils::IPCSender;
 use rand::Rng;
 use std::cell::RefCell;
@@ -330,12 +330,13 @@ impl SOLTrader {
             .unwrap();
         self.log_visualizer(
             market.borrow().get_name().to_string(),
-            TradingEventDetails::AskedLock {
+            TradingEventDetails {
                 successful: true,
                 trade_type: TradeType::Buy,
                 good_kind: kind,
                 quantity: qty,
                 price: bid,
+                operation: TradeOperation::AskedLock,
             },
         );
         (bid, token)
@@ -358,12 +359,13 @@ impl SOLTrader {
             .unwrap();
         self.log_visualizer(
             market.borrow().get_name().to_string(),
-            TradingEventDetails::AskedLock {
+            TradingEventDetails {
                 successful: true,
                 trade_type: TradeType::Sell,
-                good_kind: kind.clone(),
+                good_kind: kind,
                 quantity: qty,
                 price: offer,
+                operation: TradeOperation::AskedLock,
             },
         );
         (offer, token)
@@ -392,12 +394,13 @@ impl SOLTrader {
 
         self.log_visualizer(
             market.borrow().get_name().to_string(),
-            TradingEventDetails::TradeFinalized {
+            TradingEventDetails {
                 successful: true,
                 trade_type: TradeType::Buy,
-                good_kind: kind.clone(),
+                good_kind: kind,
                 quantity: qty,
                 price: bid,
+                operation: TradeOperation::TradeFinalized,
             },
         );
     }
@@ -423,12 +426,13 @@ impl SOLTrader {
             .unwrap();
         self.log_visualizer(
             market.borrow().get_name().to_string(),
-            TradingEventDetails::TradeFinalized {
+            TradingEventDetails {
                 successful: true,
                 trade_type: TradeType::Sell,
-                good_kind: kind.clone(),
+                good_kind: kind,
                 quantity: qty,
                 price: offer,
+                operation: TradeOperation::TradeFinalized,
             },
         );
     }
