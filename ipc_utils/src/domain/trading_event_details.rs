@@ -3,6 +3,7 @@ use unitn_market_2022::good::good_kind::GoodKind;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum TradingEventDetails {
+    // TODO: we can merge these structs
     AskedLock {
         successful: bool,
         trade_type: TradeType,
@@ -19,7 +20,7 @@ pub enum TradingEventDetails {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TradeType {
     Buy,
     Sell,

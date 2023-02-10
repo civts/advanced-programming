@@ -8,7 +8,7 @@ use tui::{
     Frame,
 };
 
-use crate::constants::{default_style, RED};
+use crate::constants::{default_style, BACKGROUND, RED};
 
 pub(crate) fn render_market_chart<B: Backend>(
     stats: &HashMap<String, u64>,
@@ -48,7 +48,12 @@ fn render_chart<B: Backend>(stats: &HashMap<String, u64>, area: Rect, frame: &mu
         BarChart::default()
             .data(&markets)
             .bar_width(bar_width)
-            .style(Style::default().fg(RED)),
+            .style(Style::default().fg(RED))
+            .value_style(Style {
+                fg: Some(BACKGROUND),
+                bg: Some(RED),
+                ..Default::default()
+            }),
         area,
     );
 }

@@ -1,13 +1,14 @@
+use crate::constants::default_style;
 use ipc_utils::trader_state::{TraderState, ALL_GOOD_KINDS};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::Modifier,
     widgets::Paragraph,
     Frame,
 };
 
-pub(crate) fn render_capital_widget<B: Backend>(
+pub(crate) fn render_portfolio_widget<B: Backend>(
     frame: &mut Frame<B>,
     state: &TraderState,
     area: Rect,
@@ -18,11 +19,7 @@ pub(crate) fn render_capital_widget<B: Backend>(
         y: area.y + 1,
         ..area
     };
-    let constraints = [Constraint::Ratio(
-        1,
-        ALL_GOOD_KINDS.len().try_into().unwrap(),
-    )]
-    .repeat(ALL_GOOD_KINDS.len());
+    let constraints = [Constraint::Min(2)].repeat(ALL_GOOD_KINDS.len());
 
     let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -31,7 +28,7 @@ pub(crate) fn render_capital_widget<B: Backend>(
         .split(av);
 
     frame.render_widget(
-        Paragraph::new("Portfolio").style(Style::default().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Portfolio").style(default_style().add_modifier(Modifier::BOLD)),
         a,
     );
 

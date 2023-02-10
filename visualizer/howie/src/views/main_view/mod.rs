@@ -2,7 +2,7 @@ use crate::{
     domain::app_state::AppState,
     views::{
         main_view::widgets::{
-            capital::render_capital_widget, markets::render_market_chart,
+            markets::render_market_chart, portfolio::render_portfolio_widget,
             stats::render_stats_widget, trader_name::render_trader_name_widget,
         },
         utils::draw_background,
@@ -74,7 +74,7 @@ fn render_column_widget<B: Backend>(state: &AppState, area: Rect, frame: &mut Fr
 
     render_market_chart(&state.stats.trades_with_market, frame, center);
 
-    render_capital_widget(frame, &last_event.trader_state, center_bottom);
+    render_portfolio_widget(frame, &last_event.trader_state, center_bottom);
 
     render_stats_widget(&state.stats, frame, bottom);
 }
