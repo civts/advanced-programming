@@ -1,7 +1,7 @@
 use ipc_utils::IPCSender;
 use std::collections::HashMap;
-use trader::trader::arbitrages::Arbitrages;
 use trader::trader::SOLTrader;
+use trader::trader::arbitrage::Arbitrages;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good_kind::GoodKind;
 
@@ -33,8 +33,8 @@ pub fn main() {
 fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
     let worth_before = trader.get_current_worth();
     for _ in 0..iterations {
-        let mut arbitrages = Arbitrages::find_arbitrages(trader);
-        arbitrages.exploit_pse_market(trader);
+        let arbitrages = trader.find_arbitrages();
+        trader.exploit_pse_market(arbitrages);
     }
     let worth_after = trader.get_current_worth();
     let profit = worth_after - worth_before;

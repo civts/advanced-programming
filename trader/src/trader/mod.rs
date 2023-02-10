@@ -1,5 +1,4 @@
-mod arbitrage;
-pub mod arbitrages;
+pub mod arbitrage;
 
 use bfb::bfb_market::Bfb;
 use dogemarket::dogemarket::DogeMarket;
@@ -52,7 +51,7 @@ impl SOLTrader {
             name,
             goods,
             markets,
-            ipc_sender: Default::default(),
+            ipc_sender: None,
         }
     }
 
@@ -76,7 +75,7 @@ impl SOLTrader {
             name,
             goods,
             markets,
-            ipc_sender: Default::default(),
+            ipc_sender: None,
         }
     }
 
@@ -309,8 +308,9 @@ impl SOLTrader {
         if let Some(send_to_visualizer) = &self.ipc_sender {
             send_to_visualizer.send(trading_event.clone()).unwrap()
         }
-
-        println!("{trading_event:?}"); // TODO: Remove in final version
+        else {
+            println!("{trading_event:?}");
+        }
     }
 
     /// Lock buy from a market reference.
