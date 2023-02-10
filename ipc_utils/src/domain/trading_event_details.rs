@@ -3,12 +3,12 @@ use unitn_market_2022::good::good_kind::GoodKind;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TradingEventDetails {
-    operation: TradeOperation,
-    successful: bool,
-    trade_type: TradeType,
-    good_kind: GoodKind,
-    quantity: f32,
-    price: f32,
+    pub operation: TradeOperation,
+    pub successful: bool,
+    pub trade_type: TradeType,
+    pub good_kind: GoodKind,
+    pub quantity: f32,
+    pub price: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
