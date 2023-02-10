@@ -47,8 +47,7 @@ impl App {
             match &trader_event_res {
                 Ok(event_opt) => match event_opt {
                     Some(trader_event) => {
-                        self.state.received_messages += 1;
-                        self.state.events.push(trader_event.to_owned());
+                        self.state.update(trader_event);
 
                         MainView::draw(&mut terminal, &self.state);
                     }

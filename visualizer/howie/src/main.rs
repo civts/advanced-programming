@@ -5,7 +5,7 @@
    1. Let the user quit with ctrl+c ✅
    1. Loop displaying the data as it comes ✅
    1. Display the data as it comes in a stream ✅
-   1. Make statistics over past data to view trends
+   1. Make statistics over past data to view trends ✅
    1. Add a graphical help menu
    1. Let the user change "views"
 */

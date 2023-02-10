@@ -1,6 +1,6 @@
 use ipc_utils::trading_event::TradingEvent;
 
-use super::app_view::AppView;
+use super::{app_view::AppView, stats::Stats};
 
 #[derive(Default)]
 pub(crate) struct AppState {
@@ -12,4 +12,15 @@ pub(crate) struct AppState {
 
     /// The events we received from the trader
     pub(crate) events: Vec<TradingEvent>,
+
+    /// The trading statistics relative to this session
+    pub(crate) stats: Stats,
+}
+
+impl AppState {
+    pub(crate) fn update(&mut self, event: &TradingEvent) {
+        self.received_messages += 1;
+        self.stats.update(event.clone());
+        self.events.push(event.clone());
+    }
 }

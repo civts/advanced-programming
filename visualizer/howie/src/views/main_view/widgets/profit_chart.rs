@@ -1,29 +1,32 @@
 use crate::constants::{default_style, BACKGROUND, BLUE, YELLOW};
-use ipc_utils::trading_event::TradingEvent;
 use tui::{
     backend::Backend,
     layout::Rect,
     style::{Modifier, Style},
     symbols,
-    text::Span,
+    text::{Span, Spans},
     widgets::{Axis, Chart, Dataset},
     Frame,
 };
-use unitn_market_2022::good::{consts::DEFAULT_GOOD_KIND, good_kind::GoodKind};
+use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 
-pub(crate) fn chart<B: Backend>(frame: &mut Frame<B>, events: &[TradingEvent], area: Rect) {
-    let trades = events.iter().enumerate().map(|(i, e)| {
-        let total_capital: f64 = e.trader_state.cash.iter().fold(0.0, |acc, (gk, qt)| {
-            let value = GoodKind::get_default_exchange_rate(gk);
-            let vf64: f64 = (value * qt).try_into().unwrap();
-            acc + vf64
-        });
-        let i = i as f64;
-        (i, total_capital)
-    });
-    let min = &trades.clone().min_by(|a, b| a.1.total_cmp(&b.1)).unwrap().1;
-    let max = &trades.clone().max_by(|a, b| a.1.total_cmp(&b.1)).unwrap().1;
-    let data = Vec::from_iter(trades);
+pub(crate) fn chart<'a, B: Backend, T>(frame: &mut Frame<B>, events: T, area: Rect)
+where
+    T: Iterator<Item = &'a (u64, f64)>,
+{
+    let data = Vec::from_iter(events.map(|(k, v)| (*k as f64, *v)));
+    let min = &data
+        .clone()
+        .into_iter()
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap()
+        .1;
+    let max = &data
+        .clone()
+        .into_iter()
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap()
+        .1;
     let len = data.len() as f64;
     let d1 = Dataset::default()
         // .name("data2")
@@ -47,37 +50,40 @@ pub(crate) fn chart<B: Backend>(frame: &mut Frame<B>, events: &[TradingEvent], a
         //         ))
         //         .borders(Borders::ALL),
         // )
-        .style(Style::default().bg(BACKGROUND))
+        .style(Style::default().bg(BACKGROUND).fg(YELLOW))
         .x_axis(
             Axis::default()
-                .title("Days")
+                .title(Span::styled("Days", default_style()))
                 .style(Style::default().fg(BLUE).add_modifier(Modifier::DIM))
                 .labels(vec![
                     Span::styled(
                         data.first().unwrap().0.to_string(),
-                        Style::default().add_modifier(Modifier::BOLD),
+                        default_style().add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         data.last().unwrap().0.to_string(),
-                        Style::default().add_modifier(Modifier::BOLD),
+                        default_style().add_modifier(Modifier::BOLD),
                     ),
                 ])
                 .bounds([0.0, len]),
         )
         .y_axis(
             Axis::default()
-                .title(Span::styled(
-                    format!(
-                        "Total capital ({})",
-                        DEFAULT_GOOD_KIND.to_string().to_uppercase()
+                .title(Spans::from(vec![
+                    Span::styled(
+                        format!(
+                            "Total capital ({})",
+                            DEFAULT_GOOD_KIND.to_string().to_uppercase()
+                        ),
+                        default_style(),
                     ),
-                    default_style(),
-                ))
+                    // Span::styled((" ").repeat(40), default_style().fg(YELLOW)),
+                ]))
                 .labels_alignment(tui::layout::Alignment::Right)
                 .style(Style::default().fg(BLUE).add_modifier(Modifier::DIM))
                 .labels(vec![
-                    Span::styled(min_y, Style::default().add_modifier(Modifier::BOLD)),
-                    Span::styled(max_y, Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(min_y, default_style().add_modifier(Modifier::BOLD)),
+                    Span::styled(max_y, default_style().add_modifier(Modifier::BOLD)),
                 ])
                 .bounds([*min, *max]),
         );
