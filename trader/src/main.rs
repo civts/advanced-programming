@@ -1,42 +1,33 @@
-//the main runs the trader forever
-
-//take the markets out of the trader into a separate playground object?
-//maybe too complicated
-
+use ipc_utils::IPCSender;
 use std::collections::HashMap;
+use trader::trader::arbitrages::Arbitrages;
 use trader::trader::SOLTrader;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good_kind::GoodKind;
-use trader::trader::arbitrages::Arbitrages;
-
-//NOTES
-// TRADER OBJECT manages trader quantities (default or other init) and the markets (methods to read the markets, trade with the markets)
-// MAIN manages history of prices, history display, next choices (can puut into separate objects later)
-//can define type history = ...
 
 type History = Vec<HashMap<String, HashMap<GoodKind, f32>>>;
 
 pub fn main() {
+    // Gianluca Trader
     let generic_init_quantity = 10000.0;
-    let mut trader = SOLTrader::new_with_quantities(
+    let mut gianluca_trader = SOLTrader::new_with_quantities(
+        "Gianluca".to_string(),
         generic_init_quantity,
         generic_init_quantity,
         generic_init_quantity,
         generic_init_quantity,
     );
-    trader.subscribe_markets_to_one_another();
+    gianluca_trader.subscribe_markets_to_one_another();
+    gianluca_trader.show_all_self_quantities();
+    gianluca_trader.show_all_market_info();
+    gianluca_strategy(&mut gianluca_trader, 20);
 
-    trader.show_all_self_quantities();
-
-    trader.show_all_market_info();
-
-    //trader main loop, each loop a different trade
-    // basic_all_random_strategy(&mut trader, 6);
-    // do_nothing_strategy(&mut trader, 6);
-    // do_nothing_strategy(&mut trader, 6);
-    // basic_best_trade_strategy(&mut trader, 6);
-    gianluca_strategy(&mut trader, 20);
-    farouk_strategy(&mut trader, 91);
+    // Farouk Trader
+    let mut farouk_trader = SOLTrader::new("Farouk".to_string());
+    farouk_trader.subscribe_markets_to_one_another();
+    // Init visualizer
+    farouk_trader.set_ipc_sender(IPCSender::new());
+    farouk_strategy(&mut farouk_trader, 91);
 }
 
 fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
@@ -48,7 +39,12 @@ fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
     let worth_after = trader.get_current_worth();
     let profit = worth_after - worth_before;
     let margin_percentage = (profit / worth_before) * 100f32;
-    println!("Trader's worth before: {worth_before}\nAfter: {worth_after}\nProfit: {margin_percentage}%");
+    println!(
+        "*** Arbitrage results ***\n\
+    Trader's worth before: {worth_before}\n\
+    Trader's worth after: {worth_after}\n\
+    Profit: {margin_percentage}%"
+    );
 }
 
 fn basic_all_random_strategy(trader: &mut SOLTrader, iterations: u32) {
@@ -107,11 +103,11 @@ pub fn make_trade_all_random(trader: &mut SOLTrader, max_qty: i32) {
     }
 }
 
-//first makes one random trade, than looks at the deltas and starts making the best trades possible
-//best trade means either
+///first makes one random trade, than looks at the deltas and starts making the best trades possible
+///best trade means either
 ///buy (market,goodkind) with the lowest delta (bargain)
-//or sell (market,goodkind) with the highest delta (amke the most out of what you bought)
-//the quantities are still random
+///or sell (market,goodkind) with the highest delta (amke the most out of what you bought)
+///the quantities are still random
 fn basic_best_trade_strategy(trader: &mut SOLTrader, iterations: u32) {
     let max_qty = 100;
     let mut history_buy: History = Vec::new();
@@ -313,7 +309,6 @@ fn make_best_historical_trade(
 fn do_nothing_strategy(trader: &mut SOLTrader, iterations: u32) {
     let mut history_buy: History = Vec::new();
     let mut history_sell: History = Vec::new();
-    let mut buy_deltas: History = Vec::new();
     let mut sell_deltas: History = Vec::new();
 
     history_buy.push(trader.get_all_current_buy_rates());
@@ -381,7 +376,7 @@ fn get_historical_average(h: &History) -> Option<HashMap<String, HashMap<GoodKin
         }
 
         for (market, rates) in avg.clone() {
-            for (good, sum) in rates {
+            for (good, _) in rates {
                 let tmp = avg.get_mut(&market[..]).unwrap().get_mut(&good).unwrap();
                 *tmp /= days;
             }
@@ -398,7 +393,7 @@ fn get_delta_from_historical_avg(h: &History) -> Option<HashMap<String, HashMap<
         let mut avg = get_historical_average(h).unwrap();
 
         for (market, rates) in avg.clone() {
-            for (good, sum) in rates {
+            for (good, _) in rates {
                 let tmp = delta.get_mut(&market[..]).unwrap().get_mut(&good).unwrap();
                 let tmp2 = avg.get_mut(&market[..]).unwrap().get_mut(&good).unwrap();
                 *tmp = tmp.abs() - tmp2.abs();

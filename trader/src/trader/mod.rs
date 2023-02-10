@@ -3,6 +3,10 @@ pub mod arbitrages;
 
 use bfb::bfb_market::Bfb;
 use dogemarket::dogemarket::DogeMarket;
+use ipc_utils::trader_state::TraderState;
+use ipc_utils::trading_event::TradingEvent;
+use ipc_utils::trading_event_details::{TradeType, TradingEventDetails};
+use ipc_utils::IPCSender;
 use rand::Rng;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,17 +22,17 @@ use unitn_market_2022::wait_one_day;
 use Pizza_Stock_Exchange_Market::PSE_Market;
 
 const KINDS: [GoodKind; 4] = [EUR, USD, YEN, YUAN];
-const TRADER_NAME: &str = "SOLTrader";
 const RANGE_GOOD_QTY: Range<f32> = 50_000f32..150_000f32; // TODO: Maybe come up with better idea
 
 pub struct SOLTrader {
     pub(crate) name: String,
     pub(crate) goods: HashMap<GoodKind, Good>,
     pub(crate) markets: Vec<Rc<RefCell<dyn Market>>>,
+    pub(crate) ipc_sender: Option<IPCSender>,
 }
 
 impl SOLTrader {
-    pub fn new() -> Self {
+    pub fn new(name: String) -> Self {
         let goods: HashMap<GoodKind, Good> = KINDS
             .iter()
             .map(|k| {
@@ -45,13 +49,14 @@ impl SOLTrader {
         ]
         .to_vec();
         Self {
-            name: TRADER_NAME.to_string(),
+            name,
             goods,
             markets,
+            ipc_sender: Default::default(),
         }
     }
 
-    pub fn new_with_quantities(eur: f32, usd: f32, yen: f32, yuan: f32) -> Self {
+    pub fn new_with_quantities(name: String, eur: f32, usd: f32, yen: f32, yuan: f32) -> Self {
         let goods: HashMap<GoodKind, Good> = KINDS
             .iter()
             .map(|k| match k {
@@ -68,9 +73,10 @@ impl SOLTrader {
         ]
         .to_vec();
         Self {
-            name: TRADER_NAME.to_string(),
+            name,
             goods,
             markets,
+            ipc_sender: Default::default(),
         }
     }
 
@@ -218,11 +224,11 @@ impl SOLTrader {
         let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
 
         //add the good locally
-        let mut cash = self
-            .goods
+        self.goods
             .get_mut(&kind)
             .unwrap()
-            .merge(buy_result.unwrap());
+            .merge(buy_result.unwrap())
+            .unwrap();
 
         println!("\n Bought from {} {} of {}", name, qty, kind);
     }
@@ -243,11 +249,11 @@ impl SOLTrader {
         let sell_result = mrk_bind.borrow_mut().sell(token, &mut good_to_sell);
 
         //get the cash
-        let mut cash = self
-            .goods
+        self.goods
             .get_mut(&DEFAULT_GOOD_KIND)
             .unwrap()
-            .merge(sell_result.unwrap());
+            .merge(sell_result.unwrap())
+            .unwrap();
 
         println!("\n Sold to {} {} of {}", name, qty, kind);
     }
@@ -273,7 +279,8 @@ impl SOLTrader {
         let market = self.get_market_by_name(market_name.clone()).unwrap();
         // Get rate by using get_sell_price because some market give the prices in EUR -> GOOD and others in GOOD -> EUR
         let rate = market.borrow().get_sell_price(kind.clone(), 1f32)?;
-        let market_cash_qty = self.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, market_name.clone());
+        let market_cash_qty =
+            self.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, market_name.clone());
         let market_max = market_cash_qty / rate;
         Ok(market_max.min(good_qty) * 0.95)
     }
@@ -283,6 +290,151 @@ impl SOLTrader {
         self.goods.iter().fold(0f32, |acc, (_, good)| {
             acc + (good.get_qty() / good.get_kind().get_default_exchange_rate())
         })
+    }
+
+    /// Send a trade event to the visualizer
+    pub fn log_visualizer(&self, market_name: String, trade_event: TradingEventDetails) {
+        let trading_event = TradingEvent {
+            details: trade_event,
+            market_name: market_name.clone(),
+            trader_state: TraderState::new(
+                self.goods
+                    .iter()
+                    .map(|(_, g)| (g.get_kind(), g.get_qty()))
+                    .collect(),
+                self.name.clone(),
+            ),
+        };
+
+        if let Some(send_to_visualizer) = &self.ipc_sender {
+            send_to_visualizer.send(trading_event.clone()).unwrap()
+        }
+
+        println!("{trading_event:?}"); // TODO: Remove in final version
+    }
+
+    /// Lock buy from a market reference.
+    /// Before using this method:
+    /// - Need to check if trader has enough DEFAULT_GOOD quantity
+    /// - Need to check if market has enough GOOD quantity
+    pub fn lock_buy_from_market_ref(
+        &self,
+        market: Rc<RefCell<dyn Market>>,
+        kind: GoodKind,
+        qty: f32,
+    ) -> (f32, String) {
+        let bid = market.borrow().get_buy_price(kind, qty).unwrap();
+        let token = market
+            .borrow_mut()
+            .lock_buy(kind, qty, bid, self.name.clone())
+            .unwrap();
+        self.log_visualizer(
+            market.borrow().get_name().to_string(),
+            TradingEventDetails::AskedLock {
+                successful: true,
+                trade_type: TradeType::Buy,
+                good_kind: kind,
+                quantity: qty,
+                price: bid,
+            },
+        );
+        (bid, token)
+    }
+
+    /// Lock sell to a market reference.
+    /// Before using this method be sure:
+    /// - Trader has enough GOOD quantity
+    /// - Market has enough DEFAULT_GOOD quantity
+    pub fn lock_sell_to_market_ref(
+        &self,
+        market: Rc<RefCell<dyn Market>>,
+        kind: GoodKind,
+        qty: f32,
+    ) -> (f32, String) {
+        let offer = market.borrow().get_sell_price(kind, qty).unwrap();
+        let token = market
+            .borrow_mut()
+            .lock_sell(kind, qty, offer, self.name.clone())
+            .unwrap();
+        self.log_visualizer(
+            market.borrow().get_name().to_string(),
+            TradingEventDetails::AskedLock {
+                successful: true,
+                trade_type: TradeType::Sell,
+                good_kind: kind.clone(),
+                quantity: qty,
+                price: offer,
+            },
+        );
+        (offer, token)
+    }
+
+    /// Buy from a market reference.
+    /// Using this method implies:
+    /// - bid and token need to be retrieve from `lock_sell_to_market_ref` method
+    /// - market, qty and kind should be the same as used for `lock_sell_to_market_ref` method
+    pub fn buy_from_market_ref(
+        &mut self,
+        market: Rc<RefCell<dyn Market>>,
+        token: String,
+        bid: f32,
+        qty: f32,
+        kind: GoodKind,
+    ) {
+        let mut cash = self
+            .goods
+            .get_mut(&DEFAULT_GOOD_KIND)
+            .unwrap()
+            .split(bid)
+            .unwrap();
+        let good = market.borrow_mut().buy(token, &mut cash).unwrap();
+        self.goods.get_mut(&kind).unwrap().merge(good).unwrap();
+
+        self.log_visualizer(
+            market.borrow().get_name().to_string(),
+            TradingEventDetails::TradeFinalized {
+                successful: true,
+                trade_type: TradeType::Buy,
+                good_kind: kind.clone(),
+                quantity: qty,
+                price: bid,
+            },
+        );
+    }
+
+    /// Sell to a market reference
+    /// Using this method implies:
+    /// - offer and token need to be retrieve from `lock_sell_to_market_ref` method
+    /// - market, qty and kind should be the same as used for `lock_sell_to_market_ref` method
+    pub fn sell_to_market_ref(
+        &mut self,
+        market: Rc<RefCell<dyn Market>>,
+        token: String,
+        offer: f32,
+        qty: f32,
+        kind: GoodKind,
+    ) {
+        let mut good = self.goods.get_mut(&kind).unwrap().split(qty).unwrap();
+        let cash = market.borrow_mut().sell(token, &mut good).unwrap();
+        self.goods
+            .get_mut(&DEFAULT_GOOD_KIND)
+            .unwrap()
+            .merge(cash)
+            .unwrap();
+        self.log_visualizer(
+            market.borrow().get_name().to_string(),
+            TradingEventDetails::TradeFinalized {
+                successful: true,
+                trade_type: TradeType::Sell,
+                good_kind: kind.clone(),
+                quantity: qty,
+                price: offer,
+            },
+        );
+    }
+
+    pub fn set_ipc_sender(&mut self, ipc_sender: IPCSender) {
+        self.ipc_sender = Some(ipc_sender);
     }
 }
 
@@ -294,7 +446,7 @@ mod trader_tests {
 
     #[test]
     fn test_get_market_by_name() {
-        let trader = SOLTrader::new();
+        let trader = SOLTrader::new("Testing_Name".to_string());
 
         let my_m = "DogeMarket";
         let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
@@ -315,7 +467,7 @@ mod trader_tests {
 
     #[test]
     fn exploit_pse() {
-        let mut trader: SOLTrader = SOLTrader::new();
+        let mut trader: SOLTrader = SOLTrader::new("Testing_Arbitrage".to_string());
 
         trader.subscribe_markets_to_one_another();
         let value_before = trader.get_current_worth();
@@ -333,7 +485,7 @@ mod trader_tests {
 
     #[test]
     fn test_subscription() {
-        let trader = SOLTrader::new();
+        let trader = SOLTrader::new("Testing_Subscription".to_string());
         let mut strong_count: usize;
         let mut weak_count: usize;
 

@@ -1,6 +1,5 @@
-use crate::trader::arbitrage::{Arbitrage, TradeEvent};
+use crate::trader::arbitrage::Arbitrage;
 use crate::trader::{SOLTrader, KINDS};
-use ipc_utils::trading_event_details::TradeType;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 
 #[derive(Debug, Clone)]
@@ -28,20 +27,18 @@ impl Arbitrages {
                     // Get the maximum qty the trader and markets can trade
                     let max_buy_qty = trader.max_buy(&kind, &buy_market_name).unwrap_or(0f32);
                     let max_sell_qty = trader.max_sell(&kind, &sell_market_name).unwrap_or(0f32);
-                    let max_qty = max_buy_qty.min(max_sell_qty) * 0.80; // 90% just in case the market wants to keep a reserve
+                    let max_qty = max_buy_qty.min(max_sell_qty) * 0.50; // 50% just in case the market wants to keep a reserve
 
                     // Get the Buy and Sell prices
                     // If an error occurs, we set the buy price at the max and the sell price at the min possible
                     let buy_price = buy_market
                         .borrow()
                         .get_buy_price(kind.clone(), max_qty)
-                        .unwrap_or(f32::MAX)
-                        * 1.15;
+                        .unwrap_or(f32::MAX);
                     let sell_price = sell_market
                         .borrow()
                         .get_sell_price(kind.clone(), max_qty)
-                        .unwrap_or(f32::MIN_POSITIVE)
-                        * 0.85;
+                        .unwrap_or(f32::MIN_POSITIVE);
 
                     let benefits = sell_price - buy_price;
                     let margin = benefits / buy_price;
@@ -53,8 +50,6 @@ impl Arbitrages {
                             sell_market_name.clone(),
                             kind.clone(),
                             max_qty,
-                            buy_price,
-                            sell_price,
                             benefits,
                             margin,
                         ));
@@ -82,9 +77,7 @@ impl Arbitrages {
             if k.eq(&DEFAULT_GOOD_KIND) {
                 continue;
             }
-            pse.borrow_mut()
-                .lock_buy(k.clone(), 0f32, f32::MAX, trader.name.clone())
-                .unwrap();
+            trader.lock_buy_from_market_ref(pse.clone(), *k, 0f32);
         }
 
         // Get all the arbitrages opportunities and take the worthiest one
@@ -98,88 +91,30 @@ impl Arbitrages {
                 return;
             }
 
-            println!("Found a worthy arbitrage {:?}", arbitrage);
+            println!("Found a worthy arbitrage {:?}", arbitrage); // TODO: remove in final version
 
             let buy_market_name = arbitrage.buying_market_name.clone();
             let sell_market_name = arbitrage.selling_market_name.clone();
-            let kind = arbitrage.good_kind.clone();
-            let buy_price = arbitrage.buy_price.clone();
-            let sell_price = arbitrage.sell_price.clone();
+            let kind = &arbitrage.good_kind;
             let qty = arbitrage.qty.clone();
 
             let buy_market = trader
-                .markets
-                .iter()
-                .find(|&m| m.borrow().get_name().eq(&buy_market_name.clone()))
-                .unwrap();
+                .get_market_by_name(buy_market_name.clone())
+                .unwrap()
+                .clone();
             let sell_market = trader
-                .markets
-                .iter()
-                .find(|&m| m.borrow().get_name().eq(&sell_market_name.clone()))
-                .unwrap();
-
-            // Get bid & offer (-/+5% Because some markets does not integrate their margin in these methods)
-            let bid = buy_price;
-            let offer = sell_price;
-
-            let error = "Error".to_string();
-
-            let buy_token = buy_market
-                .borrow_mut()
-                .lock_buy(kind, qty, bid, trader.name.clone())
-                .unwrap_or(error.clone());
-
-            arbitrage.log_trade_event(
-                &trader,
-                TradeEvent::Locked,
-                if buy_token.ne(&error) { true } else { false },
-                TradeType::Buy,
-            );
-
-            let sell_token = sell_market
-                .borrow_mut()
-                .lock_sell(kind, qty, offer, trader.name.clone())
-                .unwrap_or(error.clone());
-
-            arbitrage.log_trade_event(
-                &trader,
-                TradeEvent::Locked,
-                if sell_token.ne(&error) { true } else { false },
-                TradeType::Sell,
-            );
-
-            if buy_token.eq(&error) || sell_token.eq(&error) {
-                return;
-            }
-
-            let recv_good = buy_market
-                .borrow_mut()
-                .buy(buy_token, trader.goods.get_mut(&DEFAULT_GOOD_KIND).unwrap())
-                .unwrap();
-
-            trader
-                .goods
-                .get_mut(&kind)
+                .get_market_by_name(sell_market_name.clone())
                 .unwrap()
-                .merge(recv_good)
-                .unwrap();
+                .clone();
 
-            arbitrage.log_trade_event(&trader, TradeEvent::Finalized, true, TradeType::Buy);
+            let (bid, buy_token) = trader.lock_buy_from_market_ref(buy_market.clone(), *kind, qty);
+            let (offer, sell_token) =
+                trader.lock_sell_to_market_ref(sell_market.clone(), *kind, qty);
 
-            let recv_cash = sell_market
-                .borrow_mut()
-                .sell(sell_token, trader.goods.get_mut(&kind).unwrap())
-                .unwrap();
+            trader.buy_from_market_ref(buy_market.clone(), buy_token.clone(), bid, qty, *kind);
+            trader.sell_to_market_ref(sell_market.clone(), sell_token.clone(), offer, qty, *kind);
 
-            trader
-                .goods
-                .get_mut(&DEFAULT_GOOD_KIND)
-                .unwrap()
-                .merge(recv_cash)
-                .unwrap();
-
-            arbitrage.log_trade_event(&trader, TradeEvent::Finalized, true, TradeType::Sell);
-            println!("Arbitrage exploited!");
+            println!("Arbitrage exploited!"); // TODO: remove in final version
         }
     }
 }

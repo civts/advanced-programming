@@ -51,5 +51,5 @@ fn should_log_trade_in_txt() {
     );
 
     // after
-   let _r = fs::remove_file("log_trader.txt");
+    let _r = fs::remove_file("log_trader.txt");
 }
