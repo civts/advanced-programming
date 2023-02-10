@@ -16,7 +16,7 @@ use tui::{
 
 use self::widgets::profit_chart;
 
-mod widgets;
+pub(crate) mod widgets;
 pub(crate) struct MainView {}
 
 impl MainView {

@@ -22,6 +22,9 @@ mod constants;
 mod domain;
 mod views;
 
+#[cfg(test)]
+mod tests;
+
 fn main() {
     enable_raw_mode().expect("Can enable raw mode");
     let _clean_up = CleanUp;

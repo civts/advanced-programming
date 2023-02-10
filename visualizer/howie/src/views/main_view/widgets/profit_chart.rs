@@ -28,10 +28,14 @@ pub(crate) fn chart<B: Backend>(frame: &mut Frame<B>, events: &[TradingEvent], a
     let d1 = Dataset::default()
         // .name("data2")
         .marker(symbols::Marker::Braille)
-        .style(Style::default().bg(BACKGROUND).fg(YELLOW))
+        .style(Style::default().fg(YELLOW))
         .graph_type(tui::widgets::GraphType::Line)
         .data(&data);
     let datasets = vec![d1];
+
+    let max_y = format!("{}{}", decimal_format_float(*max), unit_of_measure(*max));
+    let min_y = format!("{}{}", decimal_format_float(*min), unit_of_measure(*min));
+
     let chart = Chart::new(datasets)
         // .block(
         //     Block::default()
@@ -43,6 +47,7 @@ pub(crate) fn chart<B: Backend>(frame: &mut Frame<B>, events: &[TradingEvent], a
         //         ))
         //         .borders(Borders::ALL),
         // )
+        .style(Style::default().bg(BACKGROUND))
         .x_axis(
             Axis::default()
                 .title("Days")
@@ -71,14 +76,8 @@ pub(crate) fn chart<B: Backend>(frame: &mut Frame<B>, events: &[TradingEvent], a
                 .labels_alignment(tui::layout::Alignment::Right)
                 .style(Style::default().fg(BLUE).add_modifier(Modifier::DIM))
                 .labels(vec![
-                    Span::styled(
-                        format_float(min.to_string()),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(
-                        format_float(max.to_string()),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled(min_y, Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(max_y, Style::default().add_modifier(Modifier::BOLD)),
                 ])
                 .bounds([*min, *max]),
         );
@@ -86,21 +85,55 @@ pub(crate) fn chart<B: Backend>(frame: &mut Frame<B>, events: &[TradingEvent], a
     frame.render_widget(chart, area);
 }
 
-fn format_float(mut s: String) -> String {
-    let final_len: usize = match s.find('.') {
-        Some(index) => index + 1 + 2,
-        None => {
-            s.push('.');
-            s.len() + 2
-        }
+// pub(crate) fn format_float(f: f64) -> String {
+//     let approx = get_approx(f);
+
+//     let mut s = approx.round().to_string();
+//     s.push_str(".00");
+//     let idx = s.find('.').unwrap();
+
+//     s.truncate(idx);
+
+//     format!("{}{}", s, unit_of_measure(f))
+// }
+
+fn get_approx(f: f64) -> f64 {
+    let divider = {
+        let i = f.abs().log10().floor() as u32;
+
+        let floor = i - i % 3;
+        10_i32.pow(floor).max(1)
     };
-    // Pad the string if necessary
-    while s.len() < final_len {
-        s.push('0');
+
+    f / divider as f64
+}
+
+pub(crate) fn decimal_format_float(f: f64) -> String {
+    let approx = get_approx(f);
+
+    let mut s = ((approx * 100.0).round() / 100.0).to_string();
+    if !s.contains('.') {
+        s.push('.');
     }
-    // Remove extra characters
-    while s.len() != final_len {
-        s.pop();
-    }
+    s.push_str("00");
+    let idx = s.find('.').unwrap();
+
+    s.truncate(idx + 3);
+
     s
+}
+
+pub(crate) fn unit_of_measure(number: f64) -> char {
+    let order = number.abs().log10();
+    if order < 3.0 {
+        ' '
+    } else if order < 6.0 {
+        'K'
+    } else if order < 9.0 {
+        'M'
+    } else if order < 12.0 {
+        'B'
+    } else {
+        '🤑'
+    }
 }
