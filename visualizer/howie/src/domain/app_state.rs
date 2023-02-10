@@ -15,6 +15,8 @@ pub(crate) struct AppState {
 
     /// The trading statistics relative to this session
     pub(crate) stats: Stats,
+
+    pub(crate) paused: bool,
 }
 
 impl AppState {

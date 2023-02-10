@@ -2,7 +2,7 @@ use crate::{
     constants::{BACKGROUND, BLUE},
     domain::stats::Stats,
 };
-use ipc_utils::trading_event_details::TradingEventDetails;
+use ipc_utils::trading_event_details::{TradeOperation, TradingEventDetails};
 use tui::{
     backend::Backend, layout::Rect, style::Style, symbols::bar::THREE_LEVELS, widgets::BarChart,
     Frame,
@@ -22,7 +22,8 @@ pub(crate) fn render_trading_volume_widget<B: Backend>(
         .recent_trades
         .iter()
         .map(|trade| match trade.details {
-            TradingEventDetails::TradeFinalized {
+            TradingEventDetails {
+                operation: TradeOperation::TradeFinalized,
                 successful: true,
                 quantity,
                 ..

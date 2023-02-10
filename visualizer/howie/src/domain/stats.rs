@@ -1,7 +1,6 @@
 use ipc_utils::{
-    trading_event::TradingEvent, trading_event_details::TradeType,
-    trading_event_details::TradingEventDetails::AskedLock,
-    trading_event_details::TradingEventDetails::TradeFinalized,
+    trading_event::TradingEvent,
+    trading_event_details::{TradeOperation, TradeType},
 };
 use std::collections::{HashMap, VecDeque};
 
@@ -35,24 +34,15 @@ impl Stats {
             self.starting_capital = get_capital_for_day(&trading_event);
         }
 
-        match trading_event.details {
-            AskedLock {
-                successful,
-                trade_type,
-                ..
-            } => {
-                if successful {
+        if trading_event.details.successful {
+            let trade_type = trading_event.details.trade_type;
+            match trading_event.details.operation {
+                TradeOperation::AskedLock => {
                     let count = self.total_locks.get(&trade_type).unwrap_or(&0);
                     self.total_locks.insert(trade_type, count + 1);
                     //self.recent_trades.push_back(trading_event.clone());
                 }
-            }
-            TradeFinalized {
-                successful,
-                trade_type,
-                ..
-            } => {
-                if successful {
+                TradeOperation::TradeFinalized => {
                     let count = self.total_trades.get(&trade_type).unwrap_or(&0);
                     self.total_trades.insert(trade_type, count + 1);
                     self.recent_trades.push_back(trading_event.clone());

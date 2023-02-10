@@ -2,7 +2,7 @@ use crate::{
     constants::REFRESH_RATE_MILLISECONDS,
     domain::app_state::AppState,
     domain::app_view::AppView,
-    views::{error_view, main_view::MainView, wait_view},
+    views::{error_view, help_view::draw_help_view, main_view::MainView, wait_view},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ipc_utils::IPCReceiver;
@@ -29,6 +29,7 @@ impl App {
         let mut should_clear: bool;
         let mut should_run_again = false;
         self.state.current_view = AppView::WaitingForFirstTrade;
+        self.state.paused = false;
 
         // Something different from AppState::WaitingForFirstTrade
         let s = AppView::HelpMenu;
@@ -37,30 +38,39 @@ impl App {
             let current_state_variant = std::mem::discriminant(&self.state.current_view);
             should_clear = previous_state_variant != current_state_variant;
 
-            // Receive and process next event (if any)
-            let trader_event_res = self.receiver.receive();
-            match trader_event_res {
-                Ok(event_opt) => match event_opt {
-                    Some(trader_event) => {
-                        self.state.update(&trader_event);
-
-                        self.state.current_view = AppView::MainTradingView;
+            if !self.state.paused {
+                match self.state.current_view {
+                    AppView::HelpMenu => {
+                        //do nothing
                     }
-                    None => self.state.current_view = AppView::WaitingForFirstTrade,
-                },
-                Err(error) => self.state.current_view = AppView::ErrorView(error),
-            }
+                    _ => {
+                        // Receive and process next event (if any)
+                        let trader_event_res = self.receiver.receive();
+                        match trader_event_res {
+                            Ok(event_opt) => match event_opt {
+                                Some(trader_event) => {
+                                    self.state.update(&trader_event);
 
-            // Redraw the screen
-            if should_clear {
-                previous_state_variant = current_state_variant;
-                terminal.clear().expect("Can clear the terminal");
-            }
-            match &self.state.current_view {
-                AppView::WaitingForFirstTrade => wait_view::draw(&mut terminal),
-                AppView::MainTradingView => MainView::draw(&mut terminal, &self.state),
-                AppView::HelpMenu => todo!(),
-                AppView::ErrorView(e) => error_view::draw(&mut terminal, e),
+                                    self.state.current_view = AppView::MainTradingView;
+                                }
+                                None => self.state.current_view = AppView::WaitingForFirstTrade,
+                            },
+                            Err(error) => self.state.current_view = AppView::ErrorView(error),
+                        }
+                    }
+                }
+
+                // Redraw the screen
+                if should_clear {
+                    previous_state_variant = current_state_variant;
+                    terminal.clear().expect("Can clear the terminal");
+                }
+                match &self.state.current_view {
+                    AppView::WaitingForFirstTrade => wait_view::draw(&mut terminal),
+                    AppView::MainTradingView => MainView::draw(&mut terminal, &self.state),
+                    AppView::HelpMenu => draw_help_view(&mut terminal),
+                    AppView::ErrorView(e) => error_view::draw(&mut terminal, e),
+                }
             }
 
             // Check for events in the terminal (User input)
@@ -72,12 +82,25 @@ impl App {
                             KeyCode::Char('q') | KeyCode::Esc => {
                                 break;
                             }
+                            KeyCode::Char('p') | KeyCode::Char(' ') => {
+                                self.state.paused = !self.state.paused;
+                            }
                             KeyCode::Char('r') => {
                                 let waiting_trader =
                                     std::mem::discriminant(&AppView::WaitingForFirstTrade);
                                 if current_state_variant == waiting_trader {
                                     should_run_again = true;
                                     break;
+                                }
+                            }
+                            KeyCode::Char('h') | KeyCode::Char('?') => {
+                                match self.state.current_view {
+                                    AppView::HelpMenu => {
+                                        self.state.current_view = AppView::MainTradingView
+                                    }
+                                    _ => {
+                                        self.state.current_view = AppView::HelpMenu;
+                                    }
                                 }
                             }
                             _ => {}
