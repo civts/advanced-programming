@@ -1,8 +1,10 @@
+use std::io;
+
 pub(crate) enum AppView {
     WaitingForFirstTrade,
     MainTradingView,
     HelpMenu,
-    FarewellScreen,
+    ErrorView(io::Error),
 }
 
 impl Default for AppView {

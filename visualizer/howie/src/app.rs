@@ -37,23 +37,30 @@ impl App {
             let current_state_variant = std::mem::discriminant(&self.state.current_view);
             should_clear = previous_state_variant != current_state_variant;
 
+            // Receive and process next event (if any)
+            let trader_event_res = self.receiver.receive();
+            match trader_event_res {
+                Ok(event_opt) => match event_opt {
+                    Some(trader_event) => {
+                        self.state.update(&trader_event);
+
+                        self.state.current_view = AppView::MainTradingView;
+                    }
+                    None => self.state.current_view = AppView::WaitingForFirstTrade,
+                },
+                Err(error) => self.state.current_view = AppView::ErrorView(error),
+            }
+
+            // Redraw the screen
             if should_clear {
                 previous_state_variant = current_state_variant;
                 terminal.clear().expect("Can clear the terminal");
             }
-
-            let trader_event_res = self.receiver.receive();
-
-            match &trader_event_res {
-                Ok(event_opt) => match event_opt {
-                    Some(trader_event) => {
-                        self.state.update(trader_event);
-
-                        MainView::draw(&mut terminal, &self.state);
-                    }
-                    None => wait_view::draw(&mut terminal),
-                },
-                Err(error) => error_view::draw(&mut terminal, error),
+            match &self.state.current_view {
+                AppView::WaitingForFirstTrade => wait_view::draw(&mut terminal),
+                AppView::MainTradingView => MainView::draw(&mut terminal, &self.state),
+                AppView::HelpMenu => todo!(),
+                AppView::ErrorView(e) => error_view::draw(&mut terminal, e),
             }
 
             // Check for events in the terminal (User input)
@@ -62,7 +69,7 @@ impl App {
                 if let Event::Key(key) = Self::get_event() {
                     match key.modifiers {
                         KeyModifiers::NONE => match key.code {
-                            KeyCode::Char('q') => {
+                            KeyCode::Char('q') | KeyCode::Esc => {
                                 break;
                             }
                             KeyCode::Char('r') => {
