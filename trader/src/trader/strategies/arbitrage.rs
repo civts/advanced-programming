@@ -4,16 +4,16 @@ use unitn_market_2022::good::good_kind::GoodKind;
 
 #[derive(Debug, Clone)]
 pub struct Arbitrage {
-    pub(crate) buying_market_name: String,
-    pub(crate) selling_market_name: String,
-    pub(crate) good_kind: GoodKind,
-    pub(crate) qty: f32,
-    pub(crate) benefits: f32,
-    pub(crate) margin: f32,
+    pub buying_market_name: String,
+    pub selling_market_name: String,
+    pub good_kind: GoodKind,
+    pub qty: f32,
+    pub benefits: f32,
+    pub margin: f32,
 }
 
 impl Arbitrage {
-    pub(crate) fn new(
+    pub fn new(
         buying_market_name: String,
         selling_market_name: String,
         good_kind: GoodKind,
@@ -123,7 +123,7 @@ impl Arbitrages for SOLTrader {
                 return;
             }
 
-            println!("Found a worthy arbitrage {:?}", arbitrage);
+            println!("\nFound a worthy arbitrage: {:?}", arbitrage);
 
             let buy_market_name = arbitrage.buying_market_name.clone();
             let sell_market_name = arbitrage.selling_market_name.clone();
@@ -145,7 +145,7 @@ impl Arbitrages for SOLTrader {
             self.buy_from_market_ref(buy_market.clone(), buy_token.clone(), bid, qty, *kind);
             self.sell_to_market_ref(sell_market.clone(), sell_token.clone(), offer, qty, *kind);
 
-            println!("Arbitrage exploited!");
+            println!("Arbitrage exploited!\n");
         }
     }
 }

@@ -1,4 +1,4 @@
-pub mod arbitrage;
+pub mod strategies;
 
 use bfb::bfb_market::Bfb;
 use dogemarket::dogemarket::DogeMarket;
@@ -447,7 +447,7 @@ impl SOLTrader {
 
 #[cfg(test)]
 mod trader_tests {
-    use crate::trader::arbitrage::Arbitrages;
+    use crate::trader::strategies::arbitrage::Arbitrages;
     use crate::trader::SOLTrader;
     use std::rc::Rc;
 
