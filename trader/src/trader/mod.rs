@@ -100,24 +100,26 @@ impl SOLTrader {
     }
 
     pub fn show_all_market_info(&self) {
+        println!("*** Markets info ***");
         for mrk_bind in self.markets.iter() {
-            print!("\n\n{}", mrk_bind.borrow().get_name());
+            println!("{}", mrk_bind.borrow().get_name());
             for gl in mrk_bind.borrow().get_goods().iter() {
-                print!(
-                    "\n{}: {} buy: {} sell: {}",
+                println!(
+                    "{:<5}:\t{:<15} buy: {:<15} sell: {:<15}",
                     gl.good_kind, gl.quantity, gl.exchange_rate_buy, gl.exchange_rate_sell
                 );
             }
+            println!();
         }
-        print!("\n");
+        println!();
     }
 
     pub fn show_all_self_quantities(&self) {
-        println!("Trader stocks");
+        println!("*** Trader stocks ({}) ***", self.name.clone());
         for (_, qty) in self.goods.iter() {
-            print!("{} ", qty);
+            println!("{}", qty);
         }
-        println!("\n");
+        println!();
     }
 
     //you can still borrow_mut the returned market!
@@ -267,7 +269,7 @@ impl SOLTrader {
         let market_good_qty = self.get_cur_good_qty_from_market(&kind, market_name.clone());
         let rate = market.borrow().get_buy_price(kind.clone(), 1f32)?;
         let trader_max = cash_qty / rate;
-        Ok(market_good_qty.min(trader_max) * 0.95)
+        Ok(market_good_qty.min(trader_max))
     }
 
     /// Get the maximum amount of a good the trader can sell to a market according to
@@ -281,7 +283,7 @@ impl SOLTrader {
         let market_cash_qty =
             self.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, market_name.clone());
         let market_max = market_cash_qty / rate;
-        Ok(market_max.min(good_qty) * 0.95)
+        Ok(market_max.min(good_qty))
     }
 
     /// Retrieve the current worth of the trader in DEFAULT_GOOD (EUR)
@@ -291,7 +293,8 @@ impl SOLTrader {
         })
     }
 
-    /// Send a trade event to the visualizer
+    /// Send a trade event to the visualizer.
+    /// If no visualizer set (self.ipc_sender = None), we print the event on stdout
     pub fn log_visualizer(&self, market_name: String, trade_event: TradingEventDetails) {
         let trading_event = TradingEvent {
             details: trade_event,
@@ -307,8 +310,7 @@ impl SOLTrader {
 
         if let Some(send_to_visualizer) = &self.ipc_sender {
             send_to_visualizer.send(trading_event.clone()).unwrap()
-        }
-        else {
+        } else {
             println!("{trading_event:?}");
         }
     }
@@ -437,6 +439,7 @@ impl SOLTrader {
         );
     }
 
+    /// Set an IPCSender so the trader can communicate with a visualizer
     pub fn set_ipc_sender(&mut self, ipc_sender: IPCSender) {
         self.ipc_sender = Some(ipc_sender);
     }
@@ -444,7 +447,7 @@ impl SOLTrader {
 
 #[cfg(test)]
 mod trader_tests {
-    use crate::trader::arbitrages::Arbitrages;
+    use crate::trader::arbitrage::Arbitrages;
     use crate::trader::SOLTrader;
     use std::rc::Rc;
 
@@ -476,9 +479,8 @@ mod trader_tests {
         trader.subscribe_markets_to_one_another();
         let value_before = trader.get_current_worth();
         for _ in 0..366 {
-            let mut arbitrages = Arbitrages::find_arbitrages(&trader);
             //println!("DAY {d:02}");
-            arbitrages.exploit_pse_market(&mut trader);
+            trader.exploit_pse_market();
         }
         let value_after = trader.get_current_worth();
         let profit = value_after - value_before;

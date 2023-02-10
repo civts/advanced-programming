@@ -33,7 +33,14 @@ impl Arbitrage {
 }
 
 pub trait Arbitrages {
+    /// Find arbitrage opportunities from every markets the trader is connected to
     fn find_arbitrages(&self) -> Vec<Arbitrage>;
+
+    /// This method exploit a weakness of the PSE market to find an arbitrage opportunity
+    ///
+    /// Weakness of PSE market:
+    /// - When lock buying a null quantity of goods on the market the prices starts to fluctuate a lot after some time,
+    /// giving us the opportunity to make some benefits with an arbitrage method.
     fn exploit_pse_market(&mut self);
 }
 
@@ -116,7 +123,7 @@ impl Arbitrages for SOLTrader {
                 return;
             }
 
-            println!("Found a worthy arbitrage {:?}", arbitrage); // TODO: remove in final version
+            println!("Found a worthy arbitrage {:?}", arbitrage);
 
             let buy_market_name = arbitrage.buying_market_name.clone();
             let sell_market_name = arbitrage.selling_market_name.clone();
@@ -138,7 +145,7 @@ impl Arbitrages for SOLTrader {
             self.buy_from_market_ref(buy_market.clone(), buy_token.clone(), bid, qty, *kind);
             self.sell_to_market_ref(sell_market.clone(), sell_token.clone(), offer, qty, *kind);
 
-            println!("Arbitrage exploited!"); // TODO: remove in final version
+            println!("Arbitrage exploited!");
         }
     }
 }
