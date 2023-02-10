@@ -34,7 +34,7 @@ impl Arbitrage {
 
 pub trait Arbitrages {
     fn find_arbitrages(&self) -> Vec<Arbitrage>;
-    fn exploit_pse_market(&mut self, arbitrages: Vec<Arbitrage>);
+    fn exploit_pse_market(&mut self);
 }
 
 impl Arbitrages for SOLTrader {
@@ -89,7 +89,7 @@ impl Arbitrages for SOLTrader {
         arbitrages
     }
 
-    fn exploit_pse_market(&mut self, mut arbitrages: Vec<Arbitrage>) {
+    fn exploit_pse_market(&mut self) {
         let pse = self
             .markets
             .iter()
@@ -103,6 +103,8 @@ impl Arbitrages for SOLTrader {
             }
             self.lock_buy_from_market_ref(pse.clone(), *k, 0f32);
         }
+
+        let mut arbitrages = self.find_arbitrages();
 
         // Get all the arbitrages opportunities and take the worthiest one
         arbitrages.sort_by(|a1, a2| a1.benefits.total_cmp(&a2.benefits));

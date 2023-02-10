@@ -33,8 +33,7 @@ pub fn main() {
 fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
     let worth_before = trader.get_current_worth();
     for _ in 0..iterations {
-        let arbitrages = trader.find_arbitrages();
-        trader.exploit_pse_market(arbitrages);
+        trader.exploit_pse_market();
     }
     let worth_after = trader.get_current_worth();
     let profit = worth_after - worth_before;
