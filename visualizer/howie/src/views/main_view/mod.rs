@@ -14,7 +14,7 @@ use tui::{
     Frame, Terminal,
 };
 
-use self::widgets::profit_chart;
+use self::widgets::{profit_chart, trading_volume::render_trading_volume_widget};
 
 pub(crate) mod widgets;
 pub(crate) struct MainView {}
@@ -37,10 +37,25 @@ impl MainView {
 
                 render_column_widget(state, left, f);
 
-                profit_chart::chart(f, state.stats.profit_history.iter(), right);
+                render_right(f, state, right);
             })
             .expect("Can draw on the terminal");
     }
+}
+
+fn render_right<B: Backend>(frame: &mut Frame<B>, state: &AppState, area: Rect) {
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(80), Constraint::Min(2)])
+        .split(area);
+
+    profit_chart::chart(
+        frame,
+        state.stats.profit_history.iter(),
+        *layout.first().unwrap(),
+    );
+
+    render_trading_volume_widget(frame, &state.stats, *layout.last().unwrap());
 }
 
 fn render_column_widget<B: Backend>(state: &AppState, area: Rect, frame: &mut Frame<B>) {

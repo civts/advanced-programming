@@ -44,6 +44,7 @@ impl Stats {
                 if successful {
                     let count = self.total_locks.get(&trade_type).unwrap_or(&0);
                     self.total_locks.insert(trade_type, count + 1);
+                    //self.recent_trades.push_back(trading_event.clone());
                 }
             }
             TradeFinalized {
@@ -54,7 +55,6 @@ impl Stats {
                 if successful {
                     let count = self.total_trades.get(&trade_type).unwrap_or(&0);
                     self.total_trades.insert(trade_type, count + 1);
-                    self.recent_trades.pop_front();
                     self.recent_trades.push_back(trading_event.clone());
                 }
             }
