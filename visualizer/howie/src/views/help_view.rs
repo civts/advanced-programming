@@ -45,16 +45,17 @@ pub(crate) fn draw_help_view<B: Backend>(terminal: &mut Terminal<B>, theme: &App
                     )),
                     ListItem::new(Span::from("")),
                     ListItem::new(Span::styled(
-                        "+ / -:                       Pause/resume",
+                        "+ / -:                       Adjust screen refresh speed",
                         theme.default_style(),
                     )),
                     ListItem::new(Span::from("")),
                     ListItem::new(Span::styled(
-                        "V:                          Toggle trading volume chart",
+                        "V:                           Toggle trading volume chart",
                         theme.default_style(),
                     )),
+                    ListItem::new(Span::from("")),
                     ListItem::new(Span::styled(
-                        "T:                          Change UI theme",
+                        "T:                           Change UI theme",
                         theme.default_style(),
                     )),
                     ListItem::new(Span::from("")),
