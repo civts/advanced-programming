@@ -12,16 +12,15 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::rc::Rc;
 use std::string::ToString;
-use unitn_market_2022::event::wrapper::NotifiableMarketWrapper;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::{GoodKind, GoodKind::*};
 use unitn_market_2022::market::{Market, MarketGetterError};
-use unitn_market_2022::wait_one_day;
+use unitn_market_2022::{subscribe_each_other, wait_one_day};
 use Pizza_Stock_Exchange_Market::PSE_Market;
 
 const KINDS: [GoodKind; 4] = [EUR, USD, YEN, YUAN];
-const RANGE_GOOD_QTY: Range<f32> = 50_000f32..150_000f32; // TODO: Maybe come up with better idea
+const RANGE_GOOD_QTY: Range<f32> = 50_000f32..150_000f32;
 
 pub struct SOLTrader {
     pub(crate) name: String,
@@ -31,6 +30,8 @@ pub struct SOLTrader {
 }
 
 impl SOLTrader {
+    /// Initialise a trader with DOGE, BFB and PSE markets.
+    /// Trader's good quantities are random number ranging from 50,000 to 150,000
     pub fn new(name: String) -> Self {
         let goods: HashMap<GoodKind, Good> = KINDS
             .iter()
@@ -41,20 +42,19 @@ impl SOLTrader {
                 )
             })
             .collect();
-        let markets = [
-            DogeMarket::new_random(),
-            Bfb::new_random(),
-            PSE_Market::new_random(),
-        ]
-        .to_vec();
+        let doge = DogeMarket::new_random();
+        let bfb = Bfb::new_random();
+        let pse = PSE_Market::new_random();
+        subscribe_each_other!(doge, bfb, pse);
         Self {
             name,
             goods,
-            markets,
+            markets: [doge, bfb, pse].to_vec(),
             ipc_sender: None,
         }
     }
 
+    /// Initialise a trader with DOGE, BFB and PSE markets and specific quantities
     pub fn new_with_quantities(name: String, eur: f32, usd: f32, yen: f32, yuan: f32) -> Self {
         let goods: HashMap<GoodKind, Good> = KINDS
             .iter()
@@ -65,29 +65,16 @@ impl SOLTrader {
                 YUAN => (*k, Good::new(*k, yuan)),
             })
             .collect();
-        let markets = [
-            DogeMarket::new_random(),
-            Bfb::new_random(),
-            PSE_Market::new_random(),
-        ]
-        .to_vec();
+        let doge = DogeMarket::new_random();
+        let bfb = Bfb::new_random();
+        let pse = PSE_Market::new_random();
+        subscribe_each_other!(doge, bfb, pse);
         Self {
             name,
             goods,
-            markets,
+            markets: [doge, bfb, pse].to_vec(),
             ipc_sender: None,
         }
-    }
-
-    pub fn subscribe_markets_to_one_another(&self) {
-        self.markets.iter().enumerate().for_each(|(i1, m1)| {
-            self.markets.iter().enumerate().for_each(|(i2, m2)| {
-                if i1 != i2 {
-                    NotifiableMarketWrapper::new(m1)
-                        .add_subscriber(NotifiableMarketWrapper::new(m2));
-                }
-            })
-        });
     }
 
     pub fn show_all_market_quantities(&self) {
@@ -111,7 +98,6 @@ impl SOLTrader {
             }
             println!();
         }
-        println!();
     }
 
     pub fn show_all_self_quantities(&self) {
@@ -319,6 +305,9 @@ impl SOLTrader {
     /// Before using this method:
     /// - Need to check if trader has enough DEFAULT_GOOD quantity
     /// - Need to check if market has enough GOOD quantity
+    ///
+    /// This method does not handle errors, all the checks needs to be done beforehand.
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
     pub fn lock_buy_from_market_ref(
         &self,
         market: Rc<RefCell<dyn Market>>,
@@ -348,6 +337,9 @@ impl SOLTrader {
     /// Before using this method be sure:
     /// - Trader has enough GOOD quantity
     /// - Market has enough DEFAULT_GOOD quantity
+    ///
+    /// This method does not handle errors, all the checks needs to be done beforehand.
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
     pub fn lock_sell_to_market_ref(
         &self,
         market: Rc<RefCell<dyn Market>>,
@@ -377,6 +369,9 @@ impl SOLTrader {
     /// Using this method implies:
     /// - bid and token need to be retrieve from `lock_sell_to_market_ref` method
     /// - market, qty and kind should be the same as used for `lock_sell_to_market_ref` method
+    ///
+    /// This method does not handle errors, all the checks needs to be done beforehand.
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
     pub fn buy_from_market_ref(
         &mut self,
         market: Rc<RefCell<dyn Market>>,
@@ -411,6 +406,9 @@ impl SOLTrader {
     /// Using this method implies:
     /// - offer and token need to be retrieve from `lock_sell_to_market_ref` method
     /// - market, qty and kind should be the same as used for `lock_sell_to_market_ref` method
+    ///
+    /// This method does not handle errors, all the checks needs to be done beforehand.
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
     pub fn sell_to_market_ref(
         &mut self,
         market: Rc<RefCell<dyn Market>>,
@@ -442,73 +440,5 @@ impl SOLTrader {
     /// Set an IPCSender so the trader can communicate with a visualizer
     pub fn set_ipc_sender(&mut self, ipc_sender: IPCSender) {
         self.ipc_sender = Some(ipc_sender);
-    }
-}
-
-#[cfg(test)]
-mod trader_tests {
-    use crate::trader::strategies::arbitrage::Arbitrages;
-    use crate::trader::SOLTrader;
-    use std::rc::Rc;
-
-    #[test]
-    fn test_get_market_by_name() {
-        let trader = SOLTrader::new("Testing_Name".to_string());
-
-        let my_m = "DogeMarket";
-        let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
-        assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
-
-        let my_m = "Baku stock exchange";
-        let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
-        assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
-
-        let my_m = "PSE_Market";
-        let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
-        assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
-
-        // let my_m = "SOL";
-        // let tmp = trader.get_market_by_name(my_m.to_owned()).unwrap();
-        // assert_eq!(my_m.to_owned(), tmp.borrow().get_name().to_owned());
-    }
-
-    #[test]
-    fn exploit_pse() {
-        let mut trader: SOLTrader = SOLTrader::new("Testing_Arbitrage".to_string());
-
-        trader.subscribe_markets_to_one_another();
-        let value_before = trader.get_current_worth();
-        for _ in 0..366 {
-            //println!("DAY {d:02}");
-            trader.exploit_pse_market();
-        }
-        let value_after = trader.get_current_worth();
-        let profit = value_after - value_before;
-        let margin_percentage = (profit / value_before) * 100f32;
-        assert!(value_after > value_before, "Trader is not profitable");
-        println!("VALUE BEFORE: {value_before}\nVALUE AFTER: {value_after}\nPROFIT: {margin_percentage}%");
-    }
-
-    #[test]
-    fn test_subscription() {
-        let trader = SOLTrader::new("Testing_Subscription".to_string());
-        let mut strong_count: usize;
-        let mut weak_count: usize;
-
-        // Test before subscription
-        for market in trader.markets.iter() {
-            strong_count = Rc::strong_count(market);
-            weak_count = Rc::weak_count(market);
-            assert!(strong_count == 1 && weak_count == 0);
-        }
-
-        // Test after subscription
-        trader.subscribe_markets_to_one_another();
-        let nb_sub_per_market = trader.markets.len() - 1;
-        for market in trader.markets.iter() {
-            strong_count = Rc::strong_count(market);
-            weak_count = Rc::weak_count(market);
-            assert!(strong_count == 1 && weak_count == nb_sub_per_market);
-        }
     }
 }

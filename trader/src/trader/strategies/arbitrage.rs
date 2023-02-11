@@ -2,6 +2,9 @@ use crate::trader::{SOLTrader, KINDS};
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good_kind::GoodKind;
 
+const MIN_BENEFITS: f32 = 5_000f32; // Set minimum profit to exploit arbitrage
+const MIN_MARGIN: f32 = 0.1; // Set minimum margin for exploiting arbitrage
+
 #[derive(Debug, Clone)]
 pub struct Arbitrage {
     pub buying_market_name: String,
@@ -119,7 +122,7 @@ impl Arbitrages for SOLTrader {
 
         if let Some(arbitrage) = highest_benefits_arbitrage {
             // We are not playing for peanuts
-            if arbitrage.benefits < 5_000f32 || arbitrage.margin < 0.1 {
+            if arbitrage.benefits < MIN_BENEFITS || arbitrage.margin < MIN_MARGIN {
                 return;
             }
 
