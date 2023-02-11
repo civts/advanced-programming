@@ -307,10 +307,15 @@ impl SOLTrader {
     }
 
     /// Get the maximum amount of a good the trader can sell to a market according to
-    ///     - The amount of good the trader has
+    ///     - The amount of good the trader has (+ amount received with previous buy trade)
     ///     - The amount of cash the market has
-    fn max_sell(&self, kind: &GoodKind, market_name: &String) -> Result<f32, MarketGetterError> {
-        let good_qty = self.goods.get(&kind).unwrap().get_qty();
+    fn max_sell(
+        &self,
+        kind: &GoodKind,
+        market_name: &String,
+        buy_before_qty: f32,
+    ) -> Result<f32, MarketGetterError> {
+        let good_qty = self.goods.get(&kind).unwrap().get_qty() + buy_before_qty;
         let market = self.get_market_by_name(market_name.clone()).unwrap();
         // Get rate by using get_sell_price because some market give the prices in EUR -> GOOD and others in GOOD -> EUR
         let rate = market.borrow().get_sell_price(kind.clone(), 1f32)?;
@@ -355,7 +360,7 @@ impl SOLTrader {
     /// - Need to check if market has enough GOOD quantity
     ///
     /// This method does not handle errors, all the checks needs to be done beforehand.
-    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_opportunities` method
     pub fn lock_buy_from_market_ref(
         &self,
         market: Rc<RefCell<dyn Market>>,
@@ -387,7 +392,7 @@ impl SOLTrader {
     /// - Market has enough DEFAULT_GOOD quantity
     ///
     /// This method does not handle errors, all the checks needs to be done beforehand.
-    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_opportunities` method
     pub fn lock_sell_to_market_ref(
         &self,
         market: Rc<RefCell<dyn Market>>,
@@ -419,7 +424,7 @@ impl SOLTrader {
     /// - market, qty and kind should be the same as used for `lock_sell_to_market_ref` method
     ///
     /// This method does not handle errors, all the checks needs to be done beforehand.
-    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_opportunities` method
     pub fn buy_from_market_ref(
         &mut self,
         market: Rc<RefCell<dyn Market>>,
@@ -456,7 +461,7 @@ impl SOLTrader {
     /// - market, qty and kind should be the same as used for `lock_sell_to_market_ref` method
     ///
     /// This method does not handle errors, all the checks needs to be done beforehand.
-    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_arbitrages` method
+    /// It is meant to be used with the arbitrage strategy where all the checks are done in the `find_opportunities` method
     pub fn sell_to_market_ref(
         &mut self,
         market: Rc<RefCell<dyn Market>>,

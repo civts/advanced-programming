@@ -2,12 +2,12 @@ use ipc_utils::IPCSender;
 use std::env;
 use trader::trader::strategies::{
     basic_all_random_strategy, basic_best_trade_strategy, do_nothing_strategy, farouk_strategy,
-    gianluca_strategy,
+    gianluca_strategy, losing_strategy,
 };
 use trader::trader::SOLTrader;
 
 /// Call main with arguments:
-/// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random> <Visualizer: vis>.
+/// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random | lose> <Visualizer: vis>.
 ///
 /// Examples:
 /// - cargo run farouk yes  -> Run trader with farouk strategy and visualizer
@@ -29,14 +29,13 @@ pub fn main() {
 
     let mut trader: SOLTrader;
     let strategy_fn: fn(&mut SOLTrader, u32);
-    let mut iterations: u32 = 100;
+    let iterations: u32 = 100;
     let qty = 10_000f32;
 
     match strategy {
         "farouk" => {
             trader = SOLTrader::new_with_quantities("Farouk".to_string(), qty, qty, qty, qty);
             strategy_fn = farouk_strategy;
-            iterations = 100;
         }
         "gianluca" => {
             trader = SOLTrader::new_with_quantities("Gianluca".to_string(), qty, qty, qty, qty);
@@ -49,6 +48,10 @@ pub fn main() {
         "basic_best" => {
             trader = SOLTrader::new("Basic".to_string());
             strategy_fn = basic_best_trade_strategy;
+        }
+        "lose" => {
+            trader = SOLTrader::new("Lose".to_string());
+            strategy_fn = losing_strategy;
         }
         &_ => {
             trader = SOLTrader::new("Lazy".to_string());

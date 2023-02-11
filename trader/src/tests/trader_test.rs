@@ -22,7 +22,21 @@ mod trader_tests {
     }
 
     #[test]
-    fn exploit_pse() {
+    fn test_subscription() {
+        let trader = SOLTrader::new("Testing_Subscription".to_string());
+        let mut strong_count: usize;
+        let mut weak_count: usize;
+
+        let nb_sub_per_market = trader.markets.len() - 1;
+        for market in trader.markets.iter() {
+            strong_count = Rc::strong_count(market);
+            weak_count = Rc::weak_count(market);
+            assert!(strong_count == 1 && weak_count == nb_sub_per_market);
+        }
+    }
+
+    #[test]
+    fn test_exploit_pse() {
         let mut trader: SOLTrader = SOLTrader::new("Testing_Arbitrage".to_string());
 
         let value_before = trader.get_current_worth();
@@ -37,16 +51,17 @@ mod trader_tests {
     }
 
     #[test]
-    fn test_subscription() {
-        let trader = SOLTrader::new("Testing_Subscription".to_string());
-        let mut strong_count: usize;
-        let mut weak_count: usize;
+    fn test_losing_money() {
+        let mut trader: SOLTrader = SOLTrader::new("Testing_Arbitrage".to_string());
 
-        let nb_sub_per_market = trader.markets.len() - 1;
-        for market in trader.markets.iter() {
-            strong_count = Rc::strong_count(market);
-            weak_count = Rc::weak_count(market);
-            assert!(strong_count == 1 && weak_count == nb_sub_per_market);
+        let value_before = trader.get_current_worth();
+        for _ in 0..15_000 {
+            trader.lose_all();
         }
+        let value_after = trader.get_current_worth();
+        let profit = value_after - value_before;
+        let margin_percentage = (profit / value_before) * 100f32;
+        assert!(value_after < value_before, "Trader is profitable");
+        println!("VALUE BEFORE: {value_before}\nVALUE AFTER: {value_after}\nPROFIT: {margin_percentage}%");
     }
 }

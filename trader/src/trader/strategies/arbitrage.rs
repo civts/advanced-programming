@@ -1,5 +1,6 @@
 use crate::trader::{SOLTrader, KINDS};
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
+use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 
 const MIN_BENEFITS: f32 = 5_000f32; // Set minimum profit to exploit arbitrage
@@ -36,8 +37,8 @@ impl Arbitrage {
 }
 
 pub trait Arbitrages {
-    /// Find arbitrage opportunities from every markets the trader is connected to
-    fn find_arbitrages(&self) -> Vec<Arbitrage>;
+    /// Find opportunities (arbitrage, reverse arbitrage) from every markets the trader is connected to
+    fn find_opportunities(&self) -> Vec<Arbitrage>;
 
     /// This method exploit a weakness of the PSE market to find an arbitrage opportunity
     ///
@@ -45,11 +46,15 @@ pub trait Arbitrages {
     /// - When lock buying a null quantity of goods on the market the prices starts to fluctuate a lot after some time,
     /// giving us the opportunity to make some benefits with an arbitrage method.
     fn exploit_pse_market(&mut self);
+
+    /// Make the worst trade possible (lowest negative margin).
+    /// Return true if trader's worth < 1 EUR
+    fn lose_all(&mut self, day: &mut u32) -> bool;
 }
 
 impl Arbitrages for SOLTrader {
-    fn find_arbitrages(&self) -> Vec<Arbitrage> {
-        let mut arbitrages: Vec<Arbitrage> = Vec::new();
+    fn find_opportunities(&self) -> Vec<Arbitrage> {
+        let mut opportunities: Vec<Arbitrage> = Vec::new();
         for (i1, buy_market) in self.markets.iter().enumerate() {
             for (i2, sell_market) in self.markets.iter().enumerate() {
                 if i1 == i2 {
@@ -65,26 +70,28 @@ impl Arbitrages for SOLTrader {
 
                     // Get the maximum qty the trader and markets can trade
                     let max_buy_qty = self.max_buy(&kind, &buy_market_name).unwrap_or(0f32);
-                    let max_sell_qty = self.max_sell(&kind, &sell_market_name).unwrap_or(0f32);
-                    let max_qty = max_buy_qty.min(max_sell_qty) * 0.50; // 50% just in case the market wants to keep a reserve
+                    let max_sell_qty = self
+                        .max_sell(&kind, &sell_market_name, max_buy_qty)
+                        .unwrap_or(0f32);
+                    let max_qty = max_buy_qty.min(max_sell_qty) * 0.5;
 
                     // Get the Buy and Sell prices
-                    // If an error occurs, we set the buy price at the max and the sell price at the min possible
+                    // If an error occurs, we set the buy price and the sell price at the min possible
                     let buy_price = buy_market
                         .borrow()
                         .get_buy_price(kind.clone(), max_qty)
-                        .unwrap_or(f32::MAX);
+                        .unwrap_or(f32::MIN);
                     let sell_price = sell_market
                         .borrow()
                         .get_sell_price(kind.clone(), max_qty)
-                        .unwrap_or(f32::MIN_POSITIVE);
+                        .unwrap_or(f32::MIN);
 
                     let benefits = sell_price - buy_price;
                     let margin = benefits / buy_price;
 
-                    // Check if we have an arbitrage
-                    if sell_price > buy_price && buy_price > 0f32 && sell_price > 0f32 {
-                        arbitrages.push(Arbitrage::new(
+                    // Consider every prices above 0 (no error)
+                    if buy_price > 0f32 && sell_price > 0f32 {
+                        opportunities.push(Arbitrage::new(
                             buy_market_name.clone(),
                             sell_market_name.clone(),
                             kind.clone(),
@@ -96,7 +103,7 @@ impl Arbitrages for SOLTrader {
                 }
             }
         }
-        arbitrages
+        opportunities
     }
 
     fn exploit_pse_market(&mut self) {
@@ -114,19 +121,19 @@ impl Arbitrages for SOLTrader {
             self.lock_buy_from_market_ref(pse.clone(), *k, 0f32);
         }
 
-        let mut arbitrages = self.find_arbitrages();
+        let mut opportunities = self.find_opportunities();
 
-        // Get all the arbitrages opportunities and take the worthiest one
-        arbitrages.sort_by(|a1, a2| a1.benefits.total_cmp(&a2.benefits));
-        let highest_benefits_arbitrage = arbitrages.pop();
+        // Get all the opportunities opportunities and take the worthiest one
+        opportunities.sort_by(|o1, o2| o1.benefits.total_cmp(&o2.benefits));
+        let highest_benefits = opportunities.pop();
 
-        if let Some(arbitrage) = highest_benefits_arbitrage {
+        if let Some(arbitrage) = highest_benefits {
             // We are not playing for peanuts
             if arbitrage.benefits < MIN_BENEFITS || arbitrage.margin < MIN_MARGIN {
                 return;
             }
 
-            println!("\nFound a worthy arbitrage: {:?}", arbitrage);
+            println!("\n*** Found a worthy arbitrage ***\n{:?}", arbitrage);
 
             let buy_market_name = arbitrage.buying_market_name.clone();
             let sell_market_name = arbitrage.selling_market_name.clone();
@@ -145,10 +152,91 @@ impl Arbitrages for SOLTrader {
             let (bid, buy_token) = self.lock_buy_from_market_ref(buy_market.clone(), *kind, qty);
             let (offer, sell_token) = self.lock_sell_to_market_ref(sell_market.clone(), *kind, qty);
 
-            self.buy_from_market_ref(buy_market.clone(), buy_token.clone(), bid, qty, *kind);
-            self.sell_to_market_ref(sell_market.clone(), sell_token.clone(), offer, qty, *kind);
+            self.buy_from_market_ref(buy_market, buy_token, bid, qty, *kind);
+            self.sell_to_market_ref(sell_market, sell_token, offer, qty, *kind);
 
-            println!("Arbitrage exploited!\n");
+            println!(
+                "Arbitrage profit: {} {}\n",
+                arbitrage.benefits, DEFAULT_GOOD_KIND
+            );
         }
+    }
+
+    fn lose_all(&mut self, day: &mut u32) -> bool {
+        if self.get_current_worth() < 1f32 {
+            return true;
+        }
+
+        // If EUR qty < 1: sell the good with highest qty in order to get some EUR
+        if self.get_cur_good_qty(&DEFAULT_GOOD_KIND) < 1f32 {
+            self.sell_highest_qty_good();
+            *day += 2;
+        }
+
+        // Get all the opportunities opportunities and take the worst one
+        let mut opportunities = self.find_opportunities();
+        opportunities.sort_by(|o1, o2| o2.margin.total_cmp(&o1.margin));
+        let lowest_benefits = opportunities.pop();
+
+        if let Some(reverse_arbitrage) = lowest_benefits {
+            // Check not profitable
+            if reverse_arbitrage.margin > 0f32 {
+                return false;
+            }
+
+            println!("\n*** Best way to lose money ***\n{:?}", reverse_arbitrage);
+
+            let buy_market_name = reverse_arbitrage.buying_market_name.clone();
+            let sell_market_name = reverse_arbitrage.selling_market_name.clone();
+            let kind = &reverse_arbitrage.good_kind;
+            let qty = reverse_arbitrage.qty.clone();
+
+            let buy_market = self
+                .get_market_by_name(buy_market_name.clone())
+                .unwrap()
+                .clone();
+            let sell_market = self
+                .get_market_by_name(sell_market_name.clone())
+                .unwrap()
+                .clone();
+
+            let (bid, buy_token) = self.lock_buy_from_market_ref(buy_market.clone(), *kind, qty);
+            let (offer, sell_token) = self.lock_sell_to_market_ref(sell_market.clone(), *kind, qty);
+
+            self.buy_from_market_ref(buy_market, buy_token, bid, qty, *kind);
+            self.sell_to_market_ref(sell_market, sell_token, offer, qty, *kind);
+            *day += 4;
+
+            println!(
+                "Money lost: {} {}\n",
+                reverse_arbitrage.benefits, DEFAULT_GOOD_KIND
+            );
+        }
+        false
+    }
+}
+
+impl SOLTrader {
+    fn sell_highest_qty_good(&mut self) {
+        let mut goods: Vec<Good> = self.goods.iter().map(|(_, g)| g.clone()).collect();
+        goods.sort_by(|g1, g2| g1.get_qty().total_cmp(&g2.get_qty()));
+        let highest_qty_good = goods.pop().unwrap();
+        let kind = highest_qty_good.get_kind();
+        let qty = highest_qty_good.get_qty();
+        let mut best_market = self.get_market_by_name("PSE_Market".to_string()).unwrap();
+        let mut best_sell = 0f32;
+        for market in self.markets.iter() {
+            let market_name = market.borrow().get_name().to_string();
+            let max_sell = self.max_sell(&kind, &market_name, 0f32).unwrap_or(0f32);
+            if max_sell > best_sell {
+                best_sell = max_sell;
+                best_market = market;
+            }
+        }
+        if best_sell == 0f32 {
+            return;
+        }
+        let (offer, sell_token) = self.lock_sell_to_market_ref(best_market.clone(), kind, qty);
+        self.sell_to_market_ref(best_market.clone(), sell_token, offer, qty, kind);
     }
 }
