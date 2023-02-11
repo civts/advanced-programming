@@ -44,18 +44,24 @@ impl MainView {
 }
 
 fn render_right<B: Backend>(frame: &mut Frame<B>, state: &AppState, area: Rect) {
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(80), Constraint::Min(2)])
-        .split(area);
+    if state.trading_volume_chart_visible {
+        // Render both trading volume and chart
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(80), Constraint::Min(2)])
+            .split(area);
 
-    profit_chart::chart(
-        frame,
-        state.stats.profit_history.iter(),
-        *layout.first().unwrap(),
-    );
+        profit_chart::chart(
+            frame,
+            state.stats.profit_history.iter(),
+            *layout.first().unwrap(),
+        );
 
-    render_trading_volume_widget(frame, &state.stats, *layout.last().unwrap());
+        render_trading_volume_widget(frame, &state.stats, *layout.last().unwrap());
+    } else {
+        // Render only the chart
+        profit_chart::chart(frame, state.stats.profit_history.iter(), area);
+    }
 }
 
 fn render_column_widget<B: Backend>(state: &AppState, area: Rect, frame: &mut Frame<B>) {

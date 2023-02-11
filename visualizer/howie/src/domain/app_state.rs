@@ -17,6 +17,9 @@ pub(crate) struct AppState {
     pub(crate) stats: Stats,
 
     pub(crate) paused: bool,
+
+    /// If we are showing the trading volume chart
+    pub(crate) trading_volume_chart_visible: bool,
 }
 
 impl AppState {

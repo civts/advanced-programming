@@ -85,6 +85,10 @@ impl App {
                             KeyCode::Char('p') | KeyCode::Char(' ') => {
                                 self.state.paused = !self.state.paused;
                             }
+                            KeyCode::Char('v') => {
+                                self.state.trading_volume_chart_visible =
+                                    !self.state.trading_volume_chart_visible;
+                            }
                             KeyCode::Char('r') => {
                                 let waiting_trader =
                                     std::mem::discriminant(&AppView::WaitingForFirstTrade);
