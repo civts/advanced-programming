@@ -13,7 +13,8 @@ mod read_pipe;
 mod receive;
 
 /// `IPCReceiver` allows a process to receive `TradingEvent`s from a sender.
-/// The
+/// The receive operation is blocking, and completes in at most
+/// `self.refresh_duration` time.
 pub struct IPCReceiver {
     /// Pipe where to read the events from
     pub(crate) pipe_path: PathBuf,

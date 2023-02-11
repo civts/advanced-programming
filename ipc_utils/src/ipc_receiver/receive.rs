@@ -11,7 +11,12 @@ pub(crate) enum ThreadResult {
 }
 
 impl IPCReceiver {
-    /// Receive a Trading Event
+    /// Reads a trading event from the pipe and returns it.
+    /// This operation is blocking fir at most `self.refresh_duration`
+    /// # Returns
+    /// - `Ok(None)` if no event is present in the pipe
+    /// - `Ok(Some(event))` if an event was read from the pipe
+    /// - `Err(e)` if an I/O error, `e`, occurred.
     pub fn receive(&mut self) -> Result<Option<TradingEvent>> {
         let previous_read_already_finished = self
             .read_handle_opt
@@ -20,7 +25,7 @@ impl IPCReceiver {
             .unwrap_or(false);
 
         if previous_read_already_finished {
-            // get and return that envent
+            // get and return that event
             let thread_execution_result = self.read_handle_opt.take().unwrap().join();
             thread_execution_result.unwrap_or(Err(Error::new(
                 std::io::ErrorKind::Interrupted,
