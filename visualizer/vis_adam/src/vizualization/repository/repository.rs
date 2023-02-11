@@ -11,7 +11,7 @@ use std::fs::OpenOptions;
 use std::time::Duration;
 use ipc_utils::IPCReceiver;
 use ipc_utils::trading_event::TradingEvent;
-use ipc_utils::trading_event_details::{TradeType, TradingEventDetails};
+use ipc_utils::trading_event_details::{TradeOperation, TradeType, TradingEventDetails};
 use thiserror::Error;
 use std::string::String;
 use unitn_market_2022::good::good_kind::GoodKind;
@@ -75,52 +75,14 @@ pub fn read_locks() -> Result<Vec<Lock>, Error> {
 }
 
 
-pub fn receive() {
-    let mut receiver = IPCReceiver::new(Duration::from_millis(REFRESH_RATE_MILLISECONDS));
-    let event = receiver.receive();
-
-    match event {
-        Ok(trade) => {
-            match trade {
-                None => {}
-                Some(tradeEvent) => {
-                    let trader_state = tradeEvent.trader_state;
-
-                    let map = trader_state.cash;
-
-                    for (kind, value) in map {
-                        let balance = Balance { value };
-                        save_balance(balance, kind);
-                    }
-
-                    let market = tradeEvent.market_name;
-                    match tradeEvent.details {
-                        TradingEventDetails::AskedLock { successful, trade_type, price, good_kind, quantity } => {
-                            save_lock_if_successful(market, successful, trade_type, price, good_kind, quantity)
-                        }
-                        TradingEventDetails::TradeFinalized { trade_type, quantity, price, successful, good_kind } => {
-                            save_trade_if_successful(market, trade_type, quantity, price, successful, good_kind)
-                        }
-                    };
-                    ()
-                }
-            };
-        }
-        Err(_) => {
-            ()
-        }
-    };
-    ()
-}
-
-fn save_lock_if_successful(market: String, successful: bool, trade_type: TradeType, price: f32, good_kind: GoodKind, quantity: f32) {
-    let lock = Lock { quantity: quantity as i32, good_kind, market, price, operation:trade_type, timestamp: Utc::now() };
+pub fn save_lock_if_successful(market: String, successful: bool, trade_type: TradeType, price: f32, good_kind: GoodKind, quantity: f32) {
+    let lock = Lock { quantity: quantity as i32, good_kind, market, price, operation: trade_type, timestamp: Utc::now() };
     if successful {
         save_lock(lock);
     }
 }
 
-fn save_trade_if_successful(market: String, trade_type: TradeType, quantity: f32, price: f32, successful: bool, good_kind: GoodKind) {
+pub fn save_trade_if_successful(market: String, trade_type: TradeType, quantity: f32, price: f32, successful: bool, good_kind: GoodKind) {
     let operation = get_operation_string(trade_type);
 
     let trade = Trade { quantity: quantity as usize, good_kind, market, price, operation, timestamp: Utc::now() };
@@ -215,7 +177,7 @@ pub fn save_lock(lock: Lock) {
     std::fs::write(LOCK_PATH, lock_json).expect("File corrupted !");
 }
 
-fn save_balance(balance: Balance, gk: GoodKind) {
+pub fn save_balance(balance: Balance, gk: GoodKind) {
     let mut balances: Vec<Balance> = read_balance(gk).unwrap();
     balances.push(balance);
     let balance_json = to_string(&balances).unwrap();

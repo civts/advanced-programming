@@ -1,5 +1,6 @@
 pub mod repository;
 pub mod components;
+pub mod service;
 
 use crossterm::{
     event::{self, Event as CEvent, KeyCode},
@@ -10,6 +11,7 @@ use std::io::{self, Stdout};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
+use ipc_utils::IPCReceiver;
 use thiserror::Error;
 use tui::{backend::CrosstermBackend, layout::{Alignment, Constraint, Direction, Layout}, style::{Color, Modifier, Style}, text::{Span, Spans}, widgets::{
     Block, BorderType, Borders, Cell, List, ListItem, ListState, Paragraph, Row, Table, Tabs,
@@ -17,7 +19,8 @@ use tui::{backend::CrosstermBackend, layout::{Alignment, Constraint, Direction, 
 use tui::layout::Rect;
 use unitn_market_2022::good::good_kind::GoodKind;
 use crate::vizualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats, get_trade_table};
-use crate::vizualization::repository::repository::{clear_all, find_latest_balance, Lock, read_locks, read_trades, receive, Trade};
+use crate::vizualization::repository::repository::{clear_all, find_latest_balance, Lock, read_locks, read_trades, Trade};
+use crate::vizualization::service::service::Service;
 
 enum Event<I> {
     Input(I),
@@ -25,6 +28,8 @@ enum Event<I> {
 }
 
 pub(crate) fn viz() -> Result<(), Box<dyn std::error::Error>> {
+    let mut service: Service = Service::new();
+
     enable_raw_mode().expect("can run in a raw mode");
 
     let (tx, rx) = mpsc::channel();
@@ -33,7 +38,7 @@ pub(crate) fn viz() -> Result<(), Box<dyn std::error::Error>> {
     thread::spawn(move || {
         let mut last_tick = Instant::now();
         loop {
-            receive();
+            service.receive();
             let timeout = tick_rate
                 .checked_sub(last_tick.elapsed())
                 .unwrap_or_else(|| Duration::from_secs(0));
