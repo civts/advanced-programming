@@ -222,16 +222,16 @@ pub fn get_copyright() -> Paragraph<'static> {
 pub fn get_stats() -> Tabs<'static> {
     Tabs::new(get_stats_items())
         .select(0)
-        .block(Block::default().title("Menu").borders(Borders::ALL))
+        .block(Block::default().title("Stats").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().fg(Color::Yellow))
         .divider(Span::raw("|"))
 }
 
 fn get_stats_items() -> Vec<Spans<'static>> {
-    let menu_titles = vec!["Trades", "Add", "Quit"];
+    let stats_tiles = vec!["Trades", "Quit"];
 
-    let menu = menu_titles
+    let stats = stats_tiles
         .iter()
         .map(|t| {
             let (first, rest) = t.split_at(1);
@@ -246,5 +246,5 @@ fn get_stats_items() -> Vec<Spans<'static>> {
             ])
         })
         .collect();
-    menu
+    stats
 }
