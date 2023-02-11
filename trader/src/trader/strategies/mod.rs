@@ -9,6 +9,7 @@ use crate::trader::strategies::misc::{
 };
 use crate::trader::SOLTrader;
 use std::collections::HashMap;
+use std::{thread, time};
 use unitn_market_2022::good::good_kind::GoodKind;
 
 type History = Vec<HashMap<String, HashMap<GoodKind, f32>>>;
@@ -121,6 +122,8 @@ pub fn basic_all_random_strategy(trader: &mut SOLTrader, iterations: u32) {
 
         // thread::sleep(time::Duration::from_secs(5))
         trader.show_all_self_quantities();
+
+        // thread::sleep(time::Duration::from_secs(1));
     }
 }
 

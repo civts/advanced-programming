@@ -29,7 +29,7 @@ pub fn main() {
 
     let mut trader: SOLTrader;
     let strategy_fn: fn(&mut SOLTrader, u32);
-    let mut iterations: u32 = 20;
+    let mut iterations: u32 = 100;
     let qty = 10_000f32;
 
     match strategy {

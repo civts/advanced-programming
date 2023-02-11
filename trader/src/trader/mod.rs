@@ -199,6 +199,18 @@ impl SOLTrader {
             .borrow_mut()
             .lock_buy(kind, qty, bid, String::from("SOLTrader"))
             .unwrap();
+        
+        self.log_visualizer(
+            mrk_bind.borrow().get_name().to_string(),
+            TradingEventDetails {
+                successful: true,
+                trade_type: TradeType::Buy,
+                good_kind: kind,
+                quantity: qty,
+                price: bid,
+                operation: TradeOperation::AskedLock,
+            },
+        );
 
         //split the cash!
         let mut cash = self
@@ -218,6 +230,18 @@ impl SOLTrader {
             .unwrap();
 
         println!("\n Bought from {} {} of {}", name, qty, kind);
+
+        self.log_visualizer(
+            mrk_bind.borrow().get_name().to_string(),
+            TradingEventDetails {
+                successful: true,
+                trade_type: TradeType::Buy,
+                good_kind: kind,
+                quantity: qty,
+                price: bid,
+                operation: TradeOperation::TradeFinalized,
+            },
+        );
     }
 
     pub fn sell_to_market(&mut self, name: String, kind: GoodKind, qty: f32) {
@@ -229,6 +253,18 @@ impl SOLTrader {
             .borrow_mut()
             .lock_sell(kind, qty, offer, String::from("SOLTrader"))
             .unwrap();
+
+        self.log_visualizer(
+            mrk_bind.borrow().get_name().to_string(),
+            TradingEventDetails {
+                successful: true,
+                trade_type: TradeType::Sell,
+                good_kind: kind,
+                quantity: qty,
+                price: offer,
+                operation: TradeOperation::AskedLock,
+            },
+        );
 
         //split the good
         let mut good_to_sell = self.goods.get_mut(&kind).unwrap().split(qty).unwrap();
@@ -243,6 +279,18 @@ impl SOLTrader {
             .unwrap();
 
         println!("\n Sold to {} {} of {}", name, qty, kind);
+
+        self.log_visualizer(
+            mrk_bind.borrow().get_name().to_string(),
+            TradingEventDetails {
+                successful: true,
+                trade_type: TradeType::Sell,
+                good_kind: kind,
+                quantity: qty,
+                price: offer,
+                operation: TradeOperation::TradeFinalized,
+            },
+        );
     }
 
     /// Get the maximum amount of a good the trader can buy from a market according to
