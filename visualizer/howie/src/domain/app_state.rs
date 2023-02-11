@@ -1,6 +1,5 @@
+use super::{app_theme::AppTheme, app_view::AppView, stats::Stats};
 use ipc_utils::trading_event::TradingEvent;
-
-use super::{app_view::AppView, stats::Stats};
 
 #[derive(Default)]
 pub(crate) struct AppState {
@@ -20,6 +19,8 @@ pub(crate) struct AppState {
 
     /// If we are showing the trading volume chart
     pub(crate) trading_volume_chart_visible: bool,
+
+    pub(crate) theme: AppTheme,
 }
 
 impl AppState {

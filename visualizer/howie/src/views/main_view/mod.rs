@@ -23,7 +23,7 @@ impl MainView {
     pub fn draw<B: Backend>(terminal: &mut Terminal<B>, state: &AppState) {
         terminal
             .draw(|f| {
-                draw_background(f);
+                draw_background(f, &state.theme);
 
                 // let last_event = build_latest_event_widget(state);
 
@@ -55,12 +55,13 @@ fn render_right<B: Backend>(frame: &mut Frame<B>, state: &AppState, area: Rect) 
             frame,
             state.stats.profit_history.iter(),
             *layout.first().unwrap(),
+            &state.theme,
         );
 
-        render_trading_volume_widget(frame, &state.stats, *layout.last().unwrap());
+        render_trading_volume_widget(frame, &state.stats, *layout.last().unwrap(), &state.theme);
     } else {
         // Render only the chart
-        profit_chart::chart(frame, state.stats.profit_history.iter(), area);
+        profit_chart::chart(frame, state.stats.profit_history.iter(), area, &state.theme);
     }
 }
 
@@ -93,9 +94,9 @@ fn render_column_widget<B: Backend>(state: &AppState, area: Rect, frame: &mut Fr
 
     render_trader_name_widget(frame, last_event, top);
 
-    render_market_chart(&state.stats.trades_with_market, frame, center);
+    render_market_chart(&state.stats.trades_with_market, frame, center, &state.theme);
 
-    render_portfolio_widget(frame, &last_event.trader_state, center_bottom);
+    render_portfolio_widget(frame, &last_event.trader_state, center_bottom, &state.theme);
 
-    render_stats_widget(&state.stats, frame, bottom);
+    render_stats_widget(&state.stats, frame, bottom, &state.theme);
 }

@@ -1,7 +1,4 @@
-use crate::{
-    constants::{BACKGROUND, BLUE},
-    domain::stats::Stats,
-};
+use crate::domain::{app_theme::AppTheme, stats::Stats};
 use ipc_utils::trading_event_details::{TradeOperation, TradingEventDetails};
 use tui::{
     backend::Backend, layout::Rect, style::Style, symbols::bar::THREE_LEVELS, widgets::BarChart,
@@ -12,6 +9,7 @@ pub(crate) fn render_trading_volume_widget<B: Backend>(
     frame: &mut Frame<B>,
     stats: &Stats,
     area: Rect,
+    theme: &AppTheme,
 ) {
     let area = Rect {
         //since BarChart always draws the labels, I make them go one row below and invisible
@@ -48,14 +46,14 @@ pub(crate) fn render_trading_volume_widget<B: Backend>(
                     .skip(skips)
                     .map(|(k, v)| (k.as_str(), *v)),
             ))
-            .label_style(Style::default().fg(BACKGROUND))
+            .label_style(Style::default().fg(theme.background))
             .bar_width(1)
-            .style(Style::default().fg(BLUE))
+            .style(Style::default().fg(theme.c1))
             .bar_gap(0)
             .bar_set(THREE_LEVELS)
             .value_style(Style {
-                fg: Some(BACKGROUND),
-                bg: Some(BLUE),
+                fg: Some(theme.background),
+                bg: Some(theme.c1),
                 ..Default::default()
             }),
         area,

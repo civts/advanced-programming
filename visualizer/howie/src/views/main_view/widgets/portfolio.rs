@@ -1,4 +1,3 @@
-use crate::constants::default_style;
 use ipc_utils::trader_state::{TraderState, ALL_GOOD_KINDS};
 use tui::{
     backend::Backend,
@@ -8,10 +7,13 @@ use tui::{
     Frame,
 };
 
+use crate::domain::app_theme::AppTheme;
+
 pub(crate) fn render_portfolio_widget<B: Backend>(
     frame: &mut Frame<B>,
     state: &TraderState,
     area: Rect,
+    theme: &AppTheme,
 ) {
     let a = Rect { height: 1, ..area };
     let av = Rect {
@@ -28,7 +30,7 @@ pub(crate) fn render_portfolio_widget<B: Backend>(
         .split(av);
 
     frame.render_widget(
-        Paragraph::new("Portfolio").style(default_style().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Portfolio").style(theme.default_style().add_modifier(Modifier::BOLD)),
         a,
     );
 

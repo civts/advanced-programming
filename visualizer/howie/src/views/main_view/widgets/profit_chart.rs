@@ -1,4 +1,3 @@
-use crate::constants::{default_style, BACKGROUND, BLUE, YELLOW};
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -10,8 +9,14 @@ use tui::{
 };
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 
-pub(crate) fn chart<'a, B: Backend, T>(frame: &mut Frame<B>, events: T, area: Rect)
-where
+use crate::domain::app_theme::AppTheme;
+
+pub(crate) fn chart<'a, B: Backend, T>(
+    frame: &mut Frame<B>,
+    events: T,
+    area: Rect,
+    theme: &AppTheme,
+) where
     T: Iterator<Item = &'a (u64, f64)>,
 {
     let data = Vec::from_iter(events.map(|(k, v)| (*k as f64, *v)));
@@ -31,7 +36,7 @@ where
     let d1 = Dataset::default()
         // .name("data2")
         .marker(symbols::Marker::Braille)
-        .style(Style::default().fg(YELLOW))
+        .style(Style::default().fg(theme.c2))
         .graph_type(tui::widgets::GraphType::Line)
         .data(&data);
     let datasets = vec![d1];
@@ -50,19 +55,19 @@ where
         //         ))
         //         .borders(Borders::ALL),
         // )
-        .style(Style::default().bg(BACKGROUND).fg(YELLOW))
+        .style(Style::default().bg(theme.background).fg(theme.c2))
         .x_axis(
             Axis::default()
-                .title(Span::styled("Days", default_style()))
-                .style(Style::default().fg(BLUE).add_modifier(Modifier::DIM))
+                .title(Span::styled("Days", theme.default_style()))
+                .style(Style::default().fg(theme.c1).add_modifier(Modifier::DIM))
                 .labels(vec![
                     Span::styled(
                         data.first().unwrap().0.to_string(),
-                        default_style().add_modifier(Modifier::BOLD),
+                        theme.default_style().add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         data.last().unwrap().0.to_string(),
-                        default_style().add_modifier(Modifier::BOLD),
+                        theme.default_style().add_modifier(Modifier::BOLD),
                     ),
                 ])
                 .bounds([0.0, len]),
@@ -75,15 +80,15 @@ where
                             "Total capital ({})",
                             DEFAULT_GOOD_KIND.to_string().to_uppercase()
                         ),
-                        default_style(),
+                        theme.default_style(),
                     ),
-                    // Span::styled((" ").repeat(40), default_style().fg(YELLOW)),
+                    // Span::styled((" ").repeat(40), theme.default_style().fg(YELLOW)),
                 ]))
                 .labels_alignment(tui::layout::Alignment::Right)
-                .style(Style::default().fg(BLUE).add_modifier(Modifier::DIM))
+                .style(Style::default().fg(theme.c1).add_modifier(Modifier::DIM))
                 .labels(vec![
-                    Span::styled(min_y, default_style().add_modifier(Modifier::BOLD)),
-                    Span::styled(max_y, default_style().add_modifier(Modifier::BOLD)),
+                    Span::styled(min_y, theme.default_style().add_modifier(Modifier::BOLD)),
+                    Span::styled(max_y, theme.default_style().add_modifier(Modifier::BOLD)),
                 ])
                 .bounds([*min, *max]),
         );

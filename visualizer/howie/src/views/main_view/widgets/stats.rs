@@ -8,16 +8,21 @@ use tui::{
     Frame,
 };
 
-use crate::{constants::default_style, domain::stats::Stats};
+use crate::domain::{app_theme::AppTheme, stats::Stats};
 
-pub(crate) fn render_stats_widget<B: Backend>(stats: &Stats, frame: &mut Frame<B>, area: Rect) {
+pub(crate) fn render_stats_widget<B: Backend>(
+    stats: &Stats,
+    frame: &mut Frame<B>,
+    area: Rect,
+    theme: &AppTheme,
+) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(2), Constraint::Min(1)])
         .split(area);
 
     frame.render_widget(
-        Paragraph::new("Stats").style(default_style().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Stats").style(theme.default_style().add_modifier(Modifier::BOLD)),
         *layout.first().unwrap(),
     );
 

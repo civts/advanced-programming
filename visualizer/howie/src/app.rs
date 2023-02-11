@@ -1,7 +1,7 @@
 use crate::{
     constants::REFRESH_RATE_MILLISECONDS,
     domain::app_state::AppState,
-    domain::app_view::AppView,
+    domain::{app_theme::app_themes, app_view::AppView},
     views::{error_view, help_view::draw_help_view, main_view::MainView, wait_view},
 };
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
@@ -36,6 +36,8 @@ impl App {
         self.state.current_view = AppView::WaitingForFirstTrade;
         self.state.paused = false;
         let minimum_refresh_duration = Duration::from_millis(REFRESH_RATE_MILLISECONDS / 2);
+        let mut theme_index: usize = 0;
+        let themes = app_themes();
 
         // Something different from AppState::WaitingForFirstTrade
         let s = AppView::HelpMenu;
@@ -72,10 +74,12 @@ impl App {
                     terminal.clear().expect("Can clear the terminal");
                 }
                 match &self.state.current_view {
-                    AppView::WaitingForFirstTrade => wait_view::draw(&mut terminal),
+                    AppView::WaitingForFirstTrade => {
+                        wait_view::draw(&mut terminal, &self.state.theme)
+                    }
                     AppView::MainTradingView => MainView::draw(&mut terminal, &self.state),
-                    AppView::HelpMenu => draw_help_view(&mut terminal),
-                    AppView::ErrorView(e) => error_view::draw(&mut terminal, e),
+                    AppView::HelpMenu => draw_help_view(&mut terminal, &self.state.theme),
+                    AppView::ErrorView(e) => error_view::draw(&mut terminal, e, &self.state.theme),
                 }
             }
 
@@ -103,6 +107,11 @@ impl App {
                                     .refresh_speed
                                     .div_f32(1.1)
                                     .max(minimum_refresh_duration);
+                            }
+                            KeyCode::Char('t') => {
+                                theme_index += 1;
+                                theme_index %= themes.len();
+                                self.state.theme = *themes.get(theme_index).unwrap();
                             }
                             KeyCode::Char('r') => {
                                 let waiting_trader =

@@ -1,3 +1,5 @@
+use crate::domain::app_theme::AppTheme;
+
 use super::utils::draw_background;
 use std::io;
 use tui::{
@@ -8,7 +10,7 @@ use tui::{
     Terminal,
 };
 
-pub(crate) fn draw<B: Backend>(terminal: &mut Terminal<B>, error: &io::Error) {
+pub(crate) fn draw<B: Backend>(terminal: &mut Terminal<B>, error: &io::Error, theme: &AppTheme) {
     let message: String;
     if let std::io::ErrorKind::NotFound = error.kind() {
         message = "Did not find the pipe 🤔\r\nMake sure you started a trader".to_string();
@@ -17,7 +19,7 @@ pub(crate) fn draw<B: Backend>(terminal: &mut Terminal<B>, error: &io::Error) {
     }
     terminal
         .draw(|f| {
-            draw_background(f);
+            draw_background(f, theme);
             let size = f.size();
             let p = Paragraph::new(message)
                 .alignment(Alignment::Center)

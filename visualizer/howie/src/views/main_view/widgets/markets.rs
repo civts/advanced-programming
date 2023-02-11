@@ -8,31 +8,38 @@ use tui::{
     Frame,
 };
 
-use crate::constants::{default_style, BACKGROUND, RED};
+use crate::domain::app_theme::AppTheme;
 
 pub(crate) fn render_market_chart<B: Backend>(
     stats: &HashMap<String, u64>,
     frame: &mut Frame<B>,
     area: Rect,
+    theme: &AppTheme,
 ) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(2), Constraint::Min(1)])
         .split(area);
 
-    render_title(*layout.first().unwrap(), frame);
+    render_title(*layout.first().unwrap(), frame, theme);
 
-    render_chart(stats, *layout.last().unwrap(), frame);
+    render_chart(stats, *layout.last().unwrap(), frame, theme);
 }
 
-fn render_title<B: Backend>(area: Rect, frame: &mut Frame<B>) {
+fn render_title<B: Backend>(area: Rect, frame: &mut Frame<B>, theme: &AppTheme) {
     frame.render_widget(
-        Paragraph::new("Most Active Markets").style(default_style().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Most Active Markets")
+            .style(theme.default_style().add_modifier(Modifier::BOLD)),
         area,
     );
 }
 
-fn render_chart<B: Backend>(stats: &HashMap<String, u64>, area: Rect, frame: &mut Frame<B>) {
+fn render_chart<B: Backend>(
+    stats: &HashMap<String, u64>,
+    area: Rect,
+    frame: &mut Frame<B>,
+    theme: &AppTheme,
+) {
     let markets = Vec::from_iter(stats.iter().map(|(k, v)| (k.as_str(), *v)));
     let number_of_markets: u16 = markets
         .len()
@@ -48,10 +55,10 @@ fn render_chart<B: Backend>(stats: &HashMap<String, u64>, area: Rect, frame: &mu
         BarChart::default()
             .data(&markets)
             .bar_width(bar_width)
-            .style(Style::default().fg(RED))
+            .style(Style::default().fg(theme.accent))
             .value_style(Style {
-                fg: Some(BACKGROUND),
-                bg: Some(RED),
+                fg: Some(theme.background),
+                bg: Some(theme.accent),
                 ..Default::default()
             }),
         area,
