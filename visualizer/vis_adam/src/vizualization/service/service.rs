@@ -21,8 +21,8 @@ impl Service {
             Ok(trade) => {
                 match trade {
                     None => {}
-                    Some(tradeEvent) => {
-                        let trader_state = tradeEvent.trader_state;
+                    Some(trade_event) => {
+                        let trader_state = trade_event.trader_state;
 
                         let map = trader_state.cash;
 
@@ -31,8 +31,8 @@ impl Service {
                             save_balance(balance, kind);
                         }
 
-                        let market = tradeEvent.market_name;
-                        let details = tradeEvent.details;
+                        let market = trade_event.market_name;
+                        let details = trade_event.details;
 
                         match details.operation {
                             TradeOperation::AskedLock => {

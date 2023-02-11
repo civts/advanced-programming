@@ -1,26 +1,25 @@
-pub mod repository;
-pub mod components;
-pub mod service;
+use std::io::{self, Stdout};
+use std::sync::mpsc;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use crossterm::{
     event::{self, Event as CEvent, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-
-use std::io::{self, Stdout};
-use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration, Instant};
-use ipc_utils::IPCReceiver;
-use thiserror::Error;
-use tui::{backend::CrosstermBackend, layout::{Alignment, Constraint, Direction, Layout}, style::{Color, Modifier, Style}, text::{Span, Spans}, widgets::{
-    Block, BorderType, Borders, Cell, List, ListItem, ListState, Paragraph, Row, Table, Tabs,
-}, Terminal, Frame};
-use tui::layout::Rect;
+use tui::backend::CrosstermBackend;
+use tui::{Frame, Terminal};
+use tui::layout::{Constraint, Direction, Layout, Rect};
+use tui::widgets::Table;
 use unitn_market_2022::good::good_kind::GoodKind;
+
 use crate::vizualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats, get_trade_table};
-use crate::vizualization::repository::repository::{clear_all, find_latest_balance, Lock, read_locks, read_trades, Trade};
+use crate::vizualization::repository::repository::{clear_all, find_latest_balance, read_locks, read_trades};
 use crate::vizualization::service::service::Service;
+
+pub mod repository;
+pub mod components;
+pub mod service;
 
 enum Event<I> {
     Input(I),

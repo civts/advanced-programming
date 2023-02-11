@@ -4,7 +4,7 @@ use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Cell, Paragraph, Row, Table, Tabs};
 use unitn_market_2022::good::good_kind::GoodKind;
-use crate::vizualization::repository::repository::{find_latest_balance, Lock, Trade};
+use crate::vizualization::repository::repository::{Lock, Trade};
 
 pub fn get_lock_table(locks: Vec<Lock>) -> Table<'static> {
     let locks_detail = Table::new(get_lock_rows(locks))

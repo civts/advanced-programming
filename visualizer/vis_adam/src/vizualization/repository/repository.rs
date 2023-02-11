@@ -1,19 +1,17 @@
-use chrono::{DateTime, Utc};
-use rand::Rng;
-use serde::{Deserialize, Serialize};
-use serde_json::to_string;
 use std::{
     fs::File,
     io::{self, Read},
 };
 use std::collections::HashMap;
 use std::fs::OpenOptions;
-use std::time::Duration;
-use ipc_utils::IPCReceiver;
-use ipc_utils::trading_event::TradingEvent;
-use ipc_utils::trading_event_details::{TradeOperation, TradeType, TradingEventDetails};
-use thiserror::Error;
 use std::string::String;
+
+use chrono::{DateTime, Utc};
+use ipc_utils::trading_event_details::{TradeType};
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+use serde_json::to_string;
+use thiserror::Error;
 use unitn_market_2022::good::good_kind::GoodKind;
 
 const TRADE_PATH: &str = "data/trade.json";
@@ -23,8 +21,6 @@ const EUR_PATH: &str = "data/eur.json";
 const YEN_PATH: &str = "data/yen.json";
 const USD_PATH: &str = "data/usd.json";
 const YUAN_PATH: &str = "data/yuan.json";
-
-const REFRESH_RATE_MILLISECONDS: u64 = 100;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -194,6 +190,6 @@ pub fn clear_all() {
 }
 
 fn clear_file(path: &str) {
-    let mut file = OpenOptions::new().write(true).open(path).unwrap();
+    let file = OpenOptions::new().write(true).open(path).unwrap();
     file.set_len(0).unwrap();
 }
