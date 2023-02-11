@@ -193,111 +193,144 @@ impl SOLTrader {
     //
     pub fn buy_from_market(&mut self, name: String, kind: GoodKind, qty: f32) {
         if self.get_cur_good_qty(&DEFAULT_GOOD_KIND) >= qty {
-        let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
+            let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
 
-        let bid = mrk_bind.borrow().get_buy_price(kind, qty).ok().unwrap();
-        let token = mrk_bind
-            .borrow_mut()
-            .lock_buy(kind, qty, bid, String::from("SOLTrader"))
-            .unwrap();
-        
-        self.log_visualizer(
-            mrk_bind.borrow().get_name().to_string(),
-            TradingEventDetails {
-                successful: true,
-                trade_type: TradeType::Buy,
-                good_kind: kind,
-                quantity: qty,
-                price: bid,
-                operation: TradeOperation::AskedLock,
-            },
-        );
+            let bid = mrk_bind.borrow().get_buy_price(kind, qty).ok().unwrap();
+            let token = mrk_bind
+                .borrow_mut()
+                .lock_buy(kind, qty, bid, String::from("SOLTrader"));
 
-        //split the cash!
-        let mut cash = self
-            .goods
-            .get_mut(&DEFAULT_GOOD_KIND)
-            .unwrap()
-            .split(bid)
-            .unwrap();
+            if let Ok(token) = token {
+                self.log_visualizer(
+                    mrk_bind.borrow().get_name().to_string(),
+                    TradingEventDetails {
+                        successful: true,
+                        trade_type: TradeType::Buy,
+                        good_kind: kind,
+                        quantity: qty,
+                        price: bid,
+                        operation: TradeOperation::AskedLock,
+                    },
+                );
 
-        let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
+                //split the cash!
+                let mut cash = self
+                    .goods
+                    .get_mut(&DEFAULT_GOOD_KIND)
+                    .unwrap()
+                    .split(bid)
+                    .unwrap();
 
-        //add the good locally
-        self.goods
-            .get_mut(&kind)
-            .unwrap()
-            .merge(buy_result.unwrap())
-            .unwrap();
+                let buy_result = mrk_bind.borrow_mut().buy(token, &mut cash);
 
-        println!("\n Bought from {} {} of {}", name, qty, kind);
+                // println!("\n Bought from {} {} of {}", name, qty, kind);
 
-        self.log_visualizer(
-            mrk_bind.borrow().get_name().to_string(),
-            TradingEventDetails {
-                successful: true,
-                trade_type: TradeType::Buy,
-                good_kind: kind,
-                quantity: qty,
-                price: bid,
-                operation: TradeOperation::TradeFinalized,
-            },
-        );
-    }
+                let mut res_ret = false;
+                if let Ok(buy_result) = buy_result {
+                    //add the good locally
+                    self.goods
+                        .get_mut(&kind)
+                        .unwrap()
+                        .merge(buy_result)
+                        .unwrap();
+
+                    res_ret = true;
+                }
+
+                self.log_visualizer(
+                    mrk_bind.borrow().get_name().to_string(),
+                    TradingEventDetails {
+                        successful: res_ret,
+                        trade_type: TradeType::Buy,
+                        good_kind: kind,
+                        quantity: qty,
+                        price: bid,
+                        operation: TradeOperation::TradeFinalized,
+                    },
+                );
+            } else {
+                self.log_visualizer(
+                    mrk_bind.borrow().get_name().to_string(),
+                    TradingEventDetails {
+                        successful: false,
+                        trade_type: TradeType::Buy,
+                        good_kind: kind,
+                        quantity: qty,
+                        price: bid,
+                        operation: TradeOperation::AskedLock,
+                    },
+                );
+            }
+        }
     }
 
     pub fn sell_to_market(&mut self, name: String, kind: GoodKind, qty: f32) {
-
         if self.get_cur_good_qty(&kind) >= qty {
+            let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
 
+            //sell the good
+            let offer = mrk_bind.borrow().get_sell_price(kind, qty).ok().unwrap();
+            let token =
+                mrk_bind
+                    .borrow_mut()
+                    .lock_sell(kind, qty, offer, String::from("SOLTrader"));
 
-        let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
+            if let Ok(token) = token {
+                self.log_visualizer(
+                    mrk_bind.borrow().get_name().to_string(),
+                    TradingEventDetails {
+                        successful: true,
+                        trade_type: TradeType::Sell,
+                        good_kind: kind,
+                        quantity: qty,
+                        price: offer,
+                        operation: TradeOperation::AskedLock,
+                    },
+                );
 
-        //sell the good
-        let offer = mrk_bind.borrow().get_sell_price(kind, qty).ok().unwrap();
-        let token = mrk_bind
-            .borrow_mut()
-            .lock_sell(kind, qty, offer, String::from("SOLTrader"))
-            .unwrap();
+                //split the good
+                let mut good_to_sell = self.goods.get_mut(&kind).unwrap().split(qty).unwrap();
 
-        self.log_visualizer(
-            mrk_bind.borrow().get_name().to_string(),
-            TradingEventDetails {
-                successful: true,
-                trade_type: TradeType::Sell,
-                good_kind: kind,
-                quantity: qty,
-                price: offer,
-                operation: TradeOperation::AskedLock,
-            },
-        );
+                let sell_result = mrk_bind.borrow_mut().sell(token, &mut good_to_sell);
+                let mut res_ret: bool = false;
+                if let Ok(sell_result) = sell_result {
+                    //get the cash
+                    self.goods
+                        .get_mut(&DEFAULT_GOOD_KIND)
+                        .unwrap()
+                        .merge(sell_result)
+                        .unwrap();
 
-        //split the good
-        let mut good_to_sell = self.goods.get_mut(&kind).unwrap().split(qty).unwrap();
+                    res_ret = true;
+                }
 
-        let sell_result = mrk_bind.borrow_mut().sell(token, &mut good_to_sell);
+                // println!("\n Sold to {} {} of {}", name, qty, kind);
 
-        //get the cash
-        self.goods
-            .get_mut(&DEFAULT_GOOD_KIND)
-            .unwrap()
-            .merge(sell_result.unwrap())
-            .unwrap();
-
-        println!("\n Sold to {} {} of {}", name, qty, kind);
-
-        self.log_visualizer(
-            mrk_bind.borrow().get_name().to_string(),
-            TradingEventDetails {
-                successful: true,
-                trade_type: TradeType::Sell,
-                good_kind: kind,
-                quantity: qty,
-                price: offer,
-                operation: TradeOperation::TradeFinalized,
-            },
-        );
-    }
+                self.log_visualizer(
+                    mrk_bind.borrow().get_name().to_string(),
+                    TradingEventDetails {
+                        successful: res_ret,
+                        trade_type: TradeType::Sell,
+                        good_kind: kind,
+                        quantity: qty,
+                        price: offer,
+                        operation: TradeOperation::TradeFinalized,
+                    },
+                );
+            } else {
+                self.log_visualizer(
+                    mrk_bind.borrow().get_name().to_string(),
+                    TradingEventDetails {
+                        successful: false,
+                        trade_type: TradeType::Sell,
+                        good_kind: kind,
+                        quantity: qty,
+                        price: offer,
+                        operation: TradeOperation::AskedLock,
+                    },
+                );
+            }
+        }
     }
 
     /// Get the maximum amount of a good the trader can buy from a market according to

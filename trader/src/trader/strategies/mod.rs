@@ -87,20 +87,13 @@ pub fn gianluca_strategy(trader: &mut SOLTrader, iterations: u32) {
 
     //for all the other days make best historical trade
     for _ in 0..iterations - 2 {
-
         // if you haven't made any trade for too long, then force a trade to shuffle the markets
-        if do_nothing_count < 4{
+        if do_nothing_count < 4 {
             make_best_historical_trade(trader, &history_buy, &history_sell, &mut do_nothing_count);
-        }
-        else{
+        } else {
             do_nothing_count = 0;
-            //to do: change max quantity here
-            // make_trade_all_random(trader, 10);
-            println!("i'm selling something");
             sell_something(trader);
         }
-
-        // show_delta();
 
         history_buy.push(trader.get_all_current_buy_rates());
         history_sell.push(trader.get_all_current_sell_rates());
@@ -148,15 +141,14 @@ pub fn basic_all_random_strategy(trader: &mut SOLTrader, iterations: u32) {
         buy_deltas.push(get_delta_last_day(history_buy.clone()).unwrap());
         sell_deltas.push(get_delta_last_day(history_sell.clone()).unwrap());
 
-        println!("\nBUY DELTAS\n{:?}", buy_deltas[buy_deltas.len() - 1]);
-        println!("\nSELL DELTAS\n{:?}", sell_deltas[sell_deltas.len() - 1]);
+        // println!("\nBUY DELTAS\n{:?}", buy_deltas[buy_deltas.len() - 1]);
+        // println!("\nSELL DELTAS\n{:?}", sell_deltas[sell_deltas.len() - 1]);
 
-        let (a, b, _) = get_best_buy_delta(&buy_deltas);
-        println!("\n today's best BUY delta is {} {}", a, b);
-        let (a, b, _) = get_best_sell_delta(&sell_deltas);
-        println!("\n today's best SELL delta is {} {}", a, b);
+        // let (a, b, _) = get_best_buy_delta(&buy_deltas);
+        // println!("\n today's best BUY delta is {} {}", a, b);
+        // let (a, b, _) = get_best_sell_delta(&sell_deltas);
+        // println!("\n today's best SELL delta is {} {}", a, b);
 
-        // thread::sleep(time::Duration::from_secs(5))
         trader.show_all_self_quantities();
 
         // thread::sleep(time::Duration::from_secs(1));
@@ -205,13 +197,13 @@ pub fn basic_best_trade_strategy(trader: &mut SOLTrader, iterations: u32) {
         // thread::sleep(time::Duration::from_secs(5))
         trader.show_all_self_quantities();
 
-        println!("history\n{:?}", history_buy);
-        println!("average");
-        println!("{:?}", get_historical_average(&history_buy));
-        println!("delta from history avg");
-        println!("{:?}", get_delta_from_historical_avg(&history_buy));
-        let (a, b, c) = get_best_buy_delta_from_historical_avg(&history_buy);
-        println!("bestbuy delta from history avg: \n {} {} {}", a, b, c);
+        // println!("history\n{:?}", history_buy);
+        // println!("average");
+        // println!("{:?}", get_historical_average(&history_buy));
+        // println!("delta from history avg");
+        // println!("{:?}", get_delta_from_historical_avg(&history_buy));
+        // let (a, b, c) = get_best_buy_delta_from_historical_avg(&history_buy);
+        // println!("bestbuy delta from history avg: \n {} {} {}", a, b, c);
     }
 }
 
@@ -233,7 +225,7 @@ pub fn do_nothing_strategy(trader: &mut SOLTrader, iterations: u32) {
 
         sell_deltas.push(get_delta_last_day(history_sell.clone()).unwrap());
 
-        println!("\n{:?}", sell_deltas[sell_deltas.len() - 1]);
+        // println!("\n{:?}", sell_deltas[sell_deltas.len() - 1]);
 
         // thread::sleep(time::Duration::from_secs(5))
         trader.show_all_self_quantities();
