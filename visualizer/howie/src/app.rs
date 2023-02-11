@@ -14,13 +14,18 @@ pub(crate) struct App {
 
     /// The app state
     state: AppState,
+
+    /// How often we refresh the screen
+    refresh_speed: Duration,
 }
 
 impl App {
     pub(crate) fn new() -> Self {
+        let duration = Duration::from_millis(REFRESH_RATE_MILLISECONDS);
         App {
-            receiver: IPCReceiver::new(Duration::from_millis(REFRESH_RATE_MILLISECONDS)),
+            receiver: IPCReceiver::new(duration),
             state: AppState::default(),
+            refresh_speed: duration,
         }
     }
 
@@ -30,6 +35,7 @@ impl App {
         let mut should_run_again = false;
         self.state.current_view = AppView::WaitingForFirstTrade;
         self.state.paused = false;
+        let minimum_refresh_duration = Duration::from_millis(REFRESH_RATE_MILLISECONDS / 2);
 
         // Something different from AppState::WaitingForFirstTrade
         let s = AppView::HelpMenu;
@@ -74,7 +80,7 @@ impl App {
             }
 
             // Check for events in the terminal (User input)
-            if Self::is_a_new_event_available() {
+            if self.is_a_new_event_available() {
                 // If a key was pressed
                 if let Event::Key(key) = Self::get_event() {
                     match key.modifiers {
@@ -88,6 +94,15 @@ impl App {
                             KeyCode::Char('v') => {
                                 self.state.trading_volume_chart_visible =
                                     !self.state.trading_volume_chart_visible;
+                            }
+                            KeyCode::Char('+') => {
+                                self.refresh_speed = self.refresh_speed.mul_f32(1.1);
+                            }
+                            KeyCode::Char('-') => {
+                                self.refresh_speed = self
+                                    .refresh_speed
+                                    .div_f32(1.1)
+                                    .max(minimum_refresh_duration);
                             }
                             KeyCode::Char('r') => {
                                 let waiting_trader =
@@ -134,8 +149,8 @@ impl App {
     }
 
     /// Returns if one or more new events are available on the terminal
-    fn is_a_new_event_available() -> bool {
-        event::poll(Duration::from_millis(REFRESH_RATE_MILLISECONDS)).expect("Can poll for input")
+    fn is_a_new_event_available(&self) -> bool {
+        event::poll(self.refresh_speed).expect("Can poll for input")
     }
 
     /// Returns the next event from the terminal

@@ -45,6 +45,11 @@ pub(crate) fn draw_help_view<B: Backend>(terminal: &mut Terminal<B>) {
                     )),
                     ListItem::new(Span::from("")),
                     ListItem::new(Span::styled(
+                        "+ / -:                       Pause/resume",
+                        default_style(),
+                    )),
+                    ListItem::new(Span::from("")),
+                    ListItem::new(Span::styled(
                         "V:                          Toggle trading volume chart",
                         default_style(),
                     )),
