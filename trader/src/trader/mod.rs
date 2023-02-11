@@ -192,6 +192,7 @@ impl SOLTrader {
     // ADD ERRORS!
     //
     pub fn buy_from_market(&mut self, name: String, kind: GoodKind, qty: f32) {
+        if self.get_cur_good_qty(&DEFAULT_GOOD_KIND) >= qty {
         let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
 
         let bid = mrk_bind.borrow().get_buy_price(kind, qty).ok().unwrap();
@@ -243,8 +244,13 @@ impl SOLTrader {
             },
         );
     }
+    }
 
     pub fn sell_to_market(&mut self, name: String, kind: GoodKind, qty: f32) {
+
+        if self.get_cur_good_qty(&kind) >= qty {
+
+
         let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
 
         //sell the good
@@ -291,6 +297,7 @@ impl SOLTrader {
                 operation: TradeOperation::TradeFinalized,
             },
         );
+    }
     }
 
     /// Get the maximum amount of a good the trader can buy from a market according to

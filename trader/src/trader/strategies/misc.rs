@@ -2,6 +2,7 @@ use crate::trader::strategies::History;
 use crate::trader::SOLTrader;
 use std::collections::HashMap;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
+use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 
 //here we can implement the stategy of the trader
@@ -25,6 +26,65 @@ pub(crate) fn make_trade_all_random(trader: &mut SOLTrader, max_qty: i32) {
     } else {
         trader.sell_to_market(name.to_owned(), kind, qty);
     }
+}
+pub(crate) fn sell_something(trader: &mut SOLTrader) {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+
+    //sell the good that i've stocked the most
+    let max_good = if trader.get_cur_good_qty(&GoodKind::USD) >= trader.get_cur_good_qty(&GoodKind::YUAN) {
+        if trader.get_cur_good_qty(&GoodKind::USD) >= trader.get_cur_good_qty(&GoodKind::YEN){
+            &GoodKind::USD
+        }
+        else{
+            &GoodKind::YEN
+        }
+    }
+    else{
+        if trader.get_cur_good_qty(&GoodKind::YEN) >= trader.get_cur_good_qty(&GoodKind::YUAN){
+            &GoodKind::YEN
+        }
+        else {
+            &GoodKind::YUAN
+        }
+    };
+
+    // select the market with the best sell rate
+    let name = if trader.get_market_sell_rates("PSE_Market".to_owned()).get(max_good) >= trader.get_market_sell_rates("DogeMarket".to_owned()).get(max_good){
+        if trader.get_market_sell_rates("PSE_Market".to_owned()).get(max_good) >= trader.get_market_sell_rates("Baku stock exchange".to_owned()).get(max_good){
+            "PSE_Market"
+        
+        }
+        else{
+            "Baku stock exchange"
+        }
+    }
+    else{
+        if trader.get_market_sell_rates("DogeMarket".to_owned()).get(max_good) >= trader.get_market_sell_rates("Baku stock exchange".to_owned()).get(max_good){
+            "DogeMarket"
+        
+        }
+        else {
+            "Baku stock exchange"
+        }
+    };
+
+    let mut qty = trader.get_cur_good_qty(max_good) * (2.0/3.0);
+    
+    let price = {
+        let mrk_bind = trader.get_market_by_name(name.to_owned()).unwrap();
+        mrk_bind.borrow().get_sell_price(*max_good, qty).unwrap()
+    };
+    
+    let max_money = trader.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, name.to_owned());
+
+    if price > max_money{
+        qty = max_money * trader.get_market_sell_rates(name.to_owned()).get(max_good).unwrap();
+    }
+
+
+    trader.sell_to_market(name.to_owned(), *max_good, qty);
+    
 }
 
 pub(crate) fn make_best_trade(trader: &mut SOLTrader, buy_deltas: &History, sell_deltas: &History) {
@@ -61,41 +121,66 @@ pub(crate) fn make_best_historical_trade(
     let threshold = 1.05;
 
     //new condition: if the delta is too small, don't make any trade
-    //but if you haven't made any trade for too long, then force a trade to shuffle the markets
-    if (*do_nothing_count < 5 && (b_delta > threshold || s_delta > threshold))
-        || (*do_nothing_count >= 5)
+    //removed: force trade after do nothing 5 days (it's useless to force a trade if deltas are too small)
+    if (b_delta > threshold || s_delta > threshold)
     {
-        *do_nothing_count = 0;
 
-        if b_delta.abs() > s_delta {
-            println!("buy {} {} {}", b_delta, name_buy, kind_buy);
+        if b_delta.abs() > s_delta && trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) > 0.0{ //can't by if you don't have eur
+            // println!("buy {} {} {}", b_delta, name_buy, kind_buy);
 
             let mut qty = {
-                if b_delta > 5.0 {
+                if b_delta > 3.0 {
                     std_qty * b_delta
                 } else if b_delta > 1.0 {
                     std_qty * b_delta.powi(2).round()
-                } else {
+                } else  if b_delta > 0.0 {
+                    std_qty * (1.0 + b_delta)
+                }
+                else {
                     std_qty
                 }
             };
 
             let upperbound = trader.get_cur_good_qty_from_market(&kind_buy, name_buy.clone()) / 2.0; //upperbound for buy is the market qty
+            //upper bound min market qty to buy & my own default good
             if qty > upperbound {
                 qty = upperbound;
             }
+            //if i'm buying more than i have money to, just buy less
+            //get buy price
+            {
+                let mrk_bind = trader.get_market_by_name(name_buy.clone()).unwrap().clone();
+                let bid = mrk_bind.borrow().get_buy_price(kind_buy, qty).ok().unwrap();
+                if bid >= trader.get_cur_good_qty(&DEFAULT_GOOD_KIND){
+                    qty = (trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) / 2.0) * trader.get_market_sell_rates(name_buy.clone()).get(&kind_buy).unwrap();
+                    // let a = trader.get_market_sell_rates(name_buy.clone()).get(&kind_buy).unwrap();
+                }
+                // qty = 1.0;
+            }
 
-            println!("qty {}", qty);
-            trader.buy_from_market(name_buy.to_owned(), kind_buy, qty);
+            // println!("qty {}", qty);
+            if (qty >= 0.01){
+                println!("ciao1");
+                *do_nothing_count = 0;
+                trader.buy_from_market(name_buy.to_owned(), kind_buy, qty);
+            }
+            else{
+                *do_nothing_count += 1;
+                fake_trade(&trader);
+            }
+            
         } else {
-            println!("sell {} {} {}", s_delta, name_sell, kind_sell);
+            // println!("sell {} {} {}", s_delta, name_sell, kind_sell);
 
             let mut qty = {
-                if s_delta > 5.0 {
+                if s_delta > 3.0 {
                     std_qty * s_delta
                 } else if s_delta > 1.0 {
                     std_qty * s_delta.powi(2).round()
-                } else {
+                } else if s_delta > 0.0{
+                    std_qty * (1.0 + s_delta)
+                }
+                else{
                     std_qty
                 }
             };
@@ -105,9 +190,17 @@ pub(crate) fn make_best_historical_trade(
                 qty = upperbound;
             }
 
-            println!("qty {}", qty);
+            // println!("qty {}", qty);
+            if(qty >= 0.01){
+                println!("ciao2");
 
-            trader.sell_to_market(name_sell.to_owned(), kind_sell, qty);
+                *do_nothing_count = 0;
+                trader.sell_to_market(name_sell.to_owned(), kind_sell, qty);
+            } else{
+                *do_nothing_count += 1;
+                fake_trade(&trader);
+            }
+
         }
     } else {
         *do_nothing_count += 1;

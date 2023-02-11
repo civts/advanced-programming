@@ -11,6 +11,8 @@ use crate::trader::SOLTrader;
 use std::collections::HashMap;
 use unitn_market_2022::good::good_kind::GoodKind;
 
+use self::misc::sell_something;
+
 type History = Vec<HashMap<String, HashMap<GoodKind, f32>>>;
 
 /// This strategy exploit a weakness of the PSE market to find arbitrage opportunities
@@ -85,7 +87,18 @@ pub fn gianluca_strategy(trader: &mut SOLTrader, iterations: u32) {
 
     //for all the other days make best historical trade
     for _ in 0..iterations - 2 {
-        make_best_historical_trade(trader, &history_buy, &history_sell, &mut do_nothing_count);
+
+        // if you haven't made any trade for too long, then force a trade to shuffle the markets
+        if do_nothing_count < 4{
+            make_best_historical_trade(trader, &history_buy, &history_sell, &mut do_nothing_count);
+        }
+        else{
+            do_nothing_count = 0;
+            //to do: change max quantity here
+            // make_trade_all_random(trader, 10);
+            println!("i'm selling something");
+            sell_something(trader);
+        }
 
         // show_delta();
 
