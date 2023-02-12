@@ -44,6 +44,7 @@ pub(crate) fn sell_something(trader: &mut SOLTrader) {
         };
 
     // select the market with the best sell rate
+    // TODO: make this into a trader function
     let name = if trader
         .get_market_sell_rates("PSE_Market".to_owned())
         .get(max_good)
@@ -94,6 +95,69 @@ pub(crate) fn sell_something(trader: &mut SOLTrader) {
     }
 
     trader.sell_to_market(name.to_owned(), *max_good, qty);
+}
+
+pub(crate) fn buy_something(trader: &mut SOLTrader) {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+
+    let all_kinds = vec![GoodKind::USD, GoodKind::YEN, GoodKind::YUAN];
+    //select next good
+    let sel_good = &all_kinds[rng.gen_range(0..all_kinds.len())];
+
+    // select the market with the best buy rate
+    //JUST LIKE SELL SOMETHING -> TODO: make trader function
+    let name = if trader
+        .get_market_sell_rates("PSE_Market".to_owned())
+        .get(sel_good)
+        <= trader
+            .get_market_sell_rates("DogeMarket".to_owned())
+            .get(sel_good)
+    {
+        if trader
+            .get_market_sell_rates("PSE_Market".to_owned())
+            .get(sel_good)
+            <= trader
+                .get_market_sell_rates("Baku stock exchange".to_owned())
+                .get(sel_good)
+        {
+            "PSE_Market"
+        } else {
+            "Baku stock exchange"
+        }
+    } else {
+        if trader
+            .get_market_sell_rates("DogeMarket".to_owned())
+            .get(sel_good)
+            <= trader
+                .get_market_sell_rates("Baku stock exchange".to_owned())
+                .get(sel_good)
+        {
+            "DogeMarket"
+        } else {
+            "Baku stock exchange"
+        }
+    };
+
+    //this is how much i want to buy
+    let mut max_cash = trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) * (0.5);
+
+    let mut qty = {
+        //qty = eur * exch_rate
+        let rate = *trader
+            .get_market_buy_rates(name.to_owned())
+            .get(sel_good)
+            .unwrap();
+        let qty = max_cash * rate;
+        //if i'm buying too mcuh, just buy everything
+        if qty > trader.get_cur_good_qty_from_market(sel_good, name.to_owned()) {
+            trader.get_cur_good_qty_from_market(sel_good, name.to_owned())
+        } else {
+            qty
+        }
+    };
+
+    trader.buy_from_market(name.to_owned(), *sel_good, qty);
 }
 
 pub(crate) fn make_best_trade(trader: &mut SOLTrader, buy_deltas: &History, sell_deltas: &History) {

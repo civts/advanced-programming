@@ -1,6 +1,9 @@
 use ipc_utils::IPCSender;
 use std::env;
-use trader::trader::strategies::{basic_all_random_strategy, basic_best_trade_strategy, do_nothing_strategy, farouk_strategy, gianluca_strategy, lose_and_recover_strategy, losing_strategy};
+use trader::trader::strategies::{
+    basic_all_random_strategy, basic_best_trade_strategy, do_nothing_strategy, farouk_strategy,
+    gianluca_strategy, lose_and_recover_strategy, losing_strategy,
+};
 use trader::trader::SOLTrader;
 
 /// Call main with arguments:
@@ -26,7 +29,7 @@ pub fn main() {
 
     let mut trader: SOLTrader;
     let strategy_fn: fn(&mut SOLTrader, u32);
-    let iterations: u32 = 100;
+    let iterations: u32 = 20;
     let qty = 10_000f32;
 
     match strategy {

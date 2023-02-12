@@ -8,9 +8,10 @@ use crate::trader::strategies::misc::{
 };
 use crate::trader::SOLTrader;
 use std::collections::HashMap;
+use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good_kind::GoodKind;
 
-use self::misc::sell_something;
+use self::misc::{buy_something, sell_something};
 
 type History = Vec<HashMap<String, HashMap<GoodKind, f32>>>;
 
@@ -90,6 +91,7 @@ pub fn gianluca_strategy(trader: &mut SOLTrader, iterations: u32) {
 
     //this var here avoids doing nothins for too many days
     let mut do_nothing_count = 0;
+    let th = 5.0; //thresold for the sell_something substrategy
 
     let mut history_buy: History = Vec::new();
     let mut history_sell: History = Vec::new();
@@ -120,7 +122,18 @@ pub fn gianluca_strategy(trader: &mut SOLTrader, iterations: u32) {
             make_best_historical_trade(trader, &history_buy, &history_sell, &mut do_nothing_count);
         } else {
             do_nothing_count = 0;
-            sell_something(trader);
+            if trader.get_cur_good_qty(&GoodKind::USD) > th
+                || trader.get_cur_good_qty(&GoodKind::USD) > th
+                || trader.get_cur_good_qty(&GoodKind::USD) > th
+            {
+                sell_something(trader);
+            } else {
+                if trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) > th {
+                    buy_something(trader);
+                } else {
+                    fake_trade(trader);
+                }
+            }
         }
 
         history_buy.push(trader.get_all_current_buy_rates());
