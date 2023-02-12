@@ -45,7 +45,7 @@ pub trait Arbitrages {
     /// Weakness of PSE market:
     /// - When lock buying a null quantity of goods on the market the prices starts to fluctuate a lot after some time,
     /// giving us the opportunity to make some benefits with an arbitrage method.
-    fn exploit_pse_market(&mut self);
+    fn exploit_pse_market(&mut self, days: &mut u32);
 
     /// Make the worst trade possible (lowest negative margin).
     /// Return true if trader's worth < 1 EUR
@@ -106,7 +106,7 @@ impl Arbitrages for SOLTrader {
         opportunities
     }
 
-    fn exploit_pse_market(&mut self) {
+    fn exploit_pse_market(&mut self, days: &mut u32) {
         let pse = self
             .markets
             .iter()
@@ -119,6 +119,7 @@ impl Arbitrages for SOLTrader {
                 continue;
             }
             self.lock_buy_from_market_ref(pse.clone(), *k, 0f32);
+            *days += 1;
         }
 
         let mut opportunities = self.find_opportunities();
@@ -154,6 +155,8 @@ impl Arbitrages for SOLTrader {
 
             self.buy_from_market_ref(buy_market, buy_token, bid, qty, *kind);
             self.sell_to_market_ref(sell_market, sell_token, offer, qty, *kind);
+
+            *days += 4;
 
             println!(
                 "Arbitrage profit: {} {}\n",

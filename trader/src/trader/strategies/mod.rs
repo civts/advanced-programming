@@ -21,8 +21,9 @@ type History = Vec<HashMap<String, HashMap<GoodKind, f32>>>;
 /// giving us the opportunity to make some benefits with an arbitrage method.
 pub fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
     let worth_before = trader.get_current_worth();
+    let mut days = 0;
     for _ in 0..iterations {
-        trader.exploit_pse_market();
+        trader.exploit_pse_market(&mut days);
     }
     let worth_after = trader.get_current_worth();
     let profit = worth_after - worth_before;
@@ -30,7 +31,7 @@ pub fn farouk_strategy(trader: &mut SOLTrader, iterations: u32) {
     println!(
         "\n*** Arbitrage results ***\n\
     Trader's worth before: {worth_before}\n\
-    Trader's worth after: {worth_after}\n\
+    Trader's worth after {days} days: {worth_after}\n\
     Profit: {margin_percentage}%"
     );
 }
@@ -51,6 +52,34 @@ pub fn losing_strategy(trader: &mut SOLTrader, _iterations: u32) {
     Trader's worth before: {worth_before}\n\
     Trader's worth after: {worth_after}\n\
     Lost everything in {days} days"
+    );
+}
+
+/// This strategy is a mix of losing and farouk strategy
+pub fn lose_and_recover_strategy(trader: &mut SOLTrader, _iterations: u32) {
+    let worth_before = trader.get_current_worth();
+    let mut days_lost = 0;
+    loop {
+        if trader.lose_all(&mut days_lost) {
+            break;
+        }
+    }
+    let worth_after_lose = trader.get_current_worth();
+    let mut days_recover = 0;
+    loop {
+        trader.exploit_pse_market(&mut days_recover);
+        if trader.get_current_worth() >= worth_before {
+            break;
+        }
+    }
+    let worth_after_recover = trader.get_current_worth();
+    println!(
+        "\n*** Lose & Recover results ***\n\
+    Trader's worth before: {worth_before}\n\
+    Trader's worth after losing: {worth_after_lose}\n\
+    Trader's worth after recovering: {worth_after_recover}\n\
+    Lost everything in {days_lost} days\n\
+    Recover everything in {days_recover} days"
     );
 }
 

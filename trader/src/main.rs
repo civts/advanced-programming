@@ -1,13 +1,10 @@
 use ipc_utils::IPCSender;
 use std::env;
-use trader::trader::strategies::{
-    basic_all_random_strategy, basic_best_trade_strategy, do_nothing_strategy, farouk_strategy,
-    gianluca_strategy, losing_strategy,
-};
+use trader::trader::strategies::{basic_all_random_strategy, basic_best_trade_strategy, do_nothing_strategy, farouk_strategy, gianluca_strategy, lose_and_recover_strategy, losing_strategy};
 use trader::trader::SOLTrader;
 
 /// Call main with arguments:
-/// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random | lose> <Visualizer: vis>.
+/// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random | lose | lose_recover> <Visualizer: vis>.
 ///
 /// Examples:
 /// - cargo run farouk vis  -> Run trader with farouk strategy and visualizer
@@ -52,6 +49,10 @@ pub fn main() {
         "lose" => {
             trader = SOLTrader::new("Lose".to_string());
             strategy_fn = losing_strategy;
+        }
+        "lose_recover" => {
+            trader = SOLTrader::new("Lose and Recover".to_string());
+            strategy_fn = lose_and_recover_strategy;
         }
         &_ => {
             trader = SOLTrader::new("Lazy".to_string());
