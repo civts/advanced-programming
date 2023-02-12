@@ -1,10 +1,10 @@
 use ipc_utils::trading_event_details::TradeType;
 use tui::layout::{Alignment, Constraint};
 use tui::style::{Color, Modifier, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, BorderType, Cell, Paragraph, Row, Table, Tabs};
+use tui::text::{Span};
+use tui::widgets::{Block, Borders, BorderType, Cell, Paragraph, Row, Table};
 use unitn_market_2022::good::good_kind::GoodKind;
-use crate::vizualization::repository::repository::{Lock, Trade};
+use crate::visualization::repository::repository::{Lock, Trade};
 
 pub fn get_lock_table(locks: Vec<Lock>) -> Table<'static> {
     let locks_detail = Table::new(get_lock_rows(locks))

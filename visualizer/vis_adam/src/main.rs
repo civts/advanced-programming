@@ -1,8 +1,8 @@
-mod vizualization;
+mod visualization;
 
-use vizualization::*;
+use visualization::*;
 
 fn main() {
-    let mut viz = Visualization::new();
-    viz.start().expect("Visualizer should start!");
+    let visualisation = Visualization::new();
+    visualisation.start().expect("Visualizer should start!");
 }

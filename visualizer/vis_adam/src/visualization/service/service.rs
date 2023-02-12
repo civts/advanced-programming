@@ -1,9 +1,11 @@
 use std::time::Duration;
+
 use ipc_utils::IPCReceiver;
 use ipc_utils::trader_state::TraderState;
 use ipc_utils::trading_event_details::{TradeOperation, TradingEventDetails};
 use unitn_market_2022::good::good_kind::GoodKind;
-use crate::vizualization::repository::repository::{Balance, clear_all, find_latest_balance, Lock, read_locks, read_trades, save_balance, save_lock_if_successful, save_trade_if_successful, Trade};
+
+use crate::visualization::repository::repository::{Balance, find_latest_balance, save_balance, save_lock_if_successful, save_trade_if_successful};
 
 pub struct Service {
     receiver: IPCReceiver,
@@ -65,17 +67,4 @@ impl Service {
             }
         };
     }
-
-    pub fn get_all_trades(&self) -> Vec<Trade> {
-        return read_trades().unwrap();
-    }
-
-    pub fn get_all_locks(&self) -> Vec<Lock> {
-        return read_locks().unwrap();
-    }
-
-    pub fn get_current_balance(&self, gk: GoodKind) -> f32 {
-        return find_latest_balance(gk);
-    }
-
 }

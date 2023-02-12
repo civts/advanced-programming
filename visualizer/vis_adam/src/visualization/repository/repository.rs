@@ -2,13 +2,11 @@ use std::{
     fs::File,
     io::{self, Read},
 };
-use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::string::String;
 
 use chrono::{DateTime, Utc};
 use ipc_utils::trading_event_details::{TradeType};
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use thiserror::Error;

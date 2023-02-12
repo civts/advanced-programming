@@ -7,16 +7,16 @@ use crossterm::{
     event::{self, Event as CEvent, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use tui::backend::CrosstermBackend;
 use tui::{Frame, Terminal};
+use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
-use tui::widgets::{Block, Borders, Paragraph, Table};
+use tui::widgets::{Block, Borders, Table};
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::good::good_kind::GoodKind::{EUR, USD, YEN, YUAN};
 
-use crate::vizualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats_paragraph, get_trade_table};
-use crate::vizualization::repository::repository::{clear_all, find_latest_balance, read_locks, read_trades};
-use crate::vizualization::service::service::Service;
+use crate::visualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats_paragraph, get_trade_table};
+use crate::visualization::repository::repository::{clear_all, find_latest_balance, read_locks, read_trades};
+use crate::visualization::service::service::Service;
 
 pub mod repository;
 pub mod components;
