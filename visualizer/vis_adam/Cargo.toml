@@ -16,3 +16,4 @@ thiserror = "1.0"
 uuid = "1.2.2"
 ipc_utils = { path = "../../ipc_utils" }
 unitn_market_2022 = { version = "1.0.10", registry = "kellnr" }
+plotters = "0.3.3"

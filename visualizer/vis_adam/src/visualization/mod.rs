@@ -10,7 +10,7 @@ use crossterm::{
 use tui::{Frame, Terminal};
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
-use tui::widgets::{Block, Borders, Table};
+use tui::widgets::{Table};
 use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::good::good_kind::GoodKind::{EUR, USD, YEN, YUAN};
 
@@ -133,7 +133,7 @@ impl Visualization {
         let usd_prf = self.service.get_profit(USD);
         let eur_prf = self.service.get_profit(EUR);
 
-        rect.render_widget(get_stats_paragraph(format!("Profit yen {} Profit YUAN {} Profit USD {} Profit EUR {}", yen_prf, yuan_prf, usd_prf, eur_prf).as_str()).block(Block::default().borders(Borders::ALL)), chunks[0]);
+        rect.render_widget(get_stats_paragraph(format!("Profit YEN : {:.2}% | Profit YUAN {:.2}% | Profit USD {:.2}% | Profit EUR {:.2}%", yen_prf, yuan_prf, usd_prf, eur_prf).as_str()), chunks[0]);
         rect.render_widget(left, tables_chunks[0]);
         rect.render_widget(center, tables_chunks[1]);
         rect.render_widget(right, tables_chunks[2]);

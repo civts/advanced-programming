@@ -40,7 +40,7 @@ pub struct Lock {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Trade {
-    pub operation: String,
+    pub operation: TradeType,
     pub market: String,
     pub good_kind: GoodKind,
     pub quantity: usize,
@@ -67,29 +67,6 @@ pub fn read_locks() -> Result<Vec<Lock>, Error> {
     }
 
     Ok(locks)
-}
-
-
-pub fn save_lock_if_successful(market: String, successful: bool, trade_type: TradeType, price: f32, good_kind: GoodKind, quantity: f32) {
-    let lock = Lock { quantity: quantity as i32, good_kind, market, price, operation: trade_type, timestamp: Utc::now() };
-    if successful {
-        save_lock(lock);
-    }
-}
-
-pub fn save_trade_if_successful(market: String, trade_type: TradeType, quantity: f32, price: f32, successful: bool, good_kind: GoodKind) {
-    let operation = get_operation_string(trade_type);
-    let trade = Trade { quantity: quantity as usize, good_kind, market, price, operation, timestamp: Utc::now() };
-    if successful {
-        save_trade(trade);
-    }
-}
-
-fn get_operation_string(trade_type: TradeType) -> String {
-    match trade_type {
-        TradeType::Buy => String::from("BUY"),
-        TradeType::Sell => String::from("SELL")
-    }
 }
 
 pub fn read_trades() -> Result<Vec<Trade>, Error> {

@@ -98,22 +98,22 @@ pub fn get_balance_table(balance_yen: f32, balance_yuan: f32, balance_usd: f32, 
 fn get_balance_rows(balance_yen: f32, balance_yuan: f32, balance_usd: f32, balance_eur: f32) -> Vec<Row<'static>> {
     let mut balance_rows: Vec<Row> = vec![];
 
-    let cell_yen = Cell::from(Span::raw(balance_yen.to_string()))
+    let cell_yen = Cell::from(Span::raw(format!("{:.2}", balance_yen)))
         .style(Style::default().fg(Color::Yellow));
     let cell_desc_yen = Cell::from(Span::raw("YEN"))
         .style(Style::default().fg(Color::Yellow));
 
-    let cell_yuan = Cell::from(Span::raw(balance_yuan.to_string()))
+    let cell_yuan = Cell::from(Span::raw(format!("{:.2}", balance_yuan)))
         .style(Style::default().fg(Color::Red));
     let cell_desc_yuan = Cell::from(Span::raw("YUAN"))
         .style(Style::default().fg(Color::Red));
 
-    let cell_eur = Cell::from(Span::raw(balance_eur.to_string()))
+    let cell_eur = Cell::from(Span::raw(format!("{:.2}", balance_eur)))
         .style(Style::default().fg(Color::Blue));
     let cell_desc_eur = Cell::from(Span::raw("EUR"))
         .style(Style::default().fg(Color::Blue));
 
-    let cell_usd = Cell::from(Span::raw(balance_usd.to_string()))
+    let cell_usd = Cell::from(Span::raw(format!("{:.2}", balance_usd)))
         .style(Style::default().fg(Color::Green));
     let cell_desc_usd = Cell::from(Span::raw("USD"))
         .style(Style::default().fg(Color::Green));
@@ -176,7 +176,7 @@ fn get_trade_rows(trade_vec: Vec<Trade>) -> Vec<Row<'static>> {
         .iter()
         .map(|t| {
             Row::new(vec![
-                Cell::from(Span::raw(t.operation.to_string())),
+                Cell::from(Span::raw(get_operation_string(t.operation))),
                 Cell::from(Span::raw(t.market.to_string())),
                 get_cell_good_kind(t.good_kind.clone()),
                 Cell::from(Span::raw(t.quantity.to_string())),
