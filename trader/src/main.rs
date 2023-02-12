@@ -10,8 +10,8 @@ use trader::trader::SOLTrader;
 /// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random | lose> <Visualizer: vis>.
 ///
 /// Examples:
-/// - cargo run farouk yes  -> Run trader with farouk strategy and visualizer
-/// - cargo run gianluca no -> Run trader with gianluca strategy and no visualizer (just stdout)
+/// - cargo run farouk vis  -> Run trader with farouk strategy and visualizer
+/// - cargo run gianluca    -> Run trader with gianluca strategy and no visualizer (just stdout)
 ///
 /// If no arguments are given the trader will be set with the function `do_nothing` and no visualizer.
 ///

@@ -2,7 +2,6 @@ use crate::trader::strategies::History;
 use crate::trader::SOLTrader;
 use std::collections::HashMap;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
-use unitn_market_2022::good::good::Good;
 use unitn_market_2022::good::good_kind::GoodKind;
 
 //here we can implement the stategy of the trader
@@ -28,9 +27,6 @@ pub(crate) fn make_trade_all_random(trader: &mut SOLTrader, max_qty: i32) {
     }
 }
 pub(crate) fn sell_something(trader: &mut SOLTrader) {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-
     //sell the good that i've stocked the most
     let max_good =
         if trader.get_cur_good_qty(&GoodKind::USD) >= trader.get_cur_good_qty(&GoodKind::YUAN) {

@@ -3,9 +3,8 @@ mod misc;
 
 use crate::trader::strategies::arbitrage::Arbitrages;
 use crate::trader::strategies::misc::{
-    fake_trade, get_best_buy_delta, get_best_buy_delta_from_historical_avg, get_best_sell_delta,
-    get_delta_from_historical_avg, get_delta_last_day, get_historical_average,
-    make_best_historical_trade, make_best_trade, make_trade_all_random, show_delta,
+    fake_trade, get_delta_last_day, make_best_historical_trade, make_best_trade,
+    make_trade_all_random, show_delta,
 };
 use crate::trader::SOLTrader;
 use std::collections::HashMap;
