@@ -191,9 +191,9 @@ fn get_trade_rows(trade_vec: Vec<Trade>) -> Vec<Row<'static>> {
 fn get_cell_good_kind(gk: GoodKind) -> Cell<'static> {
     let color = match gk {
         GoodKind::EUR => { Color::Blue }
-        GoodKind::YEN => { Color::Red }
+        GoodKind::YEN => { Color::Yellow }
         GoodKind::USD => { Color::Green }
-        GoodKind::YUAN => { Color::Yellow }
+        GoodKind::YUAN => { Color::Red }
     };
     Cell::from(Span::raw(gk.to_string())).style(Style::default().fg(color))
 }
@@ -219,32 +219,8 @@ pub fn get_copyright() -> Paragraph<'static> {
 }
 
 
-pub fn get_stats() -> Tabs<'static> {
-    Tabs::new(get_stats_items())
-        .select(0)
-        .block(Block::default().title("Stats").borders(Borders::ALL))
-        .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().fg(Color::Yellow))
-        .divider(Span::raw("|"))
-}
-
-fn get_stats_items() -> Vec<Spans<'static>> {
-    let stats_tiles = vec!["Trades", "Quit"];
-
-    let stats = stats_tiles
-        .iter()
-        .map(|t| {
-            let (first, rest) = t.split_at(1);
-            Spans::from(vec![
-                Span::styled(
-                    first,
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::UNDERLINED),
-                ),
-                Span::styled(rest, Style::default().fg(Color::White)),
-            ])
-        })
-        .collect();
-    stats
+pub fn get_stats_paragraph(text: &str) -> Paragraph {
+    Paragraph::new(text)
+        .block(Block::default().borders(Borders::ALL).style(Style::default().fg(Color::White)).title("Stats"))
+        .alignment(Alignment::Center)
 }

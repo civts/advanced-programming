@@ -3,5 +3,6 @@ mod vizualization;
 use vizualization::*;
 
 fn main() {
-    viz().expect("Visualizer should start without problems!");
+    let mut viz = Visualization::new();
+    viz.start().expect("Visualizer should start!");
 }

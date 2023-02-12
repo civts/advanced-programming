@@ -55,6 +55,7 @@ pub struct Balance {
     pub value: f32,
 }
 
+
 pub fn read_locks() -> Result<Vec<Lock>, Error> {
     let mut file = File::open(LOCK_PATH).unwrap();
     let mut locks_json = String::new();
@@ -80,7 +81,6 @@ pub fn save_lock_if_successful(market: String, successful: bool, trade_type: Tra
 
 pub fn save_trade_if_successful(market: String, trade_type: TradeType, quantity: f32, price: f32, successful: bool, good_kind: GoodKind) {
     let operation = get_operation_string(trade_type);
-
     let trade = Trade { quantity: quantity as usize, good_kind, market, price, operation, timestamp: Utc::now() };
     if successful {
         save_trade(trade);
@@ -193,3 +193,5 @@ fn clear_file(path: &str) {
     let file = OpenOptions::new().write(true).open(path).unwrap();
     file.set_len(0).unwrap();
 }
+
+
