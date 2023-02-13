@@ -7,6 +7,7 @@ use crossterm::{
     event::{self, Event as CEvent, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
+use ipc_utils::trader_state::ALL_GOOD_KINDS;
 use tui::{Frame, Terminal};
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
@@ -16,7 +17,7 @@ use unitn_market_2022::good::good_kind::GoodKind::{EUR, USD, YEN, YUAN};
 
 use crate::visualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats_paragraph, get_trade_table};
 use crate::visualization::repository::repository::{clear_all, find_latest_balance, read_locks, read_trades};
-use crate::visualization::service::plotlib::generate_all_balances_plot;
+use crate::visualization::service::plotlib::{generate_all_balances_plot, plot_for_gk};
 use crate::visualization::service::service::Service;
 
 pub mod repository;
@@ -85,7 +86,8 @@ impl Visualization {
                     KeyCode::Char('q') => {
                         disable_raw_mode()?;
                         terminal.show_cursor()?;
-                        generate_all_balances_plot(1.0, 1.0);
+                        generate_all_balances_plot();
+                        ALL_GOOD_KINDS.iter().for_each(|good| { plot_for_gk(good.clone()) });
                         clear_all();
                         break;
                     }
