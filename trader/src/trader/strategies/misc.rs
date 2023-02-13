@@ -140,9 +140,9 @@ pub(crate) fn buy_something(trader: &mut SOLTrader) {
     };
 
     //this is how much i want to buy
-    let mut max_cash = trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) * (0.5);
+    let max_cash = trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) * (0.5);
 
-    let mut qty = {
+    let qty = {
         //qty = eur * exch_rate
         let rate = *trader
             .get_market_buy_rates(name.to_owned())
