@@ -16,6 +16,7 @@ use unitn_market_2022::good::good_kind::GoodKind::{EUR, USD, YEN, YUAN};
 
 use crate::visualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats_paragraph, get_trade_table};
 use crate::visualization::repository::repository::{clear_all, find_latest_balance, read_locks, read_trades};
+use crate::visualization::service::plotlib::generate_all_balances_plot;
 use crate::visualization::service::service::Service;
 
 pub mod repository;
@@ -84,6 +85,7 @@ impl Visualization {
                     KeyCode::Char('q') => {
                         disable_raw_mode()?;
                         terminal.show_cursor()?;
+                        generate_all_balances_plot(1.0, 1.0);
                         clear_all();
                         break;
                     }
@@ -133,7 +135,7 @@ impl Visualization {
         let usd_prf = self.service.get_profit(USD);
         let eur_prf = self.service.get_profit(EUR);
 
-        rect.render_widget(get_stats_paragraph(format!("Profit YEN : {:.2}% | Profit YUAN {:.2}% | Profit USD {:.2}% | Profit EUR {:.2}%", yen_prf, yuan_prf, usd_prf, eur_prf).as_str()), chunks[0]);
+        rect.render_widget(get_stats_paragraph(format!("Profit YEN : {:.2}% | Profit YUAN {:.2}% | Profit USD {:.2}% | Profit EUR {:.2}% No. of trades {} | No. of locks {}", yen_prf, yuan_prf, usd_prf, eur_prf, self.service.failed_trades, self.service.failed_locks).as_str()), chunks[0]);
         rect.render_widget(left, tables_chunks[0]);
         rect.render_widget(center, tables_chunks[1]);
         rect.render_widget(right, tables_chunks[2]);
@@ -144,10 +146,10 @@ impl Visualization {
         let lock_table = get_lock_table(read_locks().unwrap());
         let trade_table = get_trade_table(read_trades().unwrap());
         let balance_table = get_balance_table(
-            find_latest_balance(GoodKind::YEN),
-            find_latest_balance(GoodKind::YUAN),
-            find_latest_balance(GoodKind::USD),
-            find_latest_balance(GoodKind::EUR),
+            find_latest_balance(YEN),
+            find_latest_balance(YUAN),
+            find_latest_balance(USD),
+            find_latest_balance(EUR),
         );
 
         (balance_table, trade_table, lock_table)

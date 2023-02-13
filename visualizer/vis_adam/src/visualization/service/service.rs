@@ -1,17 +1,19 @@
+use std::ops::Range;
 use std::time::Duration;
-use chrono::Utc;
 
+use chrono::Utc;
 use ipc_utils::IPCReceiver;
 use ipc_utils::trader_state::TraderState;
 use ipc_utils::trading_event_details::{TradeOperation, TradingEventDetails};
+use plotters::prelude::*;
 use unitn_market_2022::good::good_kind::GoodKind;
 
-use crate::visualization::repository::repository::{Balance, find_latest_balance, Lock, save_balance, save_lock, save_trade, Trade};
+use crate::visualization::repository::repository::{Balance, find_latest_balance, Lock, read_balance, save_balance, save_lock, save_trade, Trade};
 
 pub struct Service {
     receiver: IPCReceiver,
-    failed_locks: usize,
-    failed_trades: usize,
+    pub failed_locks: usize,
+    pub failed_trades: usize,
 }
 
 impl Service {
@@ -73,7 +75,7 @@ impl Service {
                 }
             }
             TradeOperation::TradeFinalized => {
-                let trade = Trade { quantity: details.quantity as usize, good_kind: details.good_kind, market, price:details.price, operation: details.trade_type, timestamp: Utc::now() };
+                let trade = Trade { quantity: details.quantity as usize, good_kind: details.good_kind, market, price: details.price, operation: details.trade_type, timestamp: Utc::now() };
                 if details.successful {
                     save_trade(trade);
                 } else {
