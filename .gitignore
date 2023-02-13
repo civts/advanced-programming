@@ -27,3 +27,5 @@ Cargo.lock
 log_*.txt
 *.log
 *.pdf
+
+/visualizer/vis_adam/summary/

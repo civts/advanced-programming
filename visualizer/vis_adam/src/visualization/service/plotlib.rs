@@ -2,16 +2,14 @@ use ipc_utils::trader_state::ALL_GOOD_KINDS;
 use plotlib::page::Page;
 use plotlib::repr::Plot;
 use plotlib::view::ContinuousView;
-use plotlib::style::{LineStyle, PointMarker, PointStyle};
-use tui::style::Color;
+use plotlib::style::{LineStyle};
 use unitn_market_2022::good::good_kind::GoodKind;
-use unitn_market_2022::good::good_kind::GoodKind::{EUR, YEN};
 use crate::visualization::repository::repository::read_balance;
 
 pub fn generate_all_balances_plot() {
     let mut lines = vec![];
 
-    let ops = read_balance(EUR).unwrap().len();
+    let ops = read_balance(GoodKind::EUR).unwrap().len();
     let mut maxes = vec![];
 
 
@@ -29,10 +27,10 @@ pub fn generate_all_balances_plot() {
         lines.push(Plot::new(data).legend(format!("{} Balances", good)).line_style(
             LineStyle::new()
                 .colour(match good {
-                    EUR => { "BLUE" }
-                    GoodKind::YEN => { "RED" }
+                    GoodKind::EUR => { "BLUE" }
+                    GoodKind::YEN => { "YELLOW" }
                     GoodKind::USD => { "GREEN" }
-                    GoodKind::YUAN => { "YELLOW" }
+                    GoodKind::YUAN => { "RED" }
                 })
         ));
     });
@@ -54,7 +52,6 @@ pub fn generate_all_balances_plot() {
 }
 
 pub fn plot_for_gk(gk: GoodKind) {
-
     let balance = read_balance(gk).unwrap();
     let ops = balance.len();
     let max_value = get_max_value(gk);
@@ -69,10 +66,10 @@ pub fn plot_for_gk(gk: GoodKind) {
     let plot = Plot::new(data).legend(format!("{} Balances", gk)).line_style(
         LineStyle::new()
             .colour(match gk {
-                EUR => { "BLUE" }
-                YEN => { "RED" }
-                USD => { "GREEN" }
-                YUAN => { "YELLOW" }
+                GoodKind::EUR => { "BLUE" }
+                GoodKind::YEN => { "YELLOW" }
+                GoodKind::USD => { "GREEN" }
+                GoodKind::YUAN => { "RED" }
             }));
 
     let v = ContinuousView::new()
@@ -95,8 +92,8 @@ fn get_max_value(gk: GoodKind) -> f32 {
         }
     });
 
-    if (max_value == 10000.00) {
-        return max_value + 10000.00
+    if max_value >= 10000.00 && max_value <= 11000.00 {
+        return max_value + 10000.00;
     }
 
     max_value
@@ -110,5 +107,4 @@ fn get_max_from_vec(x: Vec<f32>) -> f32 {
             max
         }
     });
-
 }

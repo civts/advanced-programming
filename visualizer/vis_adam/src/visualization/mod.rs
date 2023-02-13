@@ -12,7 +12,6 @@ use tui::{Frame, Terminal};
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::widgets::{Table};
-use unitn_market_2022::good::good_kind::GoodKind;
 use unitn_market_2022::good::good_kind::GoodKind::{EUR, USD, YEN, YUAN};
 
 use crate::visualization::components::components::{get_balance_table, get_copyright, get_lock_table, get_stats_paragraph, get_trade_table};
@@ -137,7 +136,7 @@ impl Visualization {
         let usd_prf = self.service.get_profit(USD);
         let eur_prf = self.service.get_profit(EUR);
 
-        rect.render_widget(get_stats_paragraph(format!("Profit YEN : {:.2}% | Profit YUAN {:.2}% | Profit USD {:.2}% | Profit EUR {:.2}% No. of trades {} | No. of locks {}", yen_prf, yuan_prf, usd_prf, eur_prf, self.service.failed_trades, self.service.failed_locks).as_str()), chunks[0]);
+        rect.render_widget(get_stats_paragraph(format!("Profit YEN : {:.2}% | Profit YUAN {:.2}% | Profit USD {:.2}% | Profit EUR {:.2}%", yen_prf, yuan_prf, usd_prf, eur_prf).as_str()), chunks[0]);
         rect.render_widget(left, tables_chunks[0]);
         rect.render_widget(center, tables_chunks[1]);
         rect.render_widget(right, tables_chunks[2]);

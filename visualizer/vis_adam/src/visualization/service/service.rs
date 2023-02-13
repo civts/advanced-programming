@@ -1,14 +1,12 @@
-use std::ops::Range;
 use std::time::Duration;
 
 use chrono::Utc;
 use ipc_utils::IPCReceiver;
 use ipc_utils::trader_state::TraderState;
 use ipc_utils::trading_event_details::{TradeOperation, TradingEventDetails};
-use plotters::prelude::*;
 use unitn_market_2022::good::good_kind::GoodKind;
 
-use crate::visualization::repository::repository::{Balance, find_latest_balance, Lock, read_balance, save_balance, save_lock, save_trade, Trade};
+use crate::visualization::repository::repository::{Balance, find_latest_balance, Lock, save_balance, save_lock, save_trade, Trade};
 
 pub struct Service {
     receiver: IPCReceiver,
@@ -84,4 +82,14 @@ impl Service {
             }
         };
     }
+}
+
+mod test {
+
+    #[test]
+    fn should_return_profit() {
+        // when
+
+    }
+
 }
