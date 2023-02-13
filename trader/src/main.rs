@@ -6,12 +6,17 @@ use trader::trader::strategies::{
 };
 use trader::trader::SOLTrader;
 
+// Default iteration number
+const DEF_ITERATION: u32 = 100;
+
 /// Call main with arguments:
-/// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random | lose | lose_recover> <Visualizer: vis>.
+/// - cargo run <Strategy: farouk | gianluca | basic_best | basic_random | lose | lose_recover> <Visualizer: vis> <Iterations: u32 or "inf">
 ///
 /// Examples:
-/// - cargo run farouk vis  -> Run trader with farouk strategy and visualizer
-/// - cargo run gianluca    -> Run trader with gianluca strategy and no visualizer (just stdout)
+/// - cargo run farouk vis inf      -> Run trader with lose & recover strategy and visualizer almost forever (u32::MAX / ~4 Billion iterations)
+/// - cargo run lose_recover vis    -> Run trader with farouk strategy and visualizer (20 iterations)
+/// - cargo run gianluca no_vis inf -> Run trader with gianluca strategy, no visualizer and almost forever
+/// - cargo run basic_best          -> Run trader with basic_best strategy and no visualizer, just stdout (20 iterations)
 ///
 /// If no arguments are given the trader will be set with the function `do_nothing` and no visualizer.
 ///
@@ -23,10 +28,13 @@ pub fn main() {
     let default = "none".to_string();
     let strategy = args.get(1).unwrap_or(&default).as_str();
     let visualizer = args.get(2).map_or(false, |s| matches!(s.as_str(), "vis"));
+    let iterations: u32 = args.get(3).map_or(DEF_ITERATION, |s| match s.as_str() {
+        "inf" => u32::MAX,
+        s => s.parse::<u32>().unwrap_or(DEF_ITERATION),
+    });
 
     let mut trader: SOLTrader;
     let strategy_fn: fn(&mut SOLTrader, u32);
-    let iterations: u32 = 20;
     let qty = 10_000f32;
 
     match strategy {
