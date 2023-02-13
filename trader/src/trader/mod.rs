@@ -30,7 +30,7 @@ pub struct SOLTrader {
 }
 
 impl SOLTrader {
-    /// Initialise a trader with DOGE, BFB and PSE markets.
+    /// Initialize a trader with DOGE, BFB and PSE markets.
     /// Trader's good quantities are random number ranging from 50,000 to 150,000
     pub fn new(name: String) -> Self {
         let goods: HashMap<GoodKind, Good> = KINDS
@@ -54,7 +54,7 @@ impl SOLTrader {
         }
     }
 
-    /// Initialise a trader with DOGE, BFB and PSE markets and specific quantities
+    /// Initialize a trader with DOGE, BFB and PSE markets and specific quantities
     pub fn new_with_quantities(name: String, eur: f32, usd: f32, yen: f32, yuan: f32) -> Self {
         let goods: HashMap<GoodKind, Good> = KINDS
             .iter()
@@ -124,7 +124,7 @@ impl SOLTrader {
     pub fn get_market_buy_rates(&self, name: String) -> HashMap<GoodKind, f32> {
         let mut ret: HashMap<GoodKind, f32> = HashMap::new();
 
-        if let Some(mrk_bind) = self.get_market_by_name(name.clone()) {
+        if let Some(mrk_bind) = self.get_market_by_name(name) {
             for gl in mrk_bind.borrow().get_goods().iter() {
                 ret.insert(gl.good_kind, gl.exchange_rate_buy);
             }
@@ -135,7 +135,7 @@ impl SOLTrader {
     pub fn get_market_sell_rates(&self, name: String) -> HashMap<GoodKind, f32> {
         let mut ret: HashMap<GoodKind, f32> = HashMap::new();
 
-        if let Some(mrk_bind) = self.get_market_by_name(name.clone()) {
+        if let Some(mrk_bind) = self.get_market_by_name(name) {
             for gl in mrk_bind.borrow().get_goods().iter() {
                 ret.insert(gl.good_kind, gl.exchange_rate_sell);
             }
@@ -173,9 +173,9 @@ impl SOLTrader {
         let markt_bind = self.get_market_by_name(m).unwrap();
         let goods = markt_bind.borrow().get_goods();
         let mut ret = 0.0;
-        for i in 0..goods.len() {
-            if goods[i].good_kind == *g {
-                ret = goods[i].quantity;
+        for good in goods {
+            if good.good_kind == *g {
+                ret = good.quantity;
             }
         }
         ret
@@ -184,7 +184,7 @@ impl SOLTrader {
     pub fn all_wait_one_day(&self) {
         //wait one day was done on the mrkt binds -> Rc<Refcell<dyn market>>
         wait_one_day!(&self.markets[0], &self.markets[1]);
-        //don't use wait one day on pizza stocck market
+        //don't use wait one day on pizza stock market
     }
 
     //i'm still assuming that i have enough cash
@@ -193,7 +193,7 @@ impl SOLTrader {
     //
     pub fn buy_from_market(&mut self, name: String, kind: GoodKind, qty: f32) {
         if self.get_cur_good_qty(&DEFAULT_GOOD_KIND) >= qty {
-            let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
+            let mrk_bind = self.get_market_by_name(name).unwrap().clone();
 
             let bid = mrk_bind.borrow().get_buy_price(kind, qty).ok().unwrap();
             let token = mrk_bind
@@ -266,7 +266,7 @@ impl SOLTrader {
 
     pub fn sell_to_market(&mut self, name: String, kind: GoodKind, qty: f32) {
         if self.get_cur_good_qty(&kind) >= qty {
-            let mrk_bind = self.get_market_by_name(name.clone()).unwrap().clone();
+            let mrk_bind = self.get_market_by_name(name).unwrap().clone();
 
             //sell the good
             let offer = mrk_bind.borrow().get_sell_price(kind, qty).ok().unwrap();
@@ -336,12 +336,12 @@ impl SOLTrader {
     /// Get the maximum amount of a good the trader can buy from a market according to
     ///     - The amount of cash the trader has
     ///     - The amount of good the market has
-    fn max_buy(&self, kind: &GoodKind, market_name: &String) -> Result<f32, MarketGetterError> {
+    fn max_buy(&self, kind: &GoodKind, market_name: &str) -> Result<f32, MarketGetterError> {
         let cash_qty = self.goods.get(&DEFAULT_GOOD_KIND).unwrap().get_qty();
-        let market = self.get_market_by_name(market_name.clone()).unwrap();
+        let market = self.get_market_by_name(market_name.to_owned()).unwrap();
         // Get rate by using get_buy_price because some market give the prices in EUR -> GOOD and others in GOOD -> EUR
-        let market_good_qty = self.get_cur_good_qty_from_market(&kind, market_name.clone());
-        let rate = market.borrow().get_buy_price(kind.clone(), 1f32)?;
+        let market_good_qty = self.get_cur_good_qty_from_market(kind, market_name.to_owned());
+        let rate = market.borrow().get_buy_price(*kind, 1f32)?;
         let trader_max = cash_qty / rate;
         Ok(market_good_qty.min(trader_max))
     }
@@ -352,15 +352,15 @@ impl SOLTrader {
     fn max_sell(
         &self,
         kind: &GoodKind,
-        market_name: &String,
+        market_name: &str,
         buy_before_qty: f32,
     ) -> Result<f32, MarketGetterError> {
-        let good_qty = self.goods.get(&kind).unwrap().get_qty() + buy_before_qty;
-        let market = self.get_market_by_name(market_name.clone()).unwrap();
+        let good_qty = self.goods.get(kind).unwrap().get_qty() + buy_before_qty;
+        let market = self.get_market_by_name(market_name.to_owned()).unwrap();
         // Get rate by using get_sell_price because some market give the prices in EUR -> GOOD and others in GOOD -> EUR
-        let rate = market.borrow().get_sell_price(kind.clone(), 1f32)?;
+        let rate = market.borrow().get_sell_price(*kind, 1f32)?;
         let market_cash_qty =
-            self.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, market_name.clone());
+            self.get_cur_good_qty_from_market(&DEFAULT_GOOD_KIND, market_name.to_owned());
         let market_max = market_cash_qty / rate;
         Ok(market_max.min(good_qty))
     }
@@ -377,18 +377,18 @@ impl SOLTrader {
     pub fn log_visualizer(&self, market_name: String, trade_event: TradingEventDetails) {
         let trading_event = TradingEvent {
             details: trade_event,
-            market_name: market_name.clone(),
+            market_name,
             trader_state: TraderState::new(
                 self.goods
-                    .iter()
-                    .map(|(_, g)| (g.get_kind(), g.get_qty()))
+                    .values()
+                    .map(|g| (g.get_kind(), g.get_qty()))
                     .collect(),
                 self.name.clone(),
             ),
         };
 
         if let Some(send_to_visualizer) = &self.ipc_sender {
-            send_to_visualizer.send(trading_event.clone()).unwrap()
+            send_to_visualizer.send(trading_event).unwrap()
         } else {
             println!("{trading_event:?}");
         }

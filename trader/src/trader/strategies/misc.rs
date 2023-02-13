@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use unitn_market_2022::good::consts::DEFAULT_GOOD_KIND;
 use unitn_market_2022::good::good_kind::GoodKind;
 
-//here we can implement the stategy of the trader
+//here we can implement the strategy of the trader
 pub(crate) fn make_trade_all_random(trader: &mut SOLTrader, max_qty: i32) {
     use rand::Rng;
     let mut rng = rand::thread_rng();
@@ -28,20 +28,19 @@ pub(crate) fn make_trade_all_random(trader: &mut SOLTrader, max_qty: i32) {
 }
 pub(crate) fn sell_something(trader: &mut SOLTrader) {
     //sell the good that i've stocked the most
-    let max_good =
-        if trader.get_cur_good_qty(&GoodKind::USD) >= trader.get_cur_good_qty(&GoodKind::YUAN) {
-            if trader.get_cur_good_qty(&GoodKind::USD) >= trader.get_cur_good_qty(&GoodKind::YEN) {
-                &GoodKind::USD
-            } else {
-                &GoodKind::YEN
-            }
+    let max_good = if trader.get_cur_good_qty(&GoodKind::USD)
+        >= trader.get_cur_good_qty(&GoodKind::YUAN)
+    {
+        if trader.get_cur_good_qty(&GoodKind::USD) >= trader.get_cur_good_qty(&GoodKind::YEN) {
+            &GoodKind::USD
         } else {
-            if trader.get_cur_good_qty(&GoodKind::YEN) >= trader.get_cur_good_qty(&GoodKind::YUAN) {
-                &GoodKind::YEN
-            } else {
-                &GoodKind::YUAN
-            }
-        };
+            &GoodKind::YEN
+        }
+    } else if trader.get_cur_good_qty(&GoodKind::YEN) >= trader.get_cur_good_qty(&GoodKind::YUAN) {
+        &GoodKind::YEN
+    } else {
+        &GoodKind::YUAN
+    };
 
     // select the market with the best sell rate
     // TODO: make this into a trader function
@@ -63,18 +62,16 @@ pub(crate) fn sell_something(trader: &mut SOLTrader) {
         } else {
             "Baku stock exchange"
         }
-    } else {
-        if trader
-            .get_market_sell_rates("DogeMarket".to_owned())
+    } else if trader
+        .get_market_sell_rates("DogeMarket".to_owned())
+        .get(max_good)
+        >= trader
+            .get_market_sell_rates("Baku stock exchange".to_owned())
             .get(max_good)
-            >= trader
-                .get_market_sell_rates("Baku stock exchange".to_owned())
-                .get(max_good)
-        {
-            "DogeMarket"
-        } else {
-            "Baku stock exchange"
-        }
+    {
+        "DogeMarket"
+    } else {
+        "Baku stock exchange"
     };
 
     let mut qty = trader.get_cur_good_qty(max_good) * (2.0 / 3.0);
@@ -125,18 +122,16 @@ pub(crate) fn buy_something(trader: &mut SOLTrader) {
         } else {
             "Baku stock exchange"
         }
-    } else {
-        if trader
-            .get_market_sell_rates("DogeMarket".to_owned())
+    } else if trader
+        .get_market_sell_rates("DogeMarket".to_owned())
+        .get(sel_good)
+        <= trader
+            .get_market_sell_rates("Baku stock exchange".to_owned())
             .get(sel_good)
-            <= trader
-                .get_market_sell_rates("Baku stock exchange".to_owned())
-                .get(sel_good)
-        {
-            "DogeMarket"
-        } else {
-            "Baku stock exchange"
-        }
+    {
+        "DogeMarket"
+    } else {
+        "Baku stock exchange"
     };
 
     //this is how much i want to buy
@@ -149,7 +144,7 @@ pub(crate) fn buy_something(trader: &mut SOLTrader) {
             .get(sel_good)
             .unwrap();
         let qty = max_cash * rate;
-        //if i'm buying too mcuh, just buy everything
+        //if i'm buying too much, just buy everything
         if qty > trader.get_cur_good_qty_from_market(sel_good, name.to_owned()) {
             trader.get_cur_good_qty_from_market(sel_good, name.to_owned())
         } else {
@@ -173,9 +168,9 @@ pub(crate) fn make_best_trade(trader: &mut SOLTrader, buy_deltas: &History, sell
 
     //trade!
     if b_delta.abs() > s_delta {
-        trader.buy_from_market(name_buy.to_owned(), kind_buy, qty);
+        trader.buy_from_market(name_buy, kind_buy, qty);
     } else {
-        trader.sell_to_market(name_sell.to_owned(), kind_sell, qty);
+        trader.sell_to_market(name_sell, kind_sell, qty);
     }
 }
 
@@ -232,10 +227,10 @@ pub(crate) fn make_best_historical_trade(
 
             if qty >= 0.01 {
                 *do_nothing_count = 0;
-                trader.buy_from_market(name_buy.to_owned(), kind_buy, qty);
+                trader.buy_from_market(name_buy, kind_buy, qty);
             } else {
                 *do_nothing_count += 1;
-                fake_trade(&trader);
+                fake_trade(trader);
             }
         } else {
             let mut qty = {
@@ -257,10 +252,10 @@ pub(crate) fn make_best_historical_trade(
 
             if qty >= 0.01 {
                 *do_nothing_count = 0;
-                trader.sell_to_market(name_sell.to_owned(), kind_sell, qty);
+                trader.sell_to_market(name_sell, kind_sell, qty);
             } else {
                 *do_nothing_count += 1;
-                fake_trade(&trader);
+                fake_trade(trader);
             }
         }
     } else {
@@ -274,7 +269,7 @@ pub(crate) fn fake_trade(trader: &SOLTrader) {
     trader.all_wait_one_day();
 }
 
-//tested: delta is zero qith no trades
+//tested: delta is zero with no trades
 pub(crate) fn get_delta_last_day(
     history: Vec<HashMap<String, HashMap<GoodKind, f32>>>,
 ) -> Option<HashMap<String, HashMap<GoodKind, f32>>> {
@@ -289,7 +284,7 @@ pub(crate) fn get_delta_last_day(
             let mut tmp: HashMap<GoodKind, f32> = HashMap::new();
 
             for (good, rate) in abc {
-                tmp.insert(good.clone(), rate - yesterday[&name][&good]);
+                tmp.insert(good, rate - yesterday[&name][&good]);
             }
 
             delta.insert(name.clone(), tmp);
@@ -356,12 +351,10 @@ pub(crate) fn get_best_buy_delta_from_historical_avg(h: &History) -> (GoodKind, 
 
     for (market, rates) in delta_buy {
         for (good, delta) in rates {
-            if good != DEFAULT_GOOD_KIND {
-                if delta < min_found {
-                    res_kind = good;
-                    res_market = market.clone();
-                    min_found = delta;
-                }
+            if good != DEFAULT_GOOD_KIND && delta < min_found {
+                res_kind = good;
+                res_market = market.clone();
+                min_found = delta;
             }
         }
     }
@@ -403,12 +396,10 @@ pub(crate) fn get_best_sell_delta(h: &History) -> (GoodKind, String, f32) {
 
     for (market, map) in delta {
         for (good, delta) in map {
-            if *good != DEFAULT_GOOD_KIND {
-                if *delta > max_found {
-                    res_kind = *good;
-                    res_market = market.clone();
-                    max_found = *delta;
-                }
+            if *good != DEFAULT_GOOD_KIND && *delta > max_found {
+                res_kind = *good;
+                res_market = market.clone();
+                max_found = *delta;
             }
         }
     }
@@ -423,12 +414,10 @@ pub(crate) fn get_best_buy_delta(h: &History) -> (GoodKind, String, f32) {
 
     for (market, map) in delta {
         for (good, delta) in map {
-            if *good != DEFAULT_GOOD_KIND {
-                if *delta < min_found {
-                    res_kind = *good;
-                    res_market = market.clone();
-                    min_found = *delta;
-                }
+            if *good != DEFAULT_GOOD_KIND && *delta < min_found {
+                res_kind = *good;
+                res_market = market.clone();
+                min_found = *delta;
             }
         }
     }

@@ -69,9 +69,9 @@ impl Arbitrages for SOLTrader {
                     }
 
                     // Get the maximum qty the trader and markets can trade
-                    let max_buy_qty = self.max_buy(&kind, &buy_market_name).unwrap_or(0f32);
+                    let max_buy_qty = self.max_buy(kind, &buy_market_name).unwrap_or(0f32);
                     let max_sell_qty = self
-                        .max_sell(&kind, &sell_market_name, max_buy_qty)
+                        .max_sell(kind, &sell_market_name, max_buy_qty)
                         .unwrap_or(0f32);
                     let max_qty = max_buy_qty.min(max_sell_qty) * 0.5;
 
@@ -79,11 +79,11 @@ impl Arbitrages for SOLTrader {
                     // If an error occurs, we set the buy price and the sell price at the min possible
                     let buy_price = buy_market
                         .borrow()
-                        .get_buy_price(kind.clone(), max_qty)
+                        .get_buy_price(*kind, max_qty)
                         .unwrap_or(f32::MIN);
                     let sell_price = sell_market
                         .borrow()
-                        .get_sell_price(kind.clone(), max_qty)
+                        .get_sell_price(*kind, max_qty)
                         .unwrap_or(f32::MIN);
 
                     let benefits = sell_price - buy_price;
@@ -94,7 +94,7 @@ impl Arbitrages for SOLTrader {
                         opportunities.push(Arbitrage::new(
                             buy_market_name.clone(),
                             sell_market_name.clone(),
-                            kind.clone(),
+                            *kind,
                             max_qty,
                             benefits,
                             margin,
@@ -139,16 +139,10 @@ impl Arbitrages for SOLTrader {
             let buy_market_name = arbitrage.buying_market_name.clone();
             let sell_market_name = arbitrage.selling_market_name.clone();
             let kind = &arbitrage.good_kind;
-            let qty = arbitrage.qty.clone();
+            let qty = arbitrage.qty;
 
-            let buy_market = self
-                .get_market_by_name(buy_market_name.clone())
-                .unwrap()
-                .clone();
-            let sell_market = self
-                .get_market_by_name(sell_market_name.clone())
-                .unwrap()
-                .clone();
+            let buy_market = self.get_market_by_name(buy_market_name).unwrap().clone();
+            let sell_market = self.get_market_by_name(sell_market_name).unwrap().clone();
 
             let (bid, buy_token) = self.lock_buy_from_market_ref(buy_market.clone(), *kind, qty);
             let (offer, sell_token) = self.lock_sell_to_market_ref(sell_market.clone(), *kind, qty);
@@ -192,16 +186,10 @@ impl Arbitrages for SOLTrader {
             let buy_market_name = reverse_arbitrage.buying_market_name.clone();
             let sell_market_name = reverse_arbitrage.selling_market_name.clone();
             let kind = &reverse_arbitrage.good_kind;
-            let qty = reverse_arbitrage.qty.clone();
+            let qty = reverse_arbitrage.qty;
 
-            let buy_market = self
-                .get_market_by_name(buy_market_name.clone())
-                .unwrap()
-                .clone();
-            let sell_market = self
-                .get_market_by_name(sell_market_name.clone())
-                .unwrap()
-                .clone();
+            let buy_market = self.get_market_by_name(buy_market_name).unwrap().clone();
+            let sell_market = self.get_market_by_name(sell_market_name).unwrap().clone();
 
             let (bid, buy_token) = self.lock_buy_from_market_ref(buy_market.clone(), *kind, qty);
             let (offer, sell_token) = self.lock_sell_to_market_ref(sell_market.clone(), *kind, qty);
@@ -221,7 +209,7 @@ impl Arbitrages for SOLTrader {
 
 impl SOLTrader {
     fn sell_highest_qty_good(&mut self) {
-        let mut goods: Vec<Good> = self.goods.iter().map(|(_, g)| g.clone()).collect();
+        let mut goods: Vec<Good> = self.goods.values().cloned().collect();
         goods.sort_by(|g1, g2| g1.get_qty().total_cmp(&g2.get_qty()));
         let highest_qty_good = goods.pop().unwrap();
         let kind = highest_qty_good.get_kind();

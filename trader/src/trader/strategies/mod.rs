@@ -127,12 +127,10 @@ pub fn gianluca_strategy(trader: &mut SOLTrader, iterations: u32) {
                 || trader.get_cur_good_qty(&GoodKind::USD) > th
             {
                 sell_something(trader);
+            } else if trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) > th {
+                buy_something(trader);
             } else {
-                if trader.get_cur_good_qty(&DEFAULT_GOOD_KIND) > th {
-                    buy_something(trader);
-                } else {
-                    fake_trade(trader);
-                }
+                fake_trade(trader);
             }
         }
 
@@ -199,7 +197,7 @@ pub fn basic_all_random_strategy(trader: &mut SOLTrader, iterations: u32) {
 ///first makes one random trade, than looks at the deltas and starts making the best trades possible
 ///best trade means either
 ///buy (market,goodkind) with the lowest delta (bargain)
-///or sell (market,goodkind) with the highest delta (amke the most out of what you bought)
+///or sell (market,goodkind) with the highest delta (make the most out of what you bought)
 ///the quantities are still random
 pub fn basic_best_trade_strategy(trader: &mut SOLTrader, iterations: u32) {
     let max_qty = 100;

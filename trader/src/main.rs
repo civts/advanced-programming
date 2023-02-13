@@ -22,10 +22,7 @@ pub fn main() {
     let args: Vec<String> = env::args().collect();
     let default = "none".to_string();
     let strategy = args.get(1).unwrap_or(&default).as_str();
-    let visualizer = args.get(2).map_or(false, |s| match s.as_str() {
-        "vis" => true,
-        _ => false,
-    });
+    let visualizer = args.get(2).map_or(false, |s| matches!(s.as_str(), "vis"));
 
     let mut trader: SOLTrader;
     let strategy_fn: fn(&mut SOLTrader, u32);

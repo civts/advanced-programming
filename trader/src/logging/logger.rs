@@ -65,7 +65,7 @@ impl LoggingStrategy for TxtStrategy {
         amount: f32,
         operation_type: String,
     ) {
-        let filename = format!("log_trader.txt");
+        let filename = "log_trader.txt".to_string();
         let mut file = OpenOptions::new()
             .append(true)
             .create(true)
@@ -85,7 +85,7 @@ impl LoggingStrategy for TxtStrategy {
         value: f32,
         good_kind: String,
     ) {
-        let filename = format!("log_trader.txt");
+        let filename = "log_trader.txt".to_string();
         let mut file = OpenOptions::new()
             .append(true)
             .create(true)

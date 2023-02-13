@@ -41,7 +41,8 @@ mod trader_tests {
 
         let value_before = trader.get_current_worth();
         for _ in 0..15_000 {
-            trader.exploit_pse_market();
+            let mut days = 0;
+            trader.exploit_pse_market(&mut days);
         }
         let value_after = trader.get_current_worth();
         let profit = value_after - value_before;
@@ -56,7 +57,8 @@ mod trader_tests {
 
         let value_before = trader.get_current_worth();
         for _ in 0..15_000 {
-            trader.lose_all();
+            let mut days = 0;
+            trader.lose_all(&mut days);
         }
         let value_after = trader.get_current_worth();
         let profit = value_after - value_before;
