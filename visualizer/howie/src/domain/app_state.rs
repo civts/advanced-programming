@@ -21,6 +21,9 @@ pub(crate) struct AppState {
     pub(crate) trading_volume_chart_visible: bool,
 
     pub(crate) theme: AppTheme,
+
+    /// If the IPC pipe has been closed, the only way is to press R
+    pub(crate) pipe_closed: bool,
 }
 
 impl AppState {

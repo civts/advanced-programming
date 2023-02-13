@@ -92,7 +92,7 @@ fn render_column_widget<B: Backend>(state: &AppState, area: Rect, frame: &mut Fr
     let center_bottom = cell_sizes.get(4).unwrap().to_owned();
     let bottom = cell_sizes.get(6).unwrap().to_owned();
 
-    render_trader_name_widget(frame, last_event, top);
+    render_trader_name_widget(frame, state, top);
 
     render_market_chart(&state.stats.trades_with_market, frame, center, &state.theme);
 

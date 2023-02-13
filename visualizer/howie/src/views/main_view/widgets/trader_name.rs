@@ -1,12 +1,27 @@
 use tui::{backend::Backend, layout::Rect, widgets::Paragraph, Frame};
 
+use crate::domain::app_state::AppState;
+
 pub(crate) fn render_trader_name_widget<B: Backend>(
     frame: &mut Frame<B>,
-    last_event: &ipc_utils::trading_event::TradingEvent,
+    state: &AppState,
     area: Rect,
 ) {
-    frame.render_widget(
-        Paragraph::new(last_event.trader_state.name.to_string()),
-        area,
-    );
+    if state.pipe_closed {
+        frame.render_widget(
+            Paragraph::new("Trader finished")
+                .style(state.theme.default_style().fg(state.theme.accent)),
+            area,
+        );
+    } else {
+        let trader_name = state
+            .events
+            .last()
+            .map(|event| event.trader_state.name.to_string())
+            .unwrap_or_default();
+        frame.render_widget(
+            Paragraph::new(trader_name).style(state.theme.default_style()),
+            area,
+        );
+    }
 }

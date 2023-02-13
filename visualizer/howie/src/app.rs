@@ -54,6 +54,7 @@ impl App {
                     _ => {
                         // Receive and process next event (if any)
                         let trader_event_res = self.receiver.receive();
+                        self.state.pipe_closed = false;
                         match trader_event_res {
                             Ok(event_opt) => match event_opt {
                                 Some(trader_event) => {
@@ -63,7 +64,13 @@ impl App {
                                 }
                                 None => self.state.current_view = AppView::WaitingForFirstTrade,
                             },
-                            Err(error) => self.state.current_view = AppView::ErrorView(error),
+                            Err(error) => {
+                                if self.state.events.is_empty() {
+                                    self.state.current_view = AppView::ErrorView(error);
+                                } else {
+                                    self.state.pipe_closed = true;
+                                }
+                            }
                         }
                     }
                 }
