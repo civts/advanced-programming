@@ -46,7 +46,7 @@ impl Visualization {
 
         let (tx, rx) = mpsc::channel();
 
-        let tick_rate = Duration::from_millis(100);
+        let tick_rate = Duration::from_millis(50);
         thread::spawn(move || {
             let mut last_tick = Instant::now();
             loop {

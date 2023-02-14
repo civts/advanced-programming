@@ -85,11 +85,75 @@ impl Service {
 }
 
 mod test {
+    use std::collections::HashMap;
+    use ipc_utils::trader_state::TraderState;
+    use ipc_utils::trading_event_details::TradeOperation::AskedLock;
+    use ipc_utils::trading_event_details::TradeType::Buy;
+    use ipc_utils::trading_event_details::{TradingEventDetails};
+    use unitn_market_2022::good::good_kind::GoodKind::{EUR, USD, YEN, YUAN};
+    use crate::visualization::repository::repository::{Balance, clear_all, read_balance, read_locks, save_balance};
+    use crate::visualization::service::service::Service;
 
     #[test]
     fn should_return_profit() {
+        // given
+        clear_all();
+        save_balance(Balance { value: 10000.00 }, EUR);
+        save_balance(Balance { value: 20000.00 }, EUR);
         // when
-
+        let s = Service::new();
+        // then
+        let result = s.get_profit(EUR);
+        assert_eq!(100.00, result)
     }
 
+    #[test]
+    fn should_save_balances_from_state() {
+        // given
+        clear_all();
+        let mut cash = HashMap::new();
+        cash.insert(YEN, 25.0);
+        cash.insert(YUAN, 35.0);
+        cash.insert(USD, 45.0);
+        cash.insert(EUR, 55.0);
+
+        // when
+        let s = Service::new();
+        s.save_current_balances(TraderState { cash, name: "test".to_string() });
+
+        // then
+        let yen = read_balance(YEN).unwrap().get(0).unwrap().value;
+        assert_eq!(25.0, yen);
+        let yuan = read_balance(YUAN).unwrap().get(0).unwrap().value;
+        assert_eq!(35.0, yuan);
+        let usd = read_balance(USD).unwrap().get(0).unwrap().value;
+        assert_eq!(45.0, usd);
+        let eur = read_balance(EUR).unwrap().get(0).unwrap().value;
+        assert_eq!(55.0, eur);
+    }
+
+    #[test]
+    fn should_save_based_on_operation() {
+        // given
+        clear_all();
+        let given_lock = TradingEventDetails {
+            trade_type: Buy,
+            operation: AskedLock,
+            good_kind: USD,
+            price: 10.0,
+            successful: true,
+            quantity: 1.0,
+        };
+
+        // when
+        let mut s = Service::new();
+        s.save_based_on_operation("PSE".to_string(), given_lock);
+
+        // then
+        let result = read_locks().unwrap().get(0).unwrap().clone();
+        assert_eq!(result.operation, Buy);
+        assert_eq!(result.price, 10.0);
+        assert_eq!(result.quantity, 1);
+        assert_eq!(result.good_kind, USD);
+    }
 }

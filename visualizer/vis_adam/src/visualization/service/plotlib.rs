@@ -12,7 +12,6 @@ pub fn generate_all_balances_plot() {
     let ops = read_balance(GoodKind::EUR).unwrap().len();
     let mut maxes = vec![];
 
-
     ALL_GOOD_KINDS.iter().for_each(|good| {
         maxes.push(get_max_value(good.clone()));
         let balances: Vec<f32> = read_balance(good.clone()).unwrap().iter().map(|x| x.value).collect();
@@ -35,8 +34,6 @@ pub fn generate_all_balances_plot() {
         ));
     });
 
-
-    // The 'view' describes what set of data is drawn
     let v = ContinuousView::new()
         .add(lines.get(0).unwrap().clone())
         .add(lines.get(1).unwrap().clone())
@@ -47,7 +44,6 @@ pub fn generate_all_balances_plot() {
         .x_label("Number of operations")
         .y_label("Balance");
 
-    // A page with a single view is then saved to an SVG file
     Page::single(&v).dimensions(640, 480).save("summary/balances.svg").unwrap();
 }
 
