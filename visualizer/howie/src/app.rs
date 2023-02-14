@@ -24,7 +24,7 @@ impl App {
         let duration = Duration::from_millis(REFRESH_RATE_MILLISECONDS);
         App {
             receiver: IPCReceiver::new(duration),
-            state: AppState::default(),
+            state: Default::default(),
             refresh_speed: duration,
         }
     }
@@ -54,7 +54,10 @@ impl App {
                     _ => {
                         // Receive and process next event (if any)
                         let trader_event_res = self.receiver.receive();
-                        self.state.pipe_closed = false;
+                        if self.state.trader_finished && trader_event_res.is_ok() {
+                            should_run_again = true;
+                            break;
+                        }
                         match trader_event_res {
                             Ok(event_opt) => match event_opt {
                                 Some(trader_event) => {
@@ -68,7 +71,7 @@ impl App {
                                 if self.state.events.is_empty() {
                                     self.state.current_view = AppView::ErrorView(error);
                                 } else {
-                                    self.state.pipe_closed = true;
+                                    self.state.trader_finished = true;
                                 }
                             }
                         }
@@ -153,6 +156,7 @@ impl App {
 
         if should_run_again {
             self.receiver.restart();
+            self.state = Default::default();
             self.run(terminal)
         } else {
             Self::prepare_for_exit(terminal)

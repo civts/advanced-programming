@@ -7,7 +7,7 @@ pub(crate) fn render_trader_name_widget<B: Backend>(
     state: &AppState,
     area: Rect,
 ) {
-    if state.pipe_closed {
+    if state.trader_finished {
         frame.render_widget(
             Paragraph::new("Trader finished")
                 .style(state.theme.default_style().fg(state.theme.accent)),

@@ -23,7 +23,7 @@ pub(crate) struct AppState {
     pub(crate) theme: AppTheme,
 
     /// If the IPC pipe has been closed, the only way is to press R
-    pub(crate) pipe_closed: bool,
+    pub(crate) trader_finished: bool,
 }
 
 impl AppState {
